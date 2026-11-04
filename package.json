@@ -1,0 +1,30 @@
+{
+  "name": "uwii",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "check:attestation": "tsx --env-file-if-exists=.env.local scripts/check-attestation.ts"
+  },
+  "dependencies": {
+    "@phala/dcap-qvl": "^0.7.1",
+    "ethers": "^6.17.0",
+    "next": "16.4.5",
+    "openai": "^7.50.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.5",
+    "tsx": "^4.23.15",
+    "typescript": "^5"
+  }
+}
