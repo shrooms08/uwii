@@ -20,7 +20,17 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
-      <body>{children}</body>
+      <body>
+        {children}
+        <footer
+          data-testid="attribution"
+          style={{ fontFamily: "system-ui, sans-serif", fontSize: 12, color: "#555", textAlign: "center", padding: "16px 24px" }}
+        >
+          <a href="https://nearblocks.io" target="_blank" rel="noreferrer">
+            Powered by NearBlocks.io APIs
+          </a>
+        </footer>
+      </body>
     </html>
   );
 }

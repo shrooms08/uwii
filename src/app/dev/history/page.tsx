@@ -1,7 +1,8 @@
 import { Suspense } from "react";
 import { getHistory } from "@/lib/history/cache";
+import { formatUnits } from "@/lib/history/amount";
 import { isValidAccountId } from "@/lib/history/fetch";
-import { assetKey, countsByKind, summarizeByAsset } from "@/lib/history/summary";
+import { assetKey, countsByKind, stakingRewardsByPool, summarizeByAsset, totalFees } from "@/lib/history/summary";
 
 export const maxDuration = 300;
 
@@ -20,28 +21,44 @@ async function History({ searchParams }: { searchParams: SearchParams }) {
   const account = one(sp.account)?.trim().toLowerCase();
   const from = one(sp.from) ?? DEFAULT_FROM;
   const to = one(sp.to) ?? DEFAULT_TO;
+  const live = one(sp.live) === "1";
 
   if (!account) return <p>Add <code>?account=&lt;id&gt;</code> to the URL, e.g. <code>/dev/history?account=rybergh44.near</code>.</p>;
   if (!isValidAccountId(account)) return <p style={{ color: "#b00020" }}>Invalid NEAR account id: {account}</p>;
 
   let data;
   try {
-    data = await getHistory(account, from, to);
+    data = await getHistory(account, from, to, { live });
   } catch (e) {
     return <p style={{ color: "#b00020" }}>Failed to load history: {e instanceof Error ? e.message : String(e)}</p>;
   }
-  const { result, fromCache } = data;
+  const { result, origin } = data;
   const records = result.records;
+  const rewards = stakingRewardsByPool(records);
+  const fees = totalFees(records);
+  const staking = result.staking;
 
   return (
     <>
       <section>
+        {origin === "fixture" && (
+          <p
+            data-testid="demo-label"
+            style={{ display: "inline-block", padding: "2px 8px", borderRadius: 4, background: "#fff4ce", border: "1px solid #e0c46c", fontSize: 13 }}
+          >
+            Demo dataset (captured {result.fetchedAt.slice(0, 10)})
+          </p>
+        )}
         <p>
           <strong>Account:</strong> <code>{result.accountId}</code>
           <br />
           <strong>Range:</strong> {result.from} → {result.to} (UTC, inclusive)
           <br />
-          <strong>Records:</strong> {records.length} · source {result.source} · {fromCache ? "cached" : "fetched"} {result.fetchedAt}
+          <strong>Records:</strong> {records.length} · source {result.source} · {origin === "fixture" ? "demo fixture" : origin === "cache" ? "cached" : "fetched live"} {result.fetchedAt}
+          <br />
+          <strong>Fees paid:</strong> {fees.total} NEAR across {fees.count} signed transactions
+          <br />
+          <strong>Staking rewards:</strong> {rewards.total} NEAR · negative reward days (not emitted): {staking.negativeRewardDays}
         </p>
       </section>
 
@@ -78,11 +95,45 @@ async function History({ searchParams }: { searchParams: SearchParams }) {
       </section>
 
       <section>
+        <h2 style={{ fontSize: 16 }}>Staking rewards by pool</h2>
+        {staking.pools.length === 0 ? (
+          <p>No staking pools.</p>
+        ) : (
+          <table style={{ borderCollapse: "collapse" }}>
+            <thead>
+              <tr>
+                {["pool", "first interaction", "start balance", "end balance", "deposits", "withdrawals", "reward days", "rewards (NEAR)"].map((h) => (
+                  <th key={h} style={cell}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {staking.pools.map((p) => (
+                <tr key={p.pool}>
+                  <td style={{ ...cell, ...mono }}>{p.pool}</td>
+                  <td style={cell}>{p.firstInteraction.slice(0, 10)}</td>
+                  <td style={{ ...cell, ...mono }}>{p.start.date}: {formatUnits(BigInt(p.start.totalBalance), 24)}</td>
+                  <td style={{ ...cell, ...mono }}>{p.end.date}: {formatUnits(BigInt(p.end.totalBalance), 24)}</td>
+                  <td style={{ ...cell, ...mono }}>{p.deposits}</td>
+                  <td style={{ ...cell, ...mono }}>{p.withdrawals}</td>
+                  <td style={cell}>{p.rewardDays}</td>
+                  <td style={{ ...cell, ...mono }}>{p.rewards}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        <p style={{ fontSize: 12, color: "#555" }}>
+          Snapshots: get_account_total_balance at the block closest to each UTC midnight (through {staking.lastCompleteBoundary ?? "n/a"}) via {staking.archivalRpc}.
+        </p>
+      </section>
+
+      <section>
         <h2 style={{ fontSize: 16 }}>Transactions</h2>
         <table data-testid="history-table" style={{ borderCollapse: "collapse", fontSize: 13, width: "100%" }}>
           <thead>
             <tr>
-              {["date (UTC)", "kind", "dir", "asset", "amount", "counterparty", "method", "success", "tx hash"].map((h) => (
+              {["date (UTC)", "kind", "dir", "asset", "amount", "counterparty", "method", "success", "fee (NEAR)", "tx hash"].map((h) => (
                 <th key={h} style={cell}>{h}</th>
               ))}
             </tr>
@@ -98,6 +149,7 @@ async function History({ searchParams }: { searchParams: SearchParams }) {
                 <td style={{ ...cell, ...mono, maxWidth: 220, overflowWrap: "anywhere" }}>{r.counterparty ?? "—"}</td>
                 <td style={{ ...cell, ...mono }}>{r.method ?? "—"}</td>
                 <td style={cell}>{r.success ? "yes" : "no"}</td>
+                <td style={{ ...cell, ...mono, textAlign: "right" }}>{r.fee ? r.fee.amount : "—"}</td>
                 <td style={{ ...cell, ...mono }}>
                   {r.txHash ? <a href={`${EXPLORER_TX}${r.txHash}`} target="_blank" rel="noreferrer">{r.txHash.slice(0, 10)}…</a> : "—"}
                 </td>

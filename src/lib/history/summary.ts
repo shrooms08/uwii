@@ -1,5 +1,5 @@
 import { ZERO, formatUnits } from "./amount";
-import type { NormalizedTx, TxKind } from "./types";
+import { NEAR_ASSET, type NormalizedTx, type TxKind } from "./types";
 
 export const KINDS: TxKind[] = [
   "native_transfer",
@@ -8,6 +8,7 @@ export const KINDS: TxKind[] = [
   "unstake",
   "withdraw_stake",
   "function_call_with_deposit",
+  "staking_reward",
   "other",
 ];
 
@@ -38,8 +39,9 @@ export function countsByKind(records: NormalizedTx[]): KindCount[] {
 }
 
 /** Parse an exact decimal string back to base units. */
-function toUnits(amount: string, decimals: number): bigint {
+export function toUnits(amount: string, decimals: number): bigint {
   const [whole, frac = ""] = amount.split(".");
+  if (frac.length > decimals) throw new Error(`Amount ${amount} has more than ${decimals} decimals`);
   return BigInt(whole + frac.padEnd(decimals, "0"));
 }
 
@@ -64,4 +66,41 @@ export function summarizeByAsset(records: NormalizedTx[]): AssetSummary[] {
       out: formatUnits(s.out, s.decimals),
     }))
     .sort((a, b) => b.total - a.total || a.asset.localeCompare(b.asset));
+}
+
+export interface RewardsByPool {
+  pool: string;
+  days: number;
+  total: string;
+}
+
+export function stakingRewardsByPool(records: NormalizedTx[]): { pools: RewardsByPool[]; total: string } {
+  const map = new Map<string, { days: number; sum: bigint }>();
+  let all = ZERO;
+  for (const r of records) {
+    if (r.kind !== "staking_reward" || !r.success) continue;
+    const pool = r.counterparty ?? "(unknown)";
+    const s = map.get(pool) ?? { days: 0, sum: ZERO };
+    const v = toUnits(r.amount, NEAR_ASSET.decimals);
+    s.days++;
+    s.sum += v;
+    all += v;
+    map.set(pool, s);
+  }
+  return {
+    pools: [...map.entries()].map(([pool, s]) => ({ pool, days: s.days, total: formatUnits(s.sum, NEAR_ASSET.decimals) })),
+    total: formatUnits(all, NEAR_ASSET.decimals),
+  };
+}
+
+/** Total gas fees paid (fees are paid whether or not the transaction succeeded). */
+export function totalFees(records: NormalizedTx[]): { count: number; total: string } {
+  let sum = ZERO;
+  let count = 0;
+  for (const r of records) {
+    if (!r.fee) continue;
+    sum += toUnits(r.fee.amount, NEAR_ASSET.decimals);
+    count++;
+  }
+  return { count, total: formatUnits(sum, NEAR_ASSET.decimals) };
 }

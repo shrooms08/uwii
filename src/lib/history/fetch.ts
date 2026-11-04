@@ -2,7 +2,8 @@ import { z } from "zod";
 import { NS_PER_MS, ZERO, absBig, formatUnits, parseUnits } from "./amount";
 import { resolveFtMetadata } from "./ft-metadata";
 import { NEARBLOCKS_SOURCE, fetchAllInRange, type ProgressFn, type RangeNs } from "./nearblocks";
-import { NEAR_ASSET, type Direction, type HistoryResult, type NormalizedTx, type TxKind } from "./types";
+import { deriveStakingRewards } from "./staking-rewards";
+import { HISTORY_SCHEMA_VERSION, NEAR_ASSET, type Direction, type HistoryResult, type NormalizedTx, type TxKind } from "./types";
 
 // ---------- indexer row shapes (validated; the original row is kept as `raw`) ----------
 
@@ -119,7 +120,7 @@ function directionFor(accountId: string, predecessor: string, receiver: string):
   return null;
 }
 
-interface Built extends Omit<NormalizedTx, "id"> {
+interface Built extends Omit<NormalizedTx, "id" | "fee"> {
   baseId: string;
 }
 
@@ -265,15 +266,77 @@ function normalizeFt(
   return out;
 }
 
+// ---------- fees ----------
+
+const SignedTxRow = z.object({
+  transaction_hash: z.string(),
+  signer_account_id: z.string(),
+  receiver_account_id: z.string(),
+  block_timestamp: intStr,
+  actions: z.array(z.object({ action: z.string(), method: z.string().nullable().optional() })).optional(),
+  outcomes: z.object({ status: z.boolean().nullable() }),
+  outcomes_agg: z.object({ transaction_fee: intStr }),
+});
+type SignedTxRow = z.infer<typeof SignedTxRow>;
+
+const FEE_BEARING_SOURCES = new Set([`${NEARBLOCKS_SOURCE}:receipts`, `${NEARBLOCKS_SOURCE}:staking-txns`]);
+
+/**
+ * Put each signed transaction's fee on exactly one record: the signer's own first receipt (earliest
+ * receipt/staking record of that tx sent by the account). If the tx produced no record, emit a fee-only one.
+ */
+function attachFees(accountId: string, records: NormalizedTx[], signed: { row: SignedTxRow; raw: unknown }[]): NormalizedTx[] {
+  const byTx = new Map<string, NormalizedTx[]>();
+  for (const r of records) {
+    if (!r.txHash) continue;
+    const list = byTx.get(r.txHash) ?? [];
+    list.push(r);
+    byTx.set(r.txHash, list);
+  }
+  const extra: NormalizedTx[] = [];
+  for (const { row, raw } of signed) {
+    if (row.signer_account_id !== accountId) continue;
+    const fee = { asset: "NEAR" as const, amount: formatUnits(parseUnits(row.outcomes_agg.transaction_fee), NEAR_ASSET.decimals) };
+    const inTx = (byTx.get(row.transaction_hash) ?? []).slice().sort((a, b) => (a.timestamp < b.timestamp ? -1 : a.timestamp > b.timestamp ? 1 : a.id < b.id ? -1 : 1));
+    const target =
+      inTx.find((r) => FEE_BEARING_SOURCES.has(r.source) && (r.direction === "out" || r.direction === "self")) ?? inTx[0];
+    if (target) {
+      target.fee = fee;
+      continue;
+    }
+    const methods = (row.actions ?? []).map((a) => a.method).filter((m): m is string => !!m);
+    extra.push({
+      id: `nearblocks:fee:${row.transaction_hash}`,
+      txHash: row.transaction_hash,
+      timestamp: nsToISO(BigInt(row.block_timestamp)),
+      direction: row.receiver_account_id === accountId ? "self" : "out",
+      kind: "other",
+      asset: NEAR_ASSET,
+      amount: "0",
+      counterparty: row.receiver_account_id === accountId ? null : row.receiver_account_id,
+      method: methods.length ? [...new Set(methods)].join(",") : null,
+      success: row.outcomes.status === true,
+      source: `${NEARBLOCKS_SOURCE}:txns`,
+      raw,
+      fee,
+    });
+  }
+  return [...records, ...extra];
+}
+
 // ---------- public API ----------
 
 export interface FetchHistoryOptions {
   onProgress?: ProgressFn;
 }
 
+const byTimeThenId = (a: NormalizedTx, b: NormalizedTx) =>
+  a.timestamp < b.timestamp ? -1 : a.timestamp > b.timestamp ? 1 : a.id < b.id ? -1 : 1;
+
 /**
  * Fetch and normalize a NEAR mainnet account's history for [fromISO, toISO] (both inclusive).
- * Sources (NearBlocks v3): receipts (native NEAR + function calls), staking-txns, ft-txns.
+ * Sources: NearBlocks v3 receipts (native NEAR + function calls), staking-txns (all-time, for pool
+ * discovery), ft-txns, txns signed by the account (fees); archival RPC pool snapshots (staking rewards).
  */
 export async function fetchHistory(
   accountId: string,
@@ -298,17 +361,18 @@ export async function fetchHistory(
     "receipts",
   );
 
-  onProgress?.(`Fetching staking txns…`);
-  const staking = validated(
+  onProgress?.(`Fetching all-time staking txns (pool discovery)…`);
+  const stakingAllTime = validated(
     StakingRow,
     await fetchAllInRange<StakingRow>({
       path: `/v3/accounts/${enc}/staking-txns`,
-      range,
+      range: { start: ZERO, endExclusive: range.endExclusive },
       timestampOf: (r) => BigInt(r.block_timestamp),
       onProgress,
     }),
     "staking-txns",
   );
+  const staking = stakingAllTime.filter(({ row }) => BigInt(row.block_timestamp) >= range.start);
 
   onProgress?.(`Fetching FT transfers…`);
   const ft = validated(
@@ -320,6 +384,19 @@ export async function fetchHistory(
       onProgress,
     }),
     "ft-txns",
+  );
+
+  onProgress?.(`Fetching transactions signed by ${accountId} (fees)…`);
+  const signed = validated(
+    SignedTxRow,
+    await fetchAllInRange<SignedTxRow>({
+      // The v3 `signer` filter returns no rows (observed 2026-11); filter on signer_account_id ourselves.
+      path: `/v3/accounts/${enc}/txns`,
+      range,
+      timestampOf: (r) => BigInt(r.block_timestamp),
+      onProgress,
+    }),
+    "txns",
   );
 
   const indexerMeta = new Map<string, { symbol?: unknown; decimals?: unknown }>();
@@ -343,20 +420,41 @@ export async function fetchHistory(
 
   // Stable unique ids even if the indexer emits two rows with the same natural key.
   const seen = new Map<string, number>();
-  const records: NormalizedTx[] = built.map(({ baseId, ...rest }) => {
+  const txRecords: NormalizedTx[] = built.map(({ baseId, ...rest }) => {
     const n = seen.get(baseId) ?? 0;
     seen.set(baseId, n + 1);
-    return { id: n === 0 ? baseId : `${baseId}#${n}`, ...rest };
+    return { id: n === 0 ? baseId : `${baseId}#${n}`, ...rest, fee: null };
   });
-  records.sort((a, b) => (a.timestamp < b.timestamp ? -1 : a.timestamp > b.timestamp ? 1 : a.id < b.id ? -1 : 1));
+  const withFees = attachFees(accountId, txRecords, signed);
+
+  onProgress?.(`Deriving staking rewards from pool snapshots…`);
+  const dateOf = (ns: bigint) => nsToISO(ns).slice(0, 10);
+  const rewards = await deriveStakingRewards({
+    accountId,
+    fromDate: dateOf(range.start),
+    toDate: dateOf(range.endExclusive - BigInt(1)),
+    events: stakingAllTime.map(({ row }) => ({
+      pool: row.contract,
+      type: row.type,
+      amount: absBig(parseUnits(row.amount)),
+      timestampNs: BigInt(row.block_timestamp),
+      txHash: row.transaction_hash ?? "",
+      receiptId: row.receipt_id,
+    })),
+    onProgress,
+  });
+
+  const records = [...withFees, ...rewards.records].sort(byTimeThenId);
 
   return {
+    schemaVersion: HISTORY_SCHEMA_VERSION,
     accountId,
     from: fromISO,
     to: toISO,
     rangeNs: { start: range.start.toString(), endExclusive: range.endExclusive.toString() },
     fetchedAt: new Date().toISOString(),
-    source: NEARBLOCKS_SOURCE,
+    source: `${NEARBLOCKS_SOURCE} + pool_snapshot`,
     records,
+    staking: rewards.info,
   };
 }
