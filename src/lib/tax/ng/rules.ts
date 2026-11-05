@@ -147,7 +147,7 @@ export function ruleSwapPairing(records: NormalizedTx[], alreadyMatched: Set<str
       out.set(l.id, match("swap", "disposal_swap", `Swap leg given up: ${gave} for ${got} via ${venue}; proceeds = FMV of asset given up (D1).`, { pairingId, swapRole: "disposed" }));
     }
     for (const l of acquired) {
-      out.set(l.id, match("swap", "disposal_swap", `Swap leg acquired: ${got} in exchange for ${gave} via ${venue}; cost base = FMV of asset given up (D1).`, { pairingId, swapRole: "acquired" }));
+      out.set(l.id, match("swap", "acquisition_swap", `Swap leg acquired: ${got} in exchange for ${gave} via ${venue}; cost base = FMV of asset given up (D1).`, { pairingId, swapRole: "acquired" }));
     }
   }
   return out;
@@ -225,12 +225,42 @@ export function ruleStorageDeposit(records: NormalizedTx[], alreadyMatched: Set<
   return out;
 }
 
+// ---------- DeFi harvest / claim (D13) ----------
+
+export const HARVEST_METHOD_RE = /harvest|claim|claim_reward|withdraw_reward/i;
+
+/**
+ * An incoming fungible-token leg in a transaction where the account itself called a
+ * harvest/claim-style method on a contract, coming from that contract (or minted, counterparty
+ * null, by that contract or as a result of the call) -> income_defi_yield.
+ */
+export function ruleDefiHarvest(records: NormalizedTx[], alreadyMatched: Set<string>): Map<string, RuleMatch> {
+  const out = new Map<string, RuleMatch>();
+  for (const legs of byTx(records).values()) {
+    const called = new Set(
+      legs
+        .filter((l) => l.direction === "out" && l.counterparty && methods(l).some((m) => HARVEST_METHOD_RE.test(m)))
+        .map((l) => l.counterparty!),
+    );
+    if (!called.size) continue;
+    for (const l of legs) {
+      if (alreadyMatched.has(l.id) || l.direction !== "in" || l.kind !== "ft_transfer" || !l.success) continue;
+      const fromCalled = l.counterparty !== null && called.has(l.counterparty);
+      const minted = l.counterparty === null;
+      if (!fromCalled && !minted) continue;
+      const via = [...called].join(", ");
+      out.set(l.id, match("defi_harvest", "income_defi_yield", `${l.amount} ${sym(l)} received after the account called ${l.method ?? "a harvest/claim method"} on ${via}; DeFi yield, income at FMV on receipt.`));
+    }
+  }
+  return out;
+}
+
 // ---------- all rules, in order ----------
 
 /**
  * Apply every rule in priority order; the first match for a record wins:
  * staking reward, pool lockup, system refund, own wallet, dust, round trip, storage deposit,
- * wrap/unwrap, liquid staking, swap pairing.
+ * DeFi harvest, wrap/unwrap, liquid staking, swap pairing.
  */
 export function applyRules(records: NormalizedTx[], ctx: RuleContext): Map<string, RuleMatch> {
   const result = new Map<string, RuleMatch>();
@@ -246,6 +276,7 @@ export function applyRules(records: NormalizedTx[], ctx: RuleContext): Map<strin
   }
   for (const [id, m] of ruleRoundTrip(records, new Set(result.keys()))) result.set(id, m);
   for (const [id, m] of ruleStorageDeposit(records, new Set(result.keys()))) result.set(id, m);
+  for (const [id, m] of ruleDefiHarvest(records, new Set(result.keys()))) result.set(id, m);
   for (const [id, m] of ruleWrapUnwrap(records.filter((r) => !result.has(r.id)))) result.set(id, m);
   for (const tx of records) {
     if (result.has(tx.id)) continue;

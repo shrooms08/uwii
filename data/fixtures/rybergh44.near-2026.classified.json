@@ -5,19 +5,19 @@
   "to": "2026-12-31",
   "ownAccounts": [],
   "historyFetchedAt": "2026-11-04T22:06:31.171Z",
-  "classifiedAt": "2026-11-05T07:01:35.819Z",
+  "classifiedAt": "2026-11-05T18:12:34.057Z",
   "model": "z-ai/glm-5.3-flash",
   "attestation": {
     "verified": true,
-    "details": "gateway + 1 model report(s) verified (14 checks, nonce 6c1a6893e89f8ac7f00c063a9c19485d569332952aadd6d522ef2886db4d602c)",
-    "nonce": "6c1a6893e89f8ac7f00c063a9c19485d569332952aadd6d522ef2886db4d602c"
+    "details": "gateway + 1 model report(s) verified (14 checks, nonce dea6335cfe319c59c1e706f6f857aae61127bbf442934acb74306a687a67f226)",
+    "nonce": "dea6335cfe319c59c1e706f6f857aae61127bbf442934acb74306a687a67f226"
   },
   "aiResponses": [
     {
       "batch": 1,
       "attempt": 1,
-      "chatId": "e35e89e438c047b6876a02303d6c0b15",
-      "txCount": 13,
+      "chatId": "8b2a3cf767d54db99593033216f05a1f",
+      "txCount": 8,
       "valid": true,
       "signatureVerified": true,
       "detail": "signature verified (provider_tee)"
@@ -25,12 +25,12 @@
   ],
   "metrics": {
     "total": 125,
-    "rule": 112,
-    "ai": 13,
+    "rule": 117,
+    "ai": 8,
     "user": 0,
-    "pctRule": "89.6%",
-    "pctAi": "10.4%",
-    "needsQuestion": 13,
+    "pctRule": "93.6%",
+    "pctAi": "6.4%",
+    "needsQuestion": 8,
     "aiResponses": 1,
     "aiResponsesVerified": 1,
     "attestationVerified": true
@@ -369,7 +369,7 @@
       },
       "amount": "0.002",
       "counterparty": null,
-      "method": "ai",
+      "method": "rule",
       "success": true,
       "source": "nearblocks-v3:ft-txns",
       "raw": {
@@ -401,16 +401,10 @@
       "fee": null,
       "label": "income_defi_yield",
       "assetCategory": "4",
-      "confidence": 0.75,
-      "reason": "MOON harvested from aa-harvest-moon farming contract; protocol yield income at FMV on receipt. MOON is not a listed category; treated as utility/reward token (4).",
+      "confidence": 1,
+      "reason": "0.002 MOON received after the account called harvest on aa-harvest-moon.near; DeFi yield, income at FMV on receipt.",
       "circularRef": "7.1 event 14; 10.4",
-      "needsQuestion": true,
-      "evidence": {
-        "chatId": "e35e89e438c047b6876a02303d6c0b15",
-        "signatureVerified": true,
-        "model": "z-ai/glm-5.3-flash",
-        "attempt": 1
-      }
+      "needsQuestion": false
     },
     {
       "id": "nearblocks:receipt:EyEHKua5HNEkNmoxTfEC95DCj11iphKWLauudjEHvppk",
@@ -507,12 +501,12 @@
       "fee": null,
       "label": "unknown",
       "assetCategory": "1",
-      "confidence": 0.3,
-      "reason": "Incoming NEAR from an unnamed address; purpose (gift, own funds, payment) cannot be determined from on-chain data.",
+      "confidence": 0.5,
+      "reason": "Incoming NEAR from an external address; purpose (gift, own funds, income) cannot be determined from on-chain data.",
       "circularRef": "question",
       "needsQuestion": true,
       "evidence": {
-        "chatId": "e35e89e438c047b6876a02303d6c0b15",
+        "chatId": "8b2a3cf767d54db99593033216f05a1f",
         "signatureVerified": true,
         "model": "z-ai/glm-5.3-flash",
         "attempt": 1
@@ -585,7 +579,7 @@
       },
       "amount": "0.002",
       "counterparty": null,
-      "method": "ai",
+      "method": "rule",
       "success": true,
       "source": "nearblocks-v3:ft-txns",
       "raw": {
@@ -617,16 +611,10 @@
       "fee": null,
       "label": "income_defi_yield",
       "assetCategory": "4",
-      "confidence": 0.75,
-      "reason": "Repeated MOON harvest from aa-harvest-moon; DeFi/farming reward income at FMV on receipt.",
+      "confidence": 1,
+      "reason": "0.002 MOON received after the account called harvest on aa-harvest-moon.near; DeFi yield, income at FMV on receipt.",
       "circularRef": "7.1 event 14; 10.4",
-      "needsQuestion": true,
-      "evidence": {
-        "chatId": "e35e89e438c047b6876a02303d6c0b15",
-        "signatureVerified": true,
-        "model": "z-ai/glm-5.3-flash",
-        "attempt": 1
-      }
+      "needsQuestion": false
     },
     {
       "id": "nearblocks:receipt:11Emks2Eai55gnTGw3ci7oJsgkVQfECcWsGSStY76dz",
@@ -745,7 +733,7 @@
       },
       "amount": "0.002",
       "counterparty": null,
-      "method": "ai",
+      "method": "rule",
       "success": true,
       "source": "nearblocks-v3:ft-txns",
       "raw": {
@@ -777,16 +765,10 @@
       "fee": null,
       "label": "income_defi_yield",
       "assetCategory": "4",
-      "confidence": 0.75,
-      "reason": "Repeated MOON harvest from aa-harvest-moon; DeFi/farming reward income at FMV on receipt.",
+      "confidence": 1,
+      "reason": "0.002 MOON received after the account called harvest on aa-harvest-moon.near; DeFi yield, income at FMV on receipt.",
       "circularRef": "7.1 event 14; 10.4",
-      "needsQuestion": true,
-      "evidence": {
-        "chatId": "e35e89e438c047b6876a02303d6c0b15",
-        "signatureVerified": true,
-        "model": "z-ai/glm-5.3-flash",
-        "attempt": 1
-      }
+      "needsQuestion": false
     },
     {
       "id": "nearblocks:receipt:BoZZfb2MDt8FM4F4sjspMCZKZS82P84xSmfxMznz2hYU",
@@ -905,7 +887,7 @@
       },
       "amount": "0.002",
       "counterparty": null,
-      "method": "ai",
+      "method": "rule",
       "success": true,
       "source": "nearblocks-v3:ft-txns",
       "raw": {
@@ -937,16 +919,10 @@
       "fee": null,
       "label": "income_defi_yield",
       "assetCategory": "4",
-      "confidence": 0.75,
-      "reason": "Repeated MOON harvest from aa-harvest-moon; DeFi/farming reward income at FMV on receipt.",
+      "confidence": 1,
+      "reason": "0.002 MOON received after the account called harvest on aa-harvest-moon.near; DeFi yield, income at FMV on receipt.",
       "circularRef": "7.1 event 14; 10.4",
-      "needsQuestion": true,
-      "evidence": {
-        "chatId": "e35e89e438c047b6876a02303d6c0b15",
-        "signatureVerified": true,
-        "model": "z-ai/glm-5.3-flash",
-        "attempt": 1
-      }
+      "needsQuestion": false
     },
     {
       "id": "nearblocks:receipt:AQc4vkf6qWdTXcm1nfd58yHsv7ftujFuyzhedHpwVWbN",
@@ -1065,7 +1041,7 @@
       },
       "amount": "0.002",
       "counterparty": null,
-      "method": "ai",
+      "method": "rule",
       "success": true,
       "source": "nearblocks-v3:ft-txns",
       "raw": {
@@ -1097,16 +1073,10 @@
       "fee": null,
       "label": "income_defi_yield",
       "assetCategory": "4",
-      "confidence": 0.75,
-      "reason": "Repeated MOON harvest from aa-harvest-moon; DeFi/farming reward income at FMV on receipt.",
+      "confidence": 1,
+      "reason": "0.002 MOON received after the account called harvest on aa-harvest-moon.near; DeFi yield, income at FMV on receipt.",
       "circularRef": "7.1 event 14; 10.4",
-      "needsQuestion": true,
-      "evidence": {
-        "chatId": "e35e89e438c047b6876a02303d6c0b15",
-        "signatureVerified": true,
-        "model": "z-ai/glm-5.3-flash",
-        "attempt": 1
-      }
+      "needsQuestion": false
     },
     {
       "id": "nearblocks:receipt:Dz4Pp8TAMXKiZXRbq15FSTbKJZdqVtvqSfQCHjgncYHX",
@@ -1203,12 +1173,12 @@
       "fee": null,
       "label": "unknown",
       "assetCategory": "1",
-      "confidence": 0.3,
-      "reason": "Large incoming NEAR from same recurring address; could be own funds moved between wallets, but ownership link is not provable on-chain.",
+      "confidence": 0.5,
+      "reason": "Incoming NEAR from same counterparty as t1; intent unknown without user context.",
       "circularRef": "question",
       "needsQuestion": true,
       "evidence": {
-        "chatId": "e35e89e438c047b6876a02303d6c0b15",
+        "chatId": "8b2a3cf767d54db99593033216f05a1f",
         "signatureVerified": true,
         "model": "z-ai/glm-5.3-flash",
         "attempt": 1
@@ -2977,11 +2947,11 @@
         "transaction_hash": "FdnXGLCEUc8Yjeszixt9naec425XG2z6YJkg3mUvYzjv"
       },
       "fee": null,
-      "label": "disposal_swap",
+      "label": "acquisition_swap",
       "assetCategory": "4",
       "confidence": 1,
       "reason": "Swap leg acquired: 1633.685702608906460383 RHEA in exchange for 20 wNEAR via aggregatedex.near (DeltaTrade DEX aggregator); cost base = FMV of asset given up (D1).",
-      "circularRef": "9.1.2; 9.3.2; Illustration 3",
+      "circularRef": "9.3.2; Illustration 3",
       "needsQuestion": false,
       "pairingId": "swap:FdnXGLCEUc8Yjeszixt9naec425XG2z6YJkg3mUvYzjv",
       "swapRole": "acquired"
@@ -3331,12 +3301,12 @@
       "fee": null,
       "label": "unknown",
       "assetCategory": "1",
-      "confidence": 0.3,
-      "reason": "Incoming NEAR from recurring address; purpose indeterminable from on-chain data alone.",
+      "confidence": 0.5,
+      "reason": "Incoming NEAR from same counterparty; could be own funds, gift or income — needs user clarification.",
       "circularRef": "question",
       "needsQuestion": true,
       "evidence": {
-        "chatId": "e35e89e438c047b6876a02303d6c0b15",
+        "chatId": "8b2a3cf767d54db99593033216f05a1f",
         "signatureVerified": true,
         "model": "z-ai/glm-5.3-flash",
         "attempt": 1
@@ -3390,12 +3360,12 @@
       },
       "label": "unknown",
       "assetCategory": "1",
-      "confidence": 0.3,
-      "reason": "Outgoing NEAR to an unnamed address; could be a gift, payment or transfer to own wallet — intent not ascertainable on-chain.",
+      "confidence": 0.5,
+      "reason": "Outgoing NEAR transfer to an external address; whether it is a payment, gift or transfer to own wallet is not determinable on-chain.",
       "circularRef": "question",
       "needsQuestion": true,
       "evidence": {
-        "chatId": "e35e89e438c047b6876a02303d6c0b15",
+        "chatId": "8b2a3cf767d54db99593033216f05a1f",
         "signatureVerified": true,
         "model": "z-ai/glm-5.3-flash",
         "attempt": 1
@@ -3495,13 +3465,13 @@
       },
       "fee": null,
       "label": "unknown",
-      "assetCategory": "4",
-      "confidence": 0.3,
-      "reason": "NPRO received from intents.near; could be a swap leg, purchase or reward — purpose not determinable from this leg alone.",
+      "assetCategory": "unknown",
+      "confidence": 0.5,
+      "reason": "Incoming NPRO from intents.near; source (swap leg, reward, gift) unclear. NPRO symbol not in listed categories, so category unknown.",
       "circularRef": "question",
       "needsQuestion": true,
       "evidence": {
-        "chatId": "e35e89e438c047b6876a02303d6c0b15",
+        "chatId": "8b2a3cf767d54db99593033216f05a1f",
         "signatureVerified": true,
         "model": "z-ai/glm-5.3-flash",
         "attempt": 1
@@ -3605,13 +3575,13 @@
       },
       "fee": null,
       "label": "unknown",
-      "assetCategory": "4",
-      "confidence": 0.3,
-      "reason": "500 NPRO sent via ft_transfer_call to premium.nearmobile.near shortly after receipt; may be a swap/payment, but consideration is not visible on-chain.",
+      "assetCategory": "unknown",
+      "confidence": 0.5,
+      "reason": "Outgoing NPRO via ft_transfer_call to premium.nearmobile.near; may be a payment/disposal but consideration and purpose unknown. NPRO category unknown.",
       "circularRef": "question",
       "needsQuestion": true,
       "evidence": {
-        "chatId": "e35e89e438c047b6876a02303d6c0b15",
+        "chatId": "8b2a3cf767d54db99593033216f05a1f",
         "signatureVerified": true,
         "model": "z-ai/glm-5.3-flash",
         "attempt": 1
@@ -4590,12 +4560,12 @@
       "fee": null,
       "label": "unknown",
       "assetCategory": "1",
-      "confidence": 0.3,
-      "reason": "Incoming NEAR from recurring address; purpose indeterminable from on-chain data alone.",
+      "confidence": 0.5,
+      "reason": "Incoming NEAR from the recurring counterparty; purpose not ascertainable from on-chain data.",
       "circularRef": "question",
       "needsQuestion": true,
       "evidence": {
-        "chatId": "e35e89e438c047b6876a02303d6c0b15",
+        "chatId": "8b2a3cf767d54db99593033216f05a1f",
         "signatureVerified": true,
         "model": "z-ai/glm-5.3-flash",
         "attempt": 1
@@ -5252,11 +5222,11 @@
         "transaction_hash": "Dq86v7Gg1YXTPohAjNrvrZWEJ4KzUgdZvRE48SZcLREf"
       },
       "fee": null,
-      "label": "disposal_swap",
+      "label": "acquisition_swap",
       "assetCategory": "4",
       "confidence": 1,
       "reason": "Swap leg acquired: 1373.049082678053733543 RHEA in exchange for 17.5 wNEAR via aggregatedex.near (DeltaTrade DEX aggregator); cost base = FMV of asset given up (D1).",
-      "circularRef": "9.1.2; 9.3.2; Illustration 3",
+      "circularRef": "9.3.2; Illustration 3",
       "needsQuestion": false,
       "pairingId": "swap:Dq86v7Gg1YXTPohAjNrvrZWEJ4KzUgdZvRE48SZcLREf",
       "swapRole": "acquired"
@@ -6284,12 +6254,12 @@
       "fee": null,
       "label": "unknown",
       "assetCategory": "1",
-      "confidence": 0.3,
-      "reason": "Incoming NEAR from recurring address; purpose indeterminable from on-chain data alone.",
+      "confidence": 0.5,
+      "reason": "Incoming NEAR from the recurring counterparty; could be income, gift or own funds — user confirmation required.",
       "circularRef": "question",
       "needsQuestion": true,
       "evidence": {
-        "chatId": "e35e89e438c047b6876a02303d6c0b15",
+        "chatId": "8b2a3cf767d54db99593033216f05a1f",
         "signatureVerified": true,
         "model": "z-ai/glm-5.3-flash",
         "attempt": 1

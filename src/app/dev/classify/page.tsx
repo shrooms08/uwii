@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { isValidAccountId } from "@/lib/history/fetch";
 import { getClassification } from "@/lib/tax/ng/cache";
+import { isAiEvidence } from "@/lib/tax/ng/types";
 
 export const maxDuration = 300;
 
@@ -90,7 +91,7 @@ async function Classified({ searchParams }: { searchParams: SearchParams }) {
                 <td style={{ ...cell, ...mono, textAlign: "right" }}>{r.amount}</td>
                 <td style={{ ...cell, ...mono }}>{r.label}{r.swapRole ? ` [${r.swapRole}]` : ""}</td>
                 <td style={cell}>{r.assetCategory}</td>
-                <td style={cell}>{r.method}{r.evidence ? (r.evidence.signatureVerified ? " ✓sig" : " ✗sig") : ""}</td>
+                <td style={cell}>{r.method}{isAiEvidence(r.evidence) ? (r.evidence.signatureVerified ? " ✓sig" : " ✗sig") : ""}</td>
                 <td style={cell}>{r.confidence.toFixed(2)}</td>
                 <td style={{ ...cell, fontSize: 12 }}>{r.circularRef}</td>
                 <td style={cell}>{r.needsQuestion ? "yes" : "no"}</td>

@@ -12,6 +12,20 @@ export interface AiEvidence {
   detail?: string;
 }
 
+/** The rule/AI classification a user answer replaced. */
+export interface PreviousClassification {
+  label: LabelId;
+  method: ClassificationMethod;
+  confidence: number;
+  reason: string;
+  ai?: AiEvidence;
+}
+
+/** Evidence on a user-labelled record. */
+export interface UserEvidence {
+  previous: PreviousClassification;
+}
+
 export type ClassifiedTx = NormalizedTx & {
   label: LabelId;
   assetCategory: AssetCategory;
@@ -25,8 +39,14 @@ export type ClassifiedTx = NormalizedTx & {
   pairingId?: string;
   /** For swap legs: the asset given up, or the asset received in exchange. */
   swapRole?: "disposed" | "acquired";
-  evidence?: AiEvidence;
+  evidence?: AiEvidence | UserEvidence;
+  /** Naira amount paid/received for P2P answers (exact decimal string). */
+  userFiat?: { ngn: string };
+  /** The swap source leg is not in the captured data (e.g. inside NEAR Intents). */
+  incompleteSourceLeg?: boolean;
 };
+
+export const isAiEvidence = (e: ClassifiedTx["evidence"]): e is AiEvidence => !!e && "chatId" in e;
 
 export interface AiResponseRecord {
   batch: number;

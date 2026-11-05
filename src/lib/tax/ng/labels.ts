@@ -25,6 +25,7 @@ export const LABEL_IDS = [
   "income_airdrop",
   "airdrop_no_value",
   "disposal_swap",
+  "acquisition_swap",
   "disposal_payment",
   "disposal_sale_fiat",
   "disposal_liquidation",
@@ -34,6 +35,8 @@ export const LABEL_IDS = [
   "wrap_unwrap",
   "defi_receipt",
   "loan_collateralised",
+  "loan_received",
+  "loan_repayment",
   "gift_given",
   "gift_received",
   "gas_refund",
@@ -94,6 +97,12 @@ export const LABELS: Record<LabelId, LabelDef> = {
     taxable: "disposal",
     circularRef: "9.1.2; 9.3.2; Illustration 3",
   },
+  acquisition_swap: {
+    id: "acquisition_swap",
+    treatment: "Asset received in a token/token swap; dollar cost base = dollar FMV of asset given up (D1).",
+    taxable: "acquisition",
+    circularRef: "9.3.2; Illustration 3",
+  },
   disposal_payment: {
     id: "disposal_payment",
     treatment: "Using a virtual asset to pay for goods or services: disposal at FMV.",
@@ -145,6 +154,18 @@ export const LABELS: Record<LabelId, LabelDef> = {
   loan_collateralised: {
     id: "loan_collateralised",
     treatment: "Posting or recovering loan collateral, or borrowing against it: not a disposal.",
+    taxable: "non_taxable",
+    circularRef: "7.2.6",
+  },
+  loan_received: {
+    id: "loan_received",
+    treatment: "Receipt of loan funds creates a liability, not income.",
+    taxable: "non_taxable",
+    circularRef: "7.2.6 (by analogy for uncollateralised loans)",
+  },
+  loan_repayment: {
+    id: "loan_repayment",
+    treatment: "Repaying a loan settles a liability; not a taxable event in itself.",
     taxable: "non_taxable",
     circularRef: "7.2.6",
   },

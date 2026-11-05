@@ -22,6 +22,7 @@ async function main() {
     process.exit(2);
   }
   const { getClassification, writeClassifiedFixture } = await import("../src/lib/tax/ng/cache");
+  const { isAiEvidence } = await import("../src/lib/tax/ng/types");
 
   const { run, origin, file } = await getClassification(values.account, values.from, values.to, {
     ownAccounts: values.own.split(","),
@@ -43,7 +44,7 @@ async function main() {
   for (const [k, v] of Object.entries(counts).sort((a, b) => b[1] - a[1])) console.log(`  ${k.padEnd(26)} ${v}`);
 
   if (values["write-fixture"]) console.log(`\nWrote classified fixture: ${await writeClassifiedFixture(run)}`);
-  const unverified = run.records.filter((r) => r.method === "ai" && r.evidence && !r.evidence.signatureVerified && !r.needsQuestion);
+  const unverified = run.records.filter((r) => r.method === "ai" && isAiEvidence(r.evidence) && !r.evidence.signatureVerified && !r.needsQuestion);
   if (unverified.length) {
     console.error(`${unverified.length} AI-classified records have an unverified signature but are not flagged`);
     process.exit(1);

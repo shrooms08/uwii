@@ -75,13 +75,14 @@ const fromRule = (tx: NormalizedTx, m: RuleMatch): ClassifiedTx =>
 
 // ---------- post-AI consistency guards (D12): flag only, never change the label ----------
 
-const INFLOW_ONLY = (l: LabelId) => l.startsWith("income_") || l === "gift_received" || l === "acquisition_fiat";
-const OUTFLOW_ONLY = (l: LabelId) => l.startsWith("disposal_") || l === "gift_given";
+const INFLOW_ONLY = (l: LabelId) =>
+  l.startsWith("income_") || l === "gift_received" || l === "acquisition_fiat" || l === "acquisition_swap" || l === "loan_received";
+const OUTFLOW_ONLY = (l: LabelId) => l.startsWith("disposal_") || l === "gift_given" || l === "loan_repayment";
 
 /** Reasons an AI label is inconsistent with the record; empty when consistent. */
 export function consistencyGuards(tx: NormalizedTx, label: LabelId, pairingId: string | undefined, all: NormalizedTx[]): string[] {
   const reasons: string[] = [];
-  if (label === "disposal_swap" && !pairingId) reasons.push("unpaired swap leg");
+  if ((label === "disposal_swap" || label === "acquisition_swap") && !pairingId) reasons.push("unpaired swap leg");
   if ((INFLOW_ONLY(label) && tx.direction === "out") || (OUTFLOW_ONLY(label) && tx.direction === "in")) {
     reasons.push("label contradicts direction");
   }

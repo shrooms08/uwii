@@ -96,3 +96,29 @@ never change the label; rule outputs are not guarded because they are determinis
 Rationale: Phase 3 showed the model mislabelling a refunded swap input as a disposal at 0.85 confidence (above the
 question threshold), dust deposits as unpaired swap disposals, and zero-value or storage refunds as gas refunds.
 Deterministic rules remove those cases; the guards catch the same shape of error if the model makes it elsewhere.
+
+## D13 — Swap acquisition, loans and DeFi harvest (Accepted)
+- `acquisition_swap` (acquisition; 9.3.2, Illustration 3) — the incoming leg of a token/token swap. Its dollar cost
+  base = dollar FMV of the asset given up (D1). The swap rule now labels the outgoing leg `disposal_swap` and the
+  incoming leg `acquisition_swap`, linked by `pairingId`. Guards: `acquisition_swap` without a `pairingId` is an
+  "unpaired swap leg"; on an outgoing leg it "contradicts direction".
+- `loan_received` (non-taxable; 7.2.6 by analogy for uncollateralised loans) — loan funds received create a
+  liability, not income. `loan_repayment` (non-taxable; 7.2.6) — settling the liability. Guards: `loan_received`
+  on an outgoing leg, or `loan_repayment` on an incoming leg, contradicts direction. Note: repaying in a different
+  asset from the one borrowed may itself be a disposal of the asset used; Phase 5 must treat the repayment leg's
+  asset movement under FIFO.
+- DeFi harvest rule (`income_defi_yield`, 7.1 event 14; 10.4) — an incoming fungible-token leg in a transaction where
+  the account itself called a method matching `/harvest|claim|claim_reward|withdraw_reward/i`, coming from the called
+  contract or minted (counterparty null). Deterministic, confidence 1.
+
+## D14 — User answers (Accepted)
+- Records still `needsQuestion` after rules (re-run with the user's declared own accounts) and AI are grouped by
+  (counterparty, direction); `intents.near` inflows form their own group. One plain-English question per group; the
+  answer applies to every transaction in the group unless overridden per transaction.
+- Answers become `method: "user"`, confidence 1, `circularRef` from labels.ts, with the previous rule/AI result kept
+  in `evidence.previous`. "I don't know" keeps the record unresolved (`unknown`, still a question).
+- P2P naira options require the naira amount per transaction (`userFiat.ngn`, decimal string).
+- NEAR Intents swap answer: `acquisition_swap` with `incompleteSourceLeg: true`; the source leg inside NEAR Intents
+  is not captured, so the cost base uses the dollar FMV of the asset received (9.1.2 Step 1(b)) pending source data.
+- Privacy: answers and the optional profile ("other taxable income in 2026 (NGN)", for D6) live only in the
+  browser (localStorage) and are sent in each request body. The server stores and logs neither.
