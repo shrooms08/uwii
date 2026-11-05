@@ -61,6 +61,11 @@ Annual chargeable income (NGN):
 ## D10 — VAT on professional fees (Accepted, out of scope)
 - VAT on professional fees received in virtual assets is out of MVP scope. The report will note it.
 
-## OPEN D11 — Grandfathering of pre-2026 holdings
-- Proposed: for holdings acquired before 1 January 2026, cost base = higher of original cost or FMV at
-  31 December 2025. Pending confirmation.
+## D11 — Pre-2026 holdings cost-base reset (Decided)
+- For any unit acquired before 1 January 2026, the dollar cost base used in 2026+ disposals = the **HIGHER** of
+  (a) the original dollar cost base, or (b) the dollar FMV at 31 December 2025 23:59:59 UTC.
+- Basis: the Nigeria Tax Act 2025 is silent on a formal reset; the Presidential Fiscal Policy and Tax Reforms
+  Committee (Taiwo Oyedele) publicly clarified that gains accrued up to 31 December 2025 are grandfathered on this
+  basis. Pending a citable paragraph in the General Transition Guidelines for the Tax Acts 2025.
+- The report must show **BOTH** the reset gain and the no-reset gain for affected disposals, with this note.
+- Computation is implemented in Phase 5; this entry records the decision only.
