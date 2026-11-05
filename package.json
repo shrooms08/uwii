@@ -10,7 +10,7 @@
     "check:attestation": "tsx --env-file-if-exists=.env.local scripts/check-attestation.ts",
     "fetch:history": "tsx scripts/fetch-history.ts",
     "classify": "tsx --env-file-if-exists=.env.local scripts/classify-history.ts",
-    "test": "tsx --test src/lib/tax/ng/*.test.ts",
+    "test": "tsx --test src/lib/tax/ng/*.test.ts src/lib/report/*.test.ts",
     "fetch:fx": "tsx scripts/fetch-cbn-nafem.ts",
     "report": "tsx --env-file-if-exists=.env.local scripts/report.ts"
   },
@@ -18,6 +18,8 @@
     "@phala/dcap-qvl": "^0.7.1",
     "decimal.js": "10.6.0",
     "ethers": "^6.17.0",
+    "jspdf": "4.2.1",
+    "jspdf-autotable": "5.0.9",
     "next": "16.4.5",
     "openai": "^7.50.0",
     "react": "19.3.0",

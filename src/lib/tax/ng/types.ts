@@ -56,6 +56,8 @@ export interface AiResponseRecord {
   valid: boolean;
   signatureVerified: boolean;
   detail: string;
+  /** Address that signed this response (when the signature was fetched). */
+  signingAddress?: string;
 }
 
 export interface ClassificationMetrics {
@@ -83,7 +85,18 @@ export interface ClassifiedRun {
   historyFetchedAt: string;
   classifiedAt: string;
   model: string | null;
-  attestation: { verified: boolean; details: string; nonce: string | null };
+  attestation: {
+    verified: boolean;
+    details: string;
+    nonce: string | null;
+    /** Preflight checks passed / run (absent on runs recorded before this field existed). */
+    checksPassed?: number;
+    checksTotal?: number;
+    /** Signing identities of the verified gateway and model reports. */
+    reportSigners?: { label: string; address: string; verified: boolean }[];
+    /** When the attestation reports were verified. */
+    attestedAt?: string;
+  };
   aiResponses: AiResponseRecord[];
   metrics: ClassificationMetrics;
   records: ClassifiedTx[];

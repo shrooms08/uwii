@@ -5,22 +5,38 @@
   "to": "2026-12-31",
   "ownAccounts": [],
   "historyFetchedAt": "2026-11-04T22:06:31.171Z",
-  "classifiedAt": "2026-11-05T18:12:34.057Z",
+  "classifiedAt": "2026-11-05T19:18:19.596Z",
   "model": "z-ai/glm-5.3-flash",
   "attestation": {
     "verified": true,
-    "details": "gateway + 1 model report(s) verified (14 checks, nonce dea6335cfe319c59c1e706f6f857aae61127bbf442934acb74306a687a67f226)",
-    "nonce": "dea6335cfe319c59c1e706f6f857aae61127bbf442934acb74306a687a67f226"
+    "details": "gateway + 1 model report(s) verified (14 checks, nonce 4cd6a569f3395b43f45058e14a9458d8e71e07feae82640cf2c60af0003705b6)",
+    "nonce": "4cd6a569f3395b43f45058e14a9458d8e71e07feae82640cf2c60af0003705b6",
+    "checksPassed": 14,
+    "checksTotal": 14,
+    "reportSigners": [
+      {
+        "label": "gateway",
+        "address": "0xb98a789cdc4817275f5155593ba73ef2a957e779",
+        "verified": true
+      },
+      {
+        "label": "model #1",
+        "address": "0x3b753b4406613c5e70ae640508632b600424fa0c",
+        "verified": true
+      }
+    ],
+    "attestedAt": "2026-11-05T19:18:00.061Z"
   },
   "aiResponses": [
     {
       "batch": 1,
       "attempt": 1,
-      "chatId": "8b2a3cf767d54db99593033216f05a1f",
+      "chatId": "0b4df1acc9074fc18f9a4ed2f920b466",
       "txCount": 8,
       "valid": true,
       "signatureVerified": true,
-      "detail": "signature verified (provider_tee)"
+      "detail": "signature verified (provider_tee)",
+      "signingAddress": "0x3b753b4406613c5e70ae640508632b600424fa0c"
     }
   ],
   "metrics": {
@@ -501,12 +517,12 @@
       "fee": null,
       "label": "unknown",
       "assetCategory": "1",
-      "confidence": 0.5,
-      "reason": "Incoming NEAR from an external address; purpose (gift, own funds, income) cannot be determined from on-chain data.",
+      "confidence": 0.3,
+      "reason": "Incoming NEAR from an external address; purpose (gift, own funds, payment) cannot be determined on-chain.",
       "circularRef": "question",
       "needsQuestion": true,
       "evidence": {
-        "chatId": "8b2a3cf767d54db99593033216f05a1f",
+        "chatId": "0b4df1acc9074fc18f9a4ed2f920b466",
         "signatureVerified": true,
         "model": "z-ai/glm-5.3-flash",
         "attempt": 1
@@ -1173,12 +1189,12 @@
       "fee": null,
       "label": "unknown",
       "assetCategory": "1",
-      "confidence": 0.5,
-      "reason": "Incoming NEAR from same counterparty as t1; intent unknown without user context.",
+      "confidence": 0.3,
+      "reason": "Incoming NEAR from same external address; intent not ascertainable from on-chain data.",
       "circularRef": "question",
       "needsQuestion": true,
       "evidence": {
-        "chatId": "8b2a3cf767d54db99593033216f05a1f",
+        "chatId": "0b4df1acc9074fc18f9a4ed2f920b466",
         "signatureVerified": true,
         "model": "z-ai/glm-5.3-flash",
         "attempt": 1
@@ -3301,12 +3317,12 @@
       "fee": null,
       "label": "unknown",
       "assetCategory": "1",
-      "confidence": 0.5,
-      "reason": "Incoming NEAR from same counterparty; could be own funds, gift or income — needs user clarification.",
+      "confidence": 0.3,
+      "reason": "Incoming NEAR from same external address; intent not ascertainable from on-chain data.",
       "circularRef": "question",
       "needsQuestion": true,
       "evidence": {
-        "chatId": "8b2a3cf767d54db99593033216f05a1f",
+        "chatId": "0b4df1acc9074fc18f9a4ed2f920b466",
         "signatureVerified": true,
         "model": "z-ai/glm-5.3-flash",
         "attempt": 1
@@ -3360,12 +3376,12 @@
       },
       "label": "unknown",
       "assetCategory": "1",
-      "confidence": 0.5,
-      "reason": "Outgoing NEAR transfer to an external address; whether it is a payment, gift or transfer to own wallet is not determinable on-chain.",
+      "confidence": 0.4,
+      "reason": "Outgoing NEAR to an external address; could be payment (disposal) or own-wallet transfer; intent unknown.",
       "circularRef": "question",
       "needsQuestion": true,
       "evidence": {
-        "chatId": "8b2a3cf767d54db99593033216f05a1f",
+        "chatId": "0b4df1acc9074fc18f9a4ed2f920b466",
         "signatureVerified": true,
         "model": "z-ai/glm-5.3-flash",
         "attempt": 1
@@ -3466,12 +3482,12 @@
       "fee": null,
       "label": "unknown",
       "assetCategory": "unknown",
-      "confidence": 0.5,
-      "reason": "Incoming NPRO from intents.near; source (swap leg, reward, gift) unclear. NPRO symbol not in listed categories, so category unknown.",
+      "confidence": 0.3,
+      "reason": "Incoming NPRO from intents.near; could be swap result, reward or transfer; purpose not determinable. NPRO category unknown.",
       "circularRef": "question",
       "needsQuestion": true,
       "evidence": {
-        "chatId": "8b2a3cf767d54db99593033216f05a1f",
+        "chatId": "0b4df1acc9074fc18f9a4ed2f920b466",
         "signatureVerified": true,
         "model": "z-ai/glm-5.3-flash",
         "attempt": 1
@@ -3574,14 +3590,14 @@
         "transaction_hash": "3upJu93rriBxxeRww7wJYRbTa5mQLc1zRaFEgdM7LYhs"
       },
       "fee": null,
-      "label": "unknown",
+      "label": "disposal_payment",
       "assetCategory": "unknown",
-      "confidence": 0.5,
-      "reason": "Outgoing NPRO via ft_transfer_call to premium.nearmobile.near; may be a payment/disposal but consideration and purpose unknown. NPRO category unknown.",
-      "circularRef": "question",
+      "confidence": 0.6,
+      "reason": "NPRO sent via ft_transfer_call to premium.nearmobile.near, suggesting payment for a premium service; disposal at FMV. NPRO category unknown.",
+      "circularRef": "7.1 event 5",
       "needsQuestion": true,
       "evidence": {
-        "chatId": "8b2a3cf767d54db99593033216f05a1f",
+        "chatId": "0b4df1acc9074fc18f9a4ed2f920b466",
         "signatureVerified": true,
         "model": "z-ai/glm-5.3-flash",
         "attempt": 1
@@ -4560,12 +4576,12 @@
       "fee": null,
       "label": "unknown",
       "assetCategory": "1",
-      "confidence": 0.5,
-      "reason": "Incoming NEAR from the recurring counterparty; purpose not ascertainable from on-chain data.",
+      "confidence": 0.3,
+      "reason": "Incoming NEAR from same external address; intent not ascertainable from on-chain data.",
       "circularRef": "question",
       "needsQuestion": true,
       "evidence": {
-        "chatId": "8b2a3cf767d54db99593033216f05a1f",
+        "chatId": "0b4df1acc9074fc18f9a4ed2f920b466",
         "signatureVerified": true,
         "model": "z-ai/glm-5.3-flash",
         "attempt": 1
@@ -6254,12 +6270,12 @@
       "fee": null,
       "label": "unknown",
       "assetCategory": "1",
-      "confidence": 0.5,
-      "reason": "Incoming NEAR from the recurring counterparty; could be income, gift or own funds — user confirmation required.",
+      "confidence": 0.3,
+      "reason": "Incoming NEAR from same external address; intent not ascertainable from on-chain data.",
       "circularRef": "question",
       "needsQuestion": true,
       "evidence": {
-        "chatId": "8b2a3cf767d54db99593033216f05a1f",
+        "chatId": "0b4df1acc9074fc18f9a4ed2f920b466",
         "signatureVerified": true,
         "model": "z-ai/glm-5.3-flash",
         "attempt": 1

@@ -246,13 +246,16 @@ async function complete(model: string, payload: PayloadItem[]): Promise<Completi
   return { chatId: completion.id ?? null, content: completion.choices[0]?.message?.content ?? "", exchange };
 }
 
-async function checkSignature(preflight: Preflight, c: Completion): Promise<{ ok: boolean; detail: string }> {
+async function checkSignature(preflight: Preflight, c: Completion): Promise<{ ok: boolean; detail: string; signingAddress?: string }> {
   if (!c.chatId) return { ok: false, detail: "no chat id in response" };
   if (!c.exchange) return { ok: false, detail: "exact request/response bytes not captured" };
   const r = await verifyResponse(preflight, { chatId: c.chatId, ...c.exchange });
   const failed = r.checks.find((x) => !x.ok);
   if (r.checks.length === 0) return { ok: false, detail: "no signature checks ran" };
-  return failed ? { ok: false, detail: `${failed.step}: ${failed.detail}` } : { ok: true, detail: `signature verified (${String(r.summary.signature_kind)})` };
+  const signingAddress = typeof r.summary.signing_address === "string" ? r.summary.signing_address : undefined;
+  return failed
+    ? { ok: false, detail: `${failed.step}: ${failed.detail}`, signingAddress }
+    : { ok: true, detail: `signature verified (${String(r.summary.signature_kind)})`, signingAddress };
 }
 
 export function preflightVerified(p: Preflight): { ok: boolean; details: string } {
@@ -305,7 +308,7 @@ export async function classifyHistory(history: HistoryResult, options: ClassifyO
 
   const aiResponses: AiResponseRecord[] = [];
   let model: string | null = null;
-  let attestation = { verified: false, details: "not needed: every record matched a rule", nonce: null as string | null };
+  let attestation: ClassifiedRun["attestation"] = { verified: false, details: "not needed: every record matched a rule", nonce: null };
 
   if (pending.length) {
     let preflight: Preflight | null = null;
@@ -318,7 +321,18 @@ export async function classifyHistory(history: HistoryResult, options: ClassifyO
         },
       });
       const v = preflightVerified(preflight);
-      attestation = { verified: v.ok, details: v.details, nonce: preflight.nonce };
+      attestation = {
+        verified: v.ok,
+        details: v.details,
+        nonce: preflight.nonce,
+        checksPassed: preflight.checks.filter((c) => c.ok).length,
+        checksTotal: preflight.checks.length,
+        reportSigners: [
+          ...(preflight.gateway ? [{ label: "gateway", address: preflight.gateway.signingAddress, verified: preflight.gateway.ok }] : []),
+          ...preflight.models.map((m) => ({ label: m.label, address: m.signingAddress, verified: m.ok })),
+        ],
+        attestedAt: new Date().toISOString(),
+      };
     } catch (e) {
       attestation = { verified: false, details: `attestation preflight failed: ${errMsg(e)}`, nonce: preflight?.nonce ?? null };
     }
@@ -354,6 +368,7 @@ export async function classifyHistory(history: HistoryResult, options: ClassifyO
             valid: parsed.ok,
             signatureVerified: sig.ok,
             detail: parsed.ok ? sig.detail : `invalid output (${parsed.error}); ${sig.detail}`,
+            ...(sig.signingAddress ? { signingAddress: sig.signingAddress } : {}),
           });
           log(`  chat ${c.chatId}: output ${parsed.ok ? "valid" : "INVALID"}, signature ${sig.ok ? "verified" : `NOT verified (${sig.detail})`}`);
           if (parsed.ok) {

@@ -8,6 +8,8 @@ import { NafemTable } from "../../fx/nafem";
 import { getHistory } from "../../history/cache";
 import { FIXTURE_DIR, readJsonIfExists, writeJson } from "../../history/paths";
 import { FixturePriceProvider, LivePriceProvider, RecordingPriceProvider, loadPriceFixture, writePriceFixture, type PriceProvider } from "../../prices/provider";
+import { reportFingerprint } from "../../report/fingerprint";
+import { privacyProofFromRun, type PrivacyProof } from "../../report/privacy";
 import { getClassification } from "./cache";
 import { runEngine, type EngineResult } from "./engine";
 import { fetchOpeningPosition, OPENING_YEAR, RESET_PRICE_TIME, type OpeningPosition } from "./opening";
@@ -35,7 +37,11 @@ export interface ReportData extends EngineResult {
   origin: { classification: string; prices: string; opening: string };
   questionSummary: ApplySummary;
   opening: Pick<OpeningPosition, "date" | "block" | "accountExisted" | "method" | "balances">;
-  dataSources: { name: string; detail: string }[];
+  dataSources: { name: string; detail: string; retrievedAt: string | null }[];
+  /** TEE attestation + response-signature evidence from the stored classification run. */
+  privacyProof: PrivacyProof;
+  /** SHA-256 of the canonical report JSON, personal fields excluded (src/lib/report/fingerprint.ts). */
+  fingerprint: string;
 }
 
 export const priceFixturePath = (account: string) => path.join(FIXTURE_DIR, `${account}-${OPENING_YEAR}.prices.json`);
@@ -85,8 +91,18 @@ export async function buildReport(req: ReportRequest): Promise<{ report: ReportD
     otherIncomeNgn: req.profile?.otherIncomeNgn || null,
   });
 
+  const privacyProof = privacyProofFromRun(run);
+  const warnings = [...engine.warnings];
+  for (const m of privacyProof.missing) warnings.push({ code: "privacy_proof_unavailable", message: `Privacy proof: ${m}` });
+  if (privacyProof.aiDecisions > 0 && privacyProof.aiDecisionsSignatureVerified < privacyProof.aiDecisions) {
+    warnings.push({ code: "ai_signature_unverified", message: `${privacyProof.aiDecisions - privacyProof.aiDecisionsSignatureVerified} AI decision(s) without a verified response signature` });
+  }
+
   const report: ReportData = {
     ...engine,
+    warnings,
+    privacyProof,
+    fingerprint: "",
     account: req.account,
     from,
     to,
@@ -99,14 +115,27 @@ export async function buildReport(req: ReportRequest): Promise<{ report: ReportD
     questionSummary: flow.summary,
     opening: { date: opening.date, block: opening.block, accountExisted: opening.accountExisted, method: opening.method, balances: opening.balances },
     dataSources: [
-      { name: "CoinGecko", detail: "keyless public API /coins/{id}/market_chart/range, hourly points (monthly windows); exact source-text prices" },
-      { name: "CBN NFEM (NAFEM) closing rate", detail: `data/fx/cbn-nafem-usdngn.csv from ${fx.meta.sourceUrl}, retrieved ${fx.meta.retrievedAt}, ${fx.range.first}..${fx.range.last}` },
-      { name: "NearBlocks", detail: `v3 API (Powered by NearBlocks.io APIs), history fetched ${history.fetchedAt}` },
-      { name: "NEAR archival RPC", detail: `${history.staking.archivalRpc}: pool snapshots (staking rewards) and opening position at block ${opening.block.height}` },
-      { name: "neardata (FastNEAR)", detail: "block headers for timestamp -> block lookup" },
-      { name: "Rhea / Ref Finance pools", detail: "primary trading pair for tokens without a CoinGecko listing (9.2(1))" },
+      {
+        name: "CoinGecko",
+        detail: "keyless public API /coins/{id}/market_chart/range, hourly points (monthly windows); exact source-text prices",
+        retrievedAt: fixture?.generatedAt ?? null,
+      },
+      {
+        name: "CBN NFEM (formerly NAFEM) closing rate",
+        detail: `data/fx/cbn-nafem-usdngn.csv from ${fx.meta.sourceUrl}, ${fx.range.first}..${fx.range.last}`,
+        retrievedAt: fx.meta.retrievedAt || null,
+      },
+      { name: "NearBlocks", detail: "v3 API (Powered by NearBlocks.io APIs): receipts, FT transfers, staking and signed transactions", retrievedAt: history.fetchedAt },
+      {
+        name: "NEAR archival RPC",
+        detail: `${history.staking.archivalRpc}: pool snapshots (staking rewards) and opening position at block ${opening.block.height}`,
+        retrievedAt: opening.fetchedAt,
+      },
+      { name: "neardata (FastNEAR)", detail: "block headers for timestamp -> block lookup", retrievedAt: history.fetchedAt },
+      { name: "Rhea / Ref Finance pools", detail: "primary trading pair for tokens without a CoinGecko listing (9.2(1))", retrievedAt: fixture?.generatedAt ?? null },
     ],
   };
+  report.fingerprint = await reportFingerprint(report);
   return { report, recorder, opening, records: flow.records };
 }
 

@@ -140,7 +140,7 @@ const DECISIONS: Record<string, string> = {
   D5: "FIFO cost method (9.3.3(3)); NEAR and wNEAR share one lot pool (10.1).",
   D6: "PIT bands: 0% to 800k; 15% next 2.2m; 18% next 9m; 21% next 13m; 23% next 25m; 25% above 50m.",
   D7: "USD prices from CoinGecko historical (hourly where available); primary trading pair otherwise (9.2(1)).",
-  D8: "USD/NGN at the CBN NFEM (NAFEM) closing rate on the transaction date; prior published date if none (never interpolated).",
+  D8: "USD/NGN at the CBN NFEM (formerly NAFEM) closing rate on the transaction date; prior published date if none (never interpolated).",
   D9: "Gift received: cost base = market value at receipt (NTA s.36(1)); gift given: no tax on donor.",
   D11: "Pre-2026 holdings: cost base = higher of original cost or FMV at 2025-12-31 23:59:59 UTC; both gains shown.",
   D13: "Loan received is a liability (no income); loan repaid in a different asset is flagged.",
