@@ -5,28 +5,19 @@
   "to": "2026-12-31",
   "ownAccounts": [],
   "historyFetchedAt": "2026-11-04T22:06:31.171Z",
-  "classifiedAt": "2026-11-05T06:51:00.502Z",
+  "classifiedAt": "2026-11-05T07:01:35.819Z",
   "model": "z-ai/glm-5.3-flash",
   "attestation": {
     "verified": true,
-    "details": "gateway + 1 model report(s) verified (14 checks, nonce 16801c86099ca20125d3cb16b5cc37e797f04a4f18fbcfbfda469ebde257647a)",
-    "nonce": "16801c86099ca20125d3cb16b5cc37e797f04a4f18fbcfbfda469ebde257647a"
+    "details": "gateway + 1 model report(s) verified (14 checks, nonce 6c1a6893e89f8ac7f00c063a9c19485d569332952aadd6d522ef2886db4d602c)",
+    "nonce": "6c1a6893e89f8ac7f00c063a9c19485d569332952aadd6d522ef2886db4d602c"
   },
   "aiResponses": [
     {
       "batch": 1,
       "attempt": 1,
-      "chatId": "914eb0b519854a7084f7397a447d867b",
-      "txCount": 20,
-      "valid": true,
-      "signatureVerified": true,
-      "detail": "signature verified (provider_tee)"
-    },
-    {
-      "batch": 2,
-      "attempt": 1,
-      "chatId": "c598fec301a2407fba02ae054fe3338b",
-      "txCount": 20,
+      "chatId": "e35e89e438c047b6876a02303d6c0b15",
+      "txCount": 13,
       "valid": true,
       "signatureVerified": true,
       "detail": "signature verified (provider_tee)"
@@ -34,14 +25,14 @@
   ],
   "metrics": {
     "total": 125,
-    "rule": 85,
-    "ai": 40,
+    "rule": 112,
+    "ai": 13,
     "user": 0,
-    "pctRule": "68.0%",
-    "pctAi": "32.0%",
-    "needsQuestion": 11,
-    "aiResponses": 2,
-    "aiResponsesVerified": 2,
+    "pctRule": "89.6%",
+    "pctAi": "10.4%",
+    "needsQuestion": 13,
+    "aiResponses": 1,
+    "aiResponsesVerified": 1,
     "attestationVerified": true
   },
   "records": [
@@ -58,7 +49,7 @@
       },
       "amount": "0",
       "counterparty": "near",
-      "method": "ai",
+      "method": "rule",
       "success": true,
       "source": "nearblocks-v3:receipts",
       "raw": {
@@ -96,18 +87,12 @@
         "transaction_hash": "7gnmASj1WELj65YkU6JyCQyQMhLiYdFrnmrvdwAV1cTb"
       },
       "fee": null,
-      "label": "gas_refund",
+      "label": "dust_no_value",
       "assetCategory": "1",
-      "confidence": 0.9,
-      "reason": "Zero-value NEAR native transfer; no economic movement, technical only.",
-      "circularRef": "not income; technical",
-      "needsQuestion": false,
-      "evidence": {
-        "chatId": "914eb0b519854a7084f7397a447d867b",
-        "signatureVerified": true,
-        "model": "z-ai/glm-5.3-flash",
-        "attempt": 1
-      }
+      "confidence": 1,
+      "reason": "Zero-value native_transfer; no economic movement.",
+      "circularRef": "Technical; 9.6(6) (no realisable value)",
+      "needsQuestion": false
     },
     {
       "id": "nearblocks:receipt:BxfP59Mb44LX7WGWKXkAN42sLT2kXDs6J7UAUWzd5MUh",
@@ -122,7 +107,7 @@
       },
       "amount": "0",
       "counterparty": "meteor-relayer.near",
-      "method": "ai",
+      "method": "rule",
       "success": true,
       "source": "nearblocks-v3:receipts",
       "raw": {
@@ -156,18 +141,12 @@
         "transaction_hash": "2RLR59tHx13uhvhCJPspkg2fVEFCDncRoGxAkdyXiHXH"
       },
       "fee": null,
-      "label": "gas_refund",
+      "label": "dust_no_value",
       "assetCategory": "1",
-      "confidence": 0.9,
-      "reason": "Zero-value relayer call leg; no economic movement.",
-      "circularRef": "not income; technical",
-      "needsQuestion": false,
-      "evidence": {
-        "chatId": "914eb0b519854a7084f7397a447d867b",
-        "signatureVerified": true,
-        "model": "z-ai/glm-5.3-flash",
-        "attempt": 1
-      }
+      "confidence": 1,
+      "reason": "Zero-value other; no economic movement.",
+      "circularRef": "Technical; 9.6(6) (no realisable value)",
+      "needsQuestion": false
     },
     {
       "id": "nearblocks:receipt:BcrVgosssMcEQZ3xAcU2SX1C7SBPqasEX9QPDGrJkd6y",
@@ -182,7 +161,7 @@
       },
       "amount": "0",
       "counterparty": null,
-      "method": "ai",
+      "method": "rule",
       "success": true,
       "source": "nearblocks-v3:receipts",
       "raw": {
@@ -212,18 +191,12 @@
         "transaction_hash": "2RLR59tHx13uhvhCJPspkg2fVEFCDncRoGxAkdyXiHXH"
       },
       "fee": null,
-      "label": "gas_refund",
+      "label": "dust_no_value",
       "assetCategory": "1",
-      "confidence": 0.9,
-      "reason": "Zero-value self leg of a relayer meta-transaction; technical only.",
-      "circularRef": "not income; technical",
-      "needsQuestion": false,
-      "evidence": {
-        "chatId": "914eb0b519854a7084f7397a447d867b",
-        "signatureVerified": true,
-        "model": "z-ai/glm-5.3-flash",
-        "attempt": 1
-      }
+      "confidence": 1,
+      "reason": "Zero-value other; no economic movement.",
+      "circularRef": "Technical; 9.6(6) (no realisable value)",
+      "needsQuestion": false
     },
     {
       "id": "nearblocks:receipt:H9cRNmQV1MR7fzJVmntuAaht39sdWcGpLyP5pyEFstAA",
@@ -238,7 +211,7 @@
       },
       "amount": "0",
       "counterparty": "meteor-relayer.near",
-      "method": "ai",
+      "method": "rule",
       "success": true,
       "source": "nearblocks-v3:receipts",
       "raw": {
@@ -272,18 +245,12 @@
         "transaction_hash": "D9YM3n9ho8948uxzKPh5Mf37YnLCGcnNW86sGqzxXbbq"
       },
       "fee": null,
-      "label": "gas_refund",
+      "label": "dust_no_value",
       "assetCategory": "1",
-      "confidence": 0.9,
-      "reason": "Zero-value initialize_account call leg; account setup, no economic movement.",
-      "circularRef": "not income; technical",
-      "needsQuestion": false,
-      "evidence": {
-        "chatId": "914eb0b519854a7084f7397a447d867b",
-        "signatureVerified": true,
-        "model": "z-ai/glm-5.3-flash",
-        "attempt": 1
-      }
+      "confidence": 1,
+      "reason": "Zero-value other (initialize_account); no economic movement.",
+      "circularRef": "Technical; 9.6(6) (no realisable value)",
+      "needsQuestion": false
     },
     {
       "id": "nearblocks:receipt:A5EUhBixZpiTTRriKbDfzJTebjY9uiUTjRMcWFeM29iJ",
@@ -298,7 +265,7 @@
       },
       "amount": "0",
       "counterparty": "aa-harvest-moon.near",
-      "method": "ai",
+      "method": "rule",
       "success": true,
       "source": "nearblocks-v3:receipts",
       "raw": {
@@ -328,18 +295,12 @@
         "transaction_hash": "D9YM3n9ho8948uxzKPh5Mf37YnLCGcnNW86sGqzxXbbq"
       },
       "fee": null,
-      "label": "gas_refund",
+      "label": "dust_no_value",
       "assetCategory": "1",
-      "confidence": 0.9,
-      "reason": "Zero-value initialize_account call leg; account setup, no economic movement.",
-      "circularRef": "not income; technical",
-      "needsQuestion": false,
-      "evidence": {
-        "chatId": "914eb0b519854a7084f7397a447d867b",
-        "signatureVerified": true,
-        "model": "z-ai/glm-5.3-flash",
-        "attempt": 1
-      }
+      "confidence": 1,
+      "reason": "Zero-value other (initialize_account); no economic movement.",
+      "circularRef": "Technical; 9.6(6) (no realisable value)",
+      "needsQuestion": false
     },
     {
       "id": "nearblocks:receipt:Bk3ihDpChzGe9n1RPRFhB6WTS9bC77E3fLxeCSSvoj8F",
@@ -354,7 +315,7 @@
       },
       "amount": "0",
       "counterparty": "meteor-relayer.near",
-      "method": "ai",
+      "method": "rule",
       "success": true,
       "source": "nearblocks-v3:receipts",
       "raw": {
@@ -388,18 +349,12 @@
         "transaction_hash": "9ZoLjs38cnjQ2jCtNWkDrqMw3FvQzP2j73y2fYmBKGap"
       },
       "fee": null,
-      "label": "gas_refund",
+      "label": "dust_no_value",
       "assetCategory": "1",
-      "confidence": 0.9,
-      "reason": "Zero-value harvest call leg; the economic result is the MOON token leg in the same transaction.",
-      "circularRef": "not income; technical",
-      "needsQuestion": false,
-      "evidence": {
-        "chatId": "914eb0b519854a7084f7397a447d867b",
-        "signatureVerified": true,
-        "model": "z-ai/glm-5.3-flash",
-        "attempt": 1
-      }
+      "confidence": 1,
+      "reason": "Zero-value other (harvest); no economic movement.",
+      "circularRef": "Technical; 9.6(6) (no realisable value)",
+      "needsQuestion": false
     },
     {
       "id": "nearblocks:ft:EyEHKua5HNEkNmoxTfEC95DCj11iphKWLauudjEHvppk:aa-harvest-moon.near:0",
@@ -446,12 +401,12 @@
       "fee": null,
       "label": "income_defi_yield",
       "assetCategory": "4",
-      "confidence": 0.85,
-      "reason": "MOON harvested from aa-harvest-moon protocol; DeFi/mining reward, income at FMV on receipt. MOON treated as utility/governance token (category 4).",
+      "confidence": 0.75,
+      "reason": "MOON harvested from aa-harvest-moon farming contract; protocol yield income at FMV on receipt. MOON is not a listed category; treated as utility/reward token (4).",
       "circularRef": "7.1 event 14; 10.4",
-      "needsQuestion": false,
+      "needsQuestion": true,
       "evidence": {
-        "chatId": "914eb0b519854a7084f7397a447d867b",
+        "chatId": "e35e89e438c047b6876a02303d6c0b15",
         "signatureVerified": true,
         "model": "z-ai/glm-5.3-flash",
         "attempt": 1
@@ -470,7 +425,7 @@
       },
       "amount": "0",
       "counterparty": "aa-harvest-moon.near",
-      "method": "ai",
+      "method": "rule",
       "success": true,
       "source": "nearblocks-v3:receipts",
       "raw": {
@@ -500,18 +455,12 @@
         "transaction_hash": "9ZoLjs38cnjQ2jCtNWkDrqMw3FvQzP2j73y2fYmBKGap"
       },
       "fee": null,
-      "label": "gas_refund",
+      "label": "dust_no_value",
       "assetCategory": "1",
-      "confidence": 0.9,
-      "reason": "Zero-value harvest call leg; no economic movement.",
-      "circularRef": "not income; technical",
-      "needsQuestion": false,
-      "evidence": {
-        "chatId": "914eb0b519854a7084f7397a447d867b",
-        "signatureVerified": true,
-        "model": "z-ai/glm-5.3-flash",
-        "attempt": 1
-      }
+      "confidence": 1,
+      "reason": "Zero-value other (harvest); no economic movement.",
+      "circularRef": "Technical; 9.6(6) (no realisable value)",
+      "needsQuestion": false
     },
     {
       "id": "nearblocks:receipt:GnJTRrXqM4fSu3hb2C9p9yQW3QMSzNuRng7JQ5rSxgnf",
@@ -559,11 +508,11 @@
       "label": "unknown",
       "assetCategory": "1",
       "confidence": 0.3,
-      "reason": "Incoming 0.1 NEAR from an unnamed address; purpose (gift, payment, own funds) cannot be determined on-chain.",
+      "reason": "Incoming NEAR from an unnamed address; purpose (gift, own funds, payment) cannot be determined from on-chain data.",
       "circularRef": "question",
       "needsQuestion": true,
       "evidence": {
-        "chatId": "914eb0b519854a7084f7397a447d867b",
+        "chatId": "e35e89e438c047b6876a02303d6c0b15",
         "signatureVerified": true,
         "model": "z-ai/glm-5.3-flash",
         "attempt": 1
@@ -582,7 +531,7 @@
       },
       "amount": "0",
       "counterparty": "meteor-relayer.near",
-      "method": "ai",
+      "method": "rule",
       "success": true,
       "source": "nearblocks-v3:receipts",
       "raw": {
@@ -616,18 +565,12 @@
         "transaction_hash": "Hb8uUaCXp2fPMzEneFxq7Ue9gwfp3WC9mKkHqkGHaYuC"
       },
       "fee": null,
-      "label": "gas_refund",
+      "label": "dust_no_value",
       "assetCategory": "1",
-      "confidence": 0.9,
-      "reason": "Zero-value harvest call leg; economic result is the MOON token leg.",
-      "circularRef": "not income; technical",
-      "needsQuestion": false,
-      "evidence": {
-        "chatId": "914eb0b519854a7084f7397a447d867b",
-        "signatureVerified": true,
-        "model": "z-ai/glm-5.3-flash",
-        "attempt": 1
-      }
+      "confidence": 1,
+      "reason": "Zero-value other (harvest); no economic movement.",
+      "circularRef": "Technical; 9.6(6) (no realisable value)",
+      "needsQuestion": false
     },
     {
       "id": "nearblocks:ft:11Emks2Eai55gnTGw3ci7oJsgkVQfECcWsGSStY76dz:aa-harvest-moon.near:0",
@@ -674,12 +617,12 @@
       "fee": null,
       "label": "income_defi_yield",
       "assetCategory": "4",
-      "confidence": 0.85,
-      "reason": "MOON harvested from aa-harvest-moon protocol; DeFi reward, income at FMV on receipt (category 4 utility token).",
+      "confidence": 0.75,
+      "reason": "Repeated MOON harvest from aa-harvest-moon; DeFi/farming reward income at FMV on receipt.",
       "circularRef": "7.1 event 14; 10.4",
-      "needsQuestion": false,
+      "needsQuestion": true,
       "evidence": {
-        "chatId": "914eb0b519854a7084f7397a447d867b",
+        "chatId": "e35e89e438c047b6876a02303d6c0b15",
         "signatureVerified": true,
         "model": "z-ai/glm-5.3-flash",
         "attempt": 1
@@ -698,7 +641,7 @@
       },
       "amount": "0",
       "counterparty": "aa-harvest-moon.near",
-      "method": "ai",
+      "method": "rule",
       "success": true,
       "source": "nearblocks-v3:receipts",
       "raw": {
@@ -728,18 +671,12 @@
         "transaction_hash": "Hb8uUaCXp2fPMzEneFxq7Ue9gwfp3WC9mKkHqkGHaYuC"
       },
       "fee": null,
-      "label": "gas_refund",
+      "label": "dust_no_value",
       "assetCategory": "1",
-      "confidence": 0.9,
-      "reason": "Zero-value harvest call leg; no economic movement.",
-      "circularRef": "not income; technical",
-      "needsQuestion": false,
-      "evidence": {
-        "chatId": "914eb0b519854a7084f7397a447d867b",
-        "signatureVerified": true,
-        "model": "z-ai/glm-5.3-flash",
-        "attempt": 1
-      }
+      "confidence": 1,
+      "reason": "Zero-value other (harvest); no economic movement.",
+      "circularRef": "Technical; 9.6(6) (no realisable value)",
+      "needsQuestion": false
     },
     {
       "id": "nearblocks:receipt:3bAUqRo8GezesSKthFJZbMkkMwDGShQDa434WvaBiDBb",
@@ -754,7 +691,7 @@
       },
       "amount": "0",
       "counterparty": "meteor-relayer.near",
-      "method": "ai",
+      "method": "rule",
       "success": true,
       "source": "nearblocks-v3:receipts",
       "raw": {
@@ -788,18 +725,12 @@
         "transaction_hash": "GVmBRVWhpkm6RuJmZLpDXCvpMmGdm2X8RFJguYoF4qRN"
       },
       "fee": null,
-      "label": "gas_refund",
+      "label": "dust_no_value",
       "assetCategory": "1",
-      "confidence": 0.9,
-      "reason": "Zero-value harvest call leg; economic result is the MOON token leg.",
-      "circularRef": "not income; technical",
-      "needsQuestion": false,
-      "evidence": {
-        "chatId": "914eb0b519854a7084f7397a447d867b",
-        "signatureVerified": true,
-        "model": "z-ai/glm-5.3-flash",
-        "attempt": 1
-      }
+      "confidence": 1,
+      "reason": "Zero-value other (harvest); no economic movement.",
+      "circularRef": "Technical; 9.6(6) (no realisable value)",
+      "needsQuestion": false
     },
     {
       "id": "nearblocks:ft:BoZZfb2MDt8FM4F4sjspMCZKZS82P84xSmfxMznz2hYU:aa-harvest-moon.near:0",
@@ -846,12 +777,12 @@
       "fee": null,
       "label": "income_defi_yield",
       "assetCategory": "4",
-      "confidence": 0.85,
-      "reason": "MOON harvested from aa-harvest-moon protocol; DeFi reward, income at FMV on receipt (category 4 utility token).",
+      "confidence": 0.75,
+      "reason": "Repeated MOON harvest from aa-harvest-moon; DeFi/farming reward income at FMV on receipt.",
       "circularRef": "7.1 event 14; 10.4",
-      "needsQuestion": false,
+      "needsQuestion": true,
       "evidence": {
-        "chatId": "914eb0b519854a7084f7397a447d867b",
+        "chatId": "e35e89e438c047b6876a02303d6c0b15",
         "signatureVerified": true,
         "model": "z-ai/glm-5.3-flash",
         "attempt": 1
@@ -870,7 +801,7 @@
       },
       "amount": "0",
       "counterparty": "aa-harvest-moon.near",
-      "method": "ai",
+      "method": "rule",
       "success": true,
       "source": "nearblocks-v3:receipts",
       "raw": {
@@ -900,18 +831,12 @@
         "transaction_hash": "GVmBRVWhpkm6RuJmZLpDXCvpMmGdm2X8RFJguYoF4qRN"
       },
       "fee": null,
-      "label": "gas_refund",
+      "label": "dust_no_value",
       "assetCategory": "1",
-      "confidence": 0.9,
-      "reason": "Zero-value harvest call leg; no economic movement.",
-      "circularRef": "not income; technical",
-      "needsQuestion": false,
-      "evidence": {
-        "chatId": "914eb0b519854a7084f7397a447d867b",
-        "signatureVerified": true,
-        "model": "z-ai/glm-5.3-flash",
-        "attempt": 1
-      }
+      "confidence": 1,
+      "reason": "Zero-value other (harvest); no economic movement.",
+      "circularRef": "Technical; 9.6(6) (no realisable value)",
+      "needsQuestion": false
     },
     {
       "id": "nearblocks:receipt:J7SpY1wNgzjdwu3Q2L1iJHdQxWJ1SVzQfqtkcKnxAC4C",
@@ -926,7 +851,7 @@
       },
       "amount": "0",
       "counterparty": "meteor-relayer.near",
-      "method": "ai",
+      "method": "rule",
       "success": true,
       "source": "nearblocks-v3:receipts",
       "raw": {
@@ -960,18 +885,12 @@
         "transaction_hash": "9KnYyX9gsnrQADpoA1RLjtGAz4tWV6jduBdDGsvm6gHZ"
       },
       "fee": null,
-      "label": "gas_refund",
+      "label": "dust_no_value",
       "assetCategory": "1",
-      "confidence": 0.9,
-      "reason": "Zero-value harvest call leg; economic result is the MOON token leg.",
-      "circularRef": "not income; technical",
-      "needsQuestion": false,
-      "evidence": {
-        "chatId": "914eb0b519854a7084f7397a447d867b",
-        "signatureVerified": true,
-        "model": "z-ai/glm-5.3-flash",
-        "attempt": 1
-      }
+      "confidence": 1,
+      "reason": "Zero-value other (harvest); no economic movement.",
+      "circularRef": "Technical; 9.6(6) (no realisable value)",
+      "needsQuestion": false
     },
     {
       "id": "nearblocks:ft:AQc4vkf6qWdTXcm1nfd58yHsv7ftujFuyzhedHpwVWbN:aa-harvest-moon.near:0",
@@ -1018,12 +937,12 @@
       "fee": null,
       "label": "income_defi_yield",
       "assetCategory": "4",
-      "confidence": 0.85,
-      "reason": "MOON harvested from aa-harvest-moon protocol; DeFi reward, income at FMV on receipt (category 4 utility token).",
+      "confidence": 0.75,
+      "reason": "Repeated MOON harvest from aa-harvest-moon; DeFi/farming reward income at FMV on receipt.",
       "circularRef": "7.1 event 14; 10.4",
-      "needsQuestion": false,
+      "needsQuestion": true,
       "evidence": {
-        "chatId": "914eb0b519854a7084f7397a447d867b",
+        "chatId": "e35e89e438c047b6876a02303d6c0b15",
         "signatureVerified": true,
         "model": "z-ai/glm-5.3-flash",
         "attempt": 1
@@ -1042,7 +961,7 @@
       },
       "amount": "0",
       "counterparty": "aa-harvest-moon.near",
-      "method": "ai",
+      "method": "rule",
       "success": true,
       "source": "nearblocks-v3:receipts",
       "raw": {
@@ -1072,18 +991,12 @@
         "transaction_hash": "9KnYyX9gsnrQADpoA1RLjtGAz4tWV6jduBdDGsvm6gHZ"
       },
       "fee": null,
-      "label": "gas_refund",
+      "label": "dust_no_value",
       "assetCategory": "1",
-      "confidence": 0.9,
-      "reason": "Zero-value harvest call leg; no economic movement.",
-      "circularRef": "not income; technical",
-      "needsQuestion": false,
-      "evidence": {
-        "chatId": "914eb0b519854a7084f7397a447d867b",
-        "signatureVerified": true,
-        "model": "z-ai/glm-5.3-flash",
-        "attempt": 1
-      }
+      "confidence": 1,
+      "reason": "Zero-value other (harvest); no economic movement.",
+      "circularRef": "Technical; 9.6(6) (no realisable value)",
+      "needsQuestion": false
     },
     {
       "id": "nearblocks:receipt:EQjMEYK5zTTDJpWK6Ksd2o36AxBG6hMwyC9Zq4FpkTLE",
@@ -1098,7 +1011,7 @@
       },
       "amount": "0",
       "counterparty": "meteor-relayer.near",
-      "method": "ai",
+      "method": "rule",
       "success": true,
       "source": "nearblocks-v3:receipts",
       "raw": {
@@ -1132,18 +1045,12 @@
         "transaction_hash": "7mmSWAn3kXA7cGFjHjTYRNQ2TjgEy247BwxQ37kWd94R"
       },
       "fee": null,
-      "label": "gas_refund",
+      "label": "dust_no_value",
       "assetCategory": "1",
-      "confidence": 0.9,
-      "reason": "Zero-value harvest call leg; economic result is the MOON token leg.",
-      "circularRef": "not income; technical",
-      "needsQuestion": false,
-      "evidence": {
-        "chatId": "914eb0b519854a7084f7397a447d867b",
-        "signatureVerified": true,
-        "model": "z-ai/glm-5.3-flash",
-        "attempt": 1
-      }
+      "confidence": 1,
+      "reason": "Zero-value other (harvest); no economic movement.",
+      "circularRef": "Technical; 9.6(6) (no realisable value)",
+      "needsQuestion": false
     },
     {
       "id": "nearblocks:ft:Dz4Pp8TAMXKiZXRbq15FSTbKJZdqVtvqSfQCHjgncYHX:aa-harvest-moon.near:0",
@@ -1190,12 +1097,12 @@
       "fee": null,
       "label": "income_defi_yield",
       "assetCategory": "4",
-      "confidence": 0.85,
-      "reason": "MOON harvested from aa-harvest-moon protocol; DeFi reward, income at FMV on receipt (category 4 utility token).",
+      "confidence": 0.75,
+      "reason": "Repeated MOON harvest from aa-harvest-moon; DeFi/farming reward income at FMV on receipt.",
       "circularRef": "7.1 event 14; 10.4",
-      "needsQuestion": false,
+      "needsQuestion": true,
       "evidence": {
-        "chatId": "914eb0b519854a7084f7397a447d867b",
+        "chatId": "e35e89e438c047b6876a02303d6c0b15",
         "signatureVerified": true,
         "model": "z-ai/glm-5.3-flash",
         "attempt": 1
@@ -1214,7 +1121,7 @@
       },
       "amount": "0",
       "counterparty": "aa-harvest-moon.near",
-      "method": "ai",
+      "method": "rule",
       "success": true,
       "source": "nearblocks-v3:receipts",
       "raw": {
@@ -1244,18 +1151,12 @@
         "transaction_hash": "7mmSWAn3kXA7cGFjHjTYRNQ2TjgEy247BwxQ37kWd94R"
       },
       "fee": null,
-      "label": "income_defi_yield",
+      "label": "dust_no_value",
       "assetCategory": "1",
-      "confidence": 0.6,
-      "reason": "Harvest call on aa-harvest-moon.near yielding 0.002 MOON (utility/farm token, category 4 assumed); reward income at FMV on receipt.",
-      "circularRef": "7.1 event 14; 10.4",
-      "needsQuestion": true,
-      "evidence": {
-        "chatId": "c598fec301a2407fba02ae054fe3338b",
-        "signatureVerified": true,
-        "model": "z-ai/glm-5.3-flash",
-        "attempt": 1
-      }
+      "confidence": 1,
+      "reason": "Zero-value other (harvest); no economic movement.",
+      "circularRef": "Technical; 9.6(6) (no realisable value)",
+      "needsQuestion": false
     },
     {
       "id": "nearblocks:receipt:2t4ewSBkJBLbqC73ooiTKh6a9v9SHWDohw2D5u1mZdyf",
@@ -1302,12 +1203,12 @@
       "fee": null,
       "label": "unknown",
       "assetCategory": "1",
-      "confidence": 0.4,
-      "reason": "Incoming 40.12 NEAR from an unstated hex address; purpose (gift, own funds, payment) not determinable on-chain.",
+      "confidence": 0.3,
+      "reason": "Large incoming NEAR from same recurring address; could be own funds moved between wallets, but ownership link is not provable on-chain.",
       "circularRef": "question",
       "needsQuestion": true,
       "evidence": {
-        "chatId": "c598fec301a2407fba02ae054fe3338b",
+        "chatId": "e35e89e438c047b6876a02303d6c0b15",
         "signatureVerified": true,
         "model": "z-ai/glm-5.3-flash",
         "attempt": 1
@@ -1326,7 +1227,7 @@
       },
       "amount": "0.002",
       "counterparty": "wrap.near",
-      "method": "ai",
+      "method": "rule",
       "success": true,
       "source": "nearblocks-v3:receipts",
       "raw": {
@@ -1359,18 +1260,12 @@
         "asset": "NEAR",
         "amount": "0.0002325606311083"
       },
-      "label": "gas_refund",
+      "label": "storage_deposit",
       "assetCategory": "1",
-      "confidence": 0.9,
-      "reason": "storage_deposit to wrap.near; technical registration with excess returned in same tx (0.00075 and system refunds). Not taxable.",
-      "circularRef": "not income; technical",
-      "needsQuestion": false,
-      "evidence": {
-        "chatId": "c598fec301a2407fba02ae054fe3338b",
-        "signatureVerified": true,
-        "model": "z-ai/glm-5.3-flash",
-        "attempt": 1
-      }
+      "confidence": 1,
+      "reason": "Refundable storage deposit of 0.002 NEAR to wrap.near (storage_deposit).",
+      "circularRef": "Technical; NEAR storage staking (refundable)",
+      "needsQuestion": false
     },
     {
       "id": "nearblocks:receipt:8jMagU7jtQF4uNudW5u82LJLjSoV5Ei48jmZJEABRi5F",
@@ -1385,7 +1280,7 @@
       },
       "amount": "0.00075",
       "counterparty": "wrap.near",
-      "method": "ai",
+      "method": "rule",
       "success": true,
       "source": "nearblocks-v3:receipts",
       "raw": {
@@ -1415,18 +1310,12 @@
         "transaction_hash": "5DjMNCyoim3wFzcqUyiv5kvbrhpP8qp3EtW8wQY1GTSc"
       },
       "fee": null,
-      "label": "gas_refund",
+      "label": "storage_deposit",
       "assetCategory": "1",
-      "confidence": 0.9,
-      "reason": "0.00075 NEAR returned by wrap.near as unused excess of the storage_deposit in the same transaction.",
-      "circularRef": "not income; technical",
-      "needsQuestion": false,
-      "evidence": {
-        "chatId": "c598fec301a2407fba02ae054fe3338b",
-        "signatureVerified": true,
-        "model": "z-ai/glm-5.3-flash",
-        "attempt": 1
-      }
+      "confidence": 1,
+      "reason": "Storage deposit refund of 0.00075 NEAR from wrap.near in the same transaction.",
+      "circularRef": "Technical; NEAR storage staking (refundable)",
+      "needsQuestion": false
     },
     {
       "id": "nearblocks:receipt:HNCMjayGpVqhHvHpyJueJ9QKuamqDn8PNVcNitFf6buE",
@@ -1694,7 +1583,7 @@
       },
       "amount": "0.002",
       "counterparty": "token.rhealab.near",
-      "method": "ai",
+      "method": "rule",
       "success": true,
       "source": "nearblocks-v3:receipts",
       "raw": {
@@ -1727,18 +1616,12 @@
         "asset": "NEAR",
         "amount": "0.000236763637384"
       },
-      "label": "gas_refund",
+      "label": "storage_deposit",
       "assetCategory": "1",
-      "confidence": 0.9,
-      "reason": "storage_deposit to token.rhealab.near; technical storage registration with excess refunded same tx.",
-      "circularRef": "not income; technical",
-      "needsQuestion": false,
-      "evidence": {
-        "chatId": "c598fec301a2407fba02ae054fe3338b",
-        "signatureVerified": true,
-        "model": "z-ai/glm-5.3-flash",
-        "attempt": 1
-      }
+      "confidence": 1,
+      "reason": "Refundable storage deposit of 0.002 NEAR to token.rhealab.near (storage_deposit).",
+      "circularRef": "Technical; NEAR storage staking (refundable)",
+      "needsQuestion": false
     },
     {
       "id": "nearblocks:receipt:3MJZuf2NAngdyb1YCMZSZxRRsGXFTMgr36nQKtwq9MxX",
@@ -1803,7 +1686,7 @@
       },
       "amount": "0.00075",
       "counterparty": "token.rhealab.near",
-      "method": "ai",
+      "method": "rule",
       "success": true,
       "source": "nearblocks-v3:receipts",
       "raw": {
@@ -1833,18 +1716,12 @@
         "transaction_hash": "6ij6C5TWRaY2URb7FKtK9AqCAdtFgtgzVKdkmDY8MHr3"
       },
       "fee": null,
-      "label": "gas_refund",
+      "label": "storage_deposit",
       "assetCategory": "1",
-      "confidence": 0.9,
-      "reason": "0.00075 NEAR refund of unused storage deposit from token.rhealab.near in the same transaction.",
-      "circularRef": "not income; technical",
-      "needsQuestion": false,
-      "evidence": {
-        "chatId": "c598fec301a2407fba02ae054fe3338b",
-        "signatureVerified": true,
-        "model": "z-ai/glm-5.3-flash",
-        "attempt": 1
-      }
+      "confidence": 1,
+      "reason": "Storage deposit refund of 0.00075 NEAR from token.rhealab.near in the same transaction.",
+      "circularRef": "Technical; NEAR storage staking (refundable)",
+      "needsQuestion": false
     },
     {
       "id": "nearblocks:receipt:DjuiQkmbJrcBZp6qbY7vZjZjqtx8Gnw3DTnJYub22M86",
@@ -1909,7 +1786,7 @@
       },
       "amount": "0.01",
       "counterparty": "aggregatedex.near",
-      "method": "ai",
+      "method": "rule",
       "success": true,
       "source": "nearblocks-v3:receipts",
       "raw": {
@@ -1942,18 +1819,12 @@
         "asset": "NEAR",
         "amount": "0.0004107108429747"
       },
-      "label": "gas_refund",
+      "label": "storage_deposit",
       "assetCategory": "1",
-      "confidence": 0.9,
-      "reason": "tokens_storage_deposit to aggregatedex.near; technical storage registration, not an economic disposal.",
-      "circularRef": "not income; technical",
-      "needsQuestion": false,
-      "evidence": {
-        "chatId": "c598fec301a2407fba02ae054fe3338b",
-        "signatureVerified": true,
-        "model": "z-ai/glm-5.3-flash",
-        "attempt": 1
-      }
+      "confidence": 1,
+      "reason": "Refundable storage deposit of 0.01 NEAR to aggregatedex.near (tokens_storage_deposit).",
+      "circularRef": "Technical; NEAR storage staking (refundable)",
+      "needsQuestion": false
     },
     {
       "id": "nearblocks:receipt:4v1hRpJUjhcdHpeHA45mhKLhZ5jtKMayVbtWfLthukjY",
@@ -2018,7 +1889,7 @@
       },
       "amount": "20",
       "counterparty": "aggregatedex.near",
-      "method": "ai",
+      "method": "rule",
       "success": true,
       "source": "nearblocks-v3:ft-txns",
       "raw": {
@@ -2048,18 +1919,12 @@
         "transaction_hash": "FcmgcGUcF98xt9hc43i1VF9QysWV1ype6s3riA6uMV6e"
       },
       "fee": null,
-      "label": "disposal_swap",
+      "label": "round_trip",
       "assetCategory": "1",
-      "confidence": 0.85,
-      "reason": "20 wNEAR sent via ft_transfer_call to aggregatedex.near (aggregator); crypto-to-crypto swap, disposal at FMV of wNEAR given up.",
-      "circularRef": "9.1.2; 9.3.2; Illustration 3",
-      "needsQuestion": false,
-      "evidence": {
-        "chatId": "c598fec301a2407fba02ae054fe3338b",
-        "signatureVerified": true,
-        "model": "z-ai/glm-5.3-flash",
-        "attempt": 1
-      }
+      "confidence": 1,
+      "reason": "Round trip: 20 wNEAR sent to aggregatedex.near and the same amount returned from aggregatedex.near in the same transaction.",
+      "circularRef": "Technical; consistent with 7.2.2 (no change in beneficial ownership)",
+      "needsQuestion": false
     },
     {
       "id": "nearblocks:receipt:2Dm3KTRRPE7B9pLLWNcPNeGpfViE3uV6ity5MRKZeJsX",
@@ -2074,7 +1939,7 @@
       },
       "amount": "0.000000000000000000000001",
       "counterparty": "wrap.near",
-      "method": "ai",
+      "method": "rule",
       "success": true,
       "source": "nearblocks-v3:receipts",
       "raw": {
@@ -2107,18 +1972,12 @@
         "asset": "NEAR",
         "amount": "0.00267929073045"
       },
-      "label": "disposal_swap",
+      "label": "dust_no_value",
       "assetCategory": "1",
-      "confidence": 0.85,
-      "reason": "1 yoctoNEAR attach is the ft_transfer_call security deposit; economic leg is the paired 20 wNEAR swap (disposal_swap).",
-      "circularRef": "9.1.2; 9.3.2; Illustration 3",
-      "needsQuestion": false,
-      "evidence": {
-        "chatId": "c598fec301a2407fba02ae054fe3338b",
-        "signatureVerified": true,
-        "model": "z-ai/glm-5.3-flash",
-        "attempt": 1
-      }
+      "confidence": 1,
+      "reason": "1 smallest units of NEAR (0.000000000000000000000001); negligible, e.g. the 1 yoctoNEAR ft_transfer security deposit.",
+      "circularRef": "Technical; 9.6(6) (no realisable value)",
+      "needsQuestion": false
     },
     {
       "id": "nearblocks:receipt:6Djm6rAtWoCeR1z9gFKLDTPJ5Weq7JR29LCNRDWo9VC8",
@@ -2433,7 +2292,7 @@
       },
       "amount": "20",
       "counterparty": "aggregatedex.near",
-      "method": "ai",
+      "method": "rule",
       "success": true,
       "source": "nearblocks-v3:ft-txns",
       "raw": {
@@ -2463,18 +2322,12 @@
         "transaction_hash": "FcmgcGUcF98xt9hc43i1VF9QysWV1ype6s3riA6uMV6e"
       },
       "fee": null,
-      "label": "unknown",
+      "label": "round_trip",
       "assetCategory": "1",
-      "confidence": 0.4,
-      "reason": "20 wNEAR in from aggregator in same tx as 20 wNEAR out; identical amount suggests return/refund of failed swap, but purpose unclear.",
-      "circularRef": "question",
-      "needsQuestion": true,
-      "evidence": {
-        "chatId": "c598fec301a2407fba02ae054fe3338b",
-        "signatureVerified": true,
-        "model": "z-ai/glm-5.3-flash",
-        "attempt": 1
-      }
+      "confidence": 1,
+      "reason": "Round trip (return leg): 20 wNEAR sent to aggregatedex.near and the same amount returned from aggregatedex.near in the same transaction.",
+      "circularRef": "Technical; consistent with 7.2.2 (no change in beneficial ownership)",
+      "needsQuestion": false
     },
     {
       "id": "nearblocks:receipt:GujVS77bH3gaGsseQW4vdgpP8CC7ZM1gokEUPs8U1Lc1",
@@ -2691,7 +2544,7 @@
       },
       "amount": "0.000000000000000000000001",
       "counterparty": "wrap.near",
-      "method": "ai",
+      "method": "rule",
       "success": true,
       "source": "nearblocks-v3:receipts",
       "raw": {
@@ -2724,18 +2577,12 @@
         "asset": "NEAR",
         "amount": "0.0040647858787866"
       },
-      "label": "disposal_swap",
+      "label": "dust_no_value",
       "assetCategory": "1",
-      "confidence": 0.85,
-      "reason": "1 yoctoNEAR attach for ft_transfer_call; paired wNEAR leg in same tx is labelled disposal_swap.",
-      "circularRef": "9.1.2; 9.3.2; Illustration 3",
-      "needsQuestion": false,
-      "evidence": {
-        "chatId": "c598fec301a2407fba02ae054fe3338b",
-        "signatureVerified": true,
-        "model": "z-ai/glm-5.3-flash",
-        "attempt": 1
-      }
+      "confidence": 1,
+      "reason": "1 smallest units of NEAR (0.000000000000000000000001); negligible, e.g. the 1 yoctoNEAR ft_transfer security deposit.",
+      "circularRef": "Technical; 9.6(6) (no realisable value)",
+      "needsQuestion": false
     },
     {
       "id": "nearblocks:receipt:8kVCNXdFT4NdMC2h8bR1N6mrPB6LtwMsk3UXZyi6rpjN",
@@ -3484,12 +3331,12 @@
       "fee": null,
       "label": "unknown",
       "assetCategory": "1",
-      "confidence": 0.4,
-      "reason": "Incoming 28.85 NEAR from hex address; on-chain data cannot show if gift, own funds or payment.",
+      "confidence": 0.3,
+      "reason": "Incoming NEAR from recurring address; purpose indeterminable from on-chain data alone.",
       "circularRef": "question",
       "needsQuestion": true,
       "evidence": {
-        "chatId": "c598fec301a2407fba02ae054fe3338b",
+        "chatId": "e35e89e438c047b6876a02303d6c0b15",
         "signatureVerified": true,
         "model": "z-ai/glm-5.3-flash",
         "attempt": 1
@@ -3543,12 +3390,12 @@
       },
       "label": "unknown",
       "assetCategory": "1",
-      "confidence": 0.4,
-      "reason": "Outgoing 35.4 NEAR to external hex address; could be gift, payment or own-wallet transfer - not determinable.",
+      "confidence": 0.3,
+      "reason": "Outgoing NEAR to an unnamed address; could be a gift, payment or transfer to own wallet — intent not ascertainable on-chain.",
       "circularRef": "question",
       "needsQuestion": true,
       "evidence": {
-        "chatId": "c598fec301a2407fba02ae054fe3338b",
+        "chatId": "e35e89e438c047b6876a02303d6c0b15",
         "signatureVerified": true,
         "model": "z-ai/glm-5.3-flash",
         "attempt": 1
@@ -3649,12 +3496,12 @@
       "fee": null,
       "label": "unknown",
       "assetCategory": "4",
-      "confidence": 0.4,
-      "reason": "501.64 NPRO (utility token assumed, category 4) from intents.near with no visible consideration; could be swap proceeds or other receipt.",
+      "confidence": 0.3,
+      "reason": "NPRO received from intents.near; could be a swap leg, purchase or reward — purpose not determinable from this leg alone.",
       "circularRef": "question",
       "needsQuestion": true,
       "evidence": {
-        "chatId": "c598fec301a2407fba02ae054fe3338b",
+        "chatId": "e35e89e438c047b6876a02303d6c0b15",
         "signatureVerified": true,
         "model": "z-ai/glm-5.3-flash",
         "attempt": 1
@@ -3673,7 +3520,7 @@
       },
       "amount": "0.000000000000000000000001",
       "counterparty": "relayer.nearmobile.near",
-      "method": "ai",
+      "method": "rule",
       "success": true,
       "source": "nearblocks-v3:receipts",
       "raw": {
@@ -3707,18 +3554,12 @@
         "transaction_hash": "3upJu93rriBxxeRww7wJYRbTa5mQLc1zRaFEgdM7LYhs"
       },
       "fee": null,
-      "label": "gas_refund",
+      "label": "dust_no_value",
       "assetCategory": "1",
-      "confidence": 0.85,
-      "reason": "1 yoctoNEAR from relayer is the ft_transfer_call security deposit; technical, economic leg is the NPRO transfer.",
-      "circularRef": "not income; technical",
-      "needsQuestion": false,
-      "evidence": {
-        "chatId": "c598fec301a2407fba02ae054fe3338b",
-        "signatureVerified": true,
-        "model": "z-ai/glm-5.3-flash",
-        "attempt": 1
-      }
+      "confidence": 1,
+      "reason": "1 smallest units of NEAR (0.000000000000000000000001); negligible, e.g. the 1 yoctoNEAR ft_transfer security deposit.",
+      "circularRef": "Technical; 9.6(6) (no realisable value)",
+      "needsQuestion": false
     },
     {
       "id": "nearblocks:ft:A77HZf7ZTxhMVMYNHX6NmzUeoJrb3bDLuUp23LEeK9Su:npro.nearmobile.near:0",
@@ -3763,14 +3604,14 @@
         "transaction_hash": "3upJu93rriBxxeRww7wJYRbTa5mQLc1zRaFEgdM7LYhs"
       },
       "fee": null,
-      "label": "disposal_payment",
+      "label": "unknown",
       "assetCategory": "4",
-      "confidence": 0.6,
-      "reason": "500 NPRO sent to premium.nearmobile.near, suggesting payment for a premium service; disposal at FMV. NPRO treated as category 4.",
-      "circularRef": "7.1 event 5",
+      "confidence": 0.3,
+      "reason": "500 NPRO sent via ft_transfer_call to premium.nearmobile.near shortly after receipt; may be a swap/payment, but consideration is not visible on-chain.",
+      "circularRef": "question",
       "needsQuestion": true,
       "evidence": {
-        "chatId": "c598fec301a2407fba02ae054fe3338b",
+        "chatId": "e35e89e438c047b6876a02303d6c0b15",
         "signatureVerified": true,
         "model": "z-ai/glm-5.3-flash",
         "attempt": 1
@@ -3789,7 +3630,7 @@
       },
       "amount": "0.000000000000000000000001",
       "counterparty": "npro.nearmobile.near",
-      "method": "ai",
+      "method": "rule",
       "success": true,
       "source": "nearblocks-v3:receipts",
       "raw": {
@@ -3819,18 +3660,12 @@
         "transaction_hash": "3upJu93rriBxxeRww7wJYRbTa5mQLc1zRaFEgdM7LYhs"
       },
       "fee": null,
-      "label": "disposal_payment",
+      "label": "dust_no_value",
       "assetCategory": "1",
-      "confidence": 0.6,
-      "reason": "1 yoctoNEAR attach for the NPRO ft_transfer_call; follows the paired token leg's treatment (disposal_payment).",
-      "circularRef": "7.1 event 5",
-      "needsQuestion": true,
-      "evidence": {
-        "chatId": "c598fec301a2407fba02ae054fe3338b",
-        "signatureVerified": true,
-        "model": "z-ai/glm-5.3-flash",
-        "attempt": 1
-      }
+      "confidence": 1,
+      "reason": "1 smallest units of NEAR (0.000000000000000000000001); negligible, e.g. the 1 yoctoNEAR ft_transfer security deposit.",
+      "circularRef": "Technical; 9.6(6) (no realisable value)",
+      "needsQuestion": false
     },
     {
       "id": "nearblocks:staking:3Rxdkj74fSvrHWy3dVW5H36FkmKnYJF6g7tjVetvgb9N:DEPOSIT",
@@ -4755,12 +4590,12 @@
       "fee": null,
       "label": "unknown",
       "assetCategory": "1",
-      "confidence": 0.4,
-      "reason": "Incoming 69 NEAR from hex address; purpose not ascertainable from on-chain data.",
+      "confidence": 0.3,
+      "reason": "Incoming NEAR from recurring address; purpose indeterminable from on-chain data alone.",
       "circularRef": "question",
       "needsQuestion": true,
       "evidence": {
-        "chatId": "c598fec301a2407fba02ae054fe3338b",
+        "chatId": "e35e89e438c047b6876a02303d6c0b15",
         "signatureVerified": true,
         "model": "z-ai/glm-5.3-flash",
         "attempt": 1
@@ -4984,7 +4819,7 @@
       },
       "amount": "0.000000000000000000000001",
       "counterparty": "wrap.near",
-      "method": "ai",
+      "method": "rule",
       "success": true,
       "source": "nearblocks-v3:receipts",
       "raw": {
@@ -5017,18 +4852,12 @@
         "asset": "NEAR",
         "amount": "0.0040698986388859"
       },
-      "label": "disposal_swap",
+      "label": "dust_no_value",
       "assetCategory": "1",
-      "confidence": 0.85,
-      "reason": "1 yoctoNEAR attach; paired 17.5 wNEAR leg in same tx labelled disposal_swap.",
-      "circularRef": "9.1.2; 9.3.2; Illustration 3",
-      "needsQuestion": false,
-      "evidence": {
-        "chatId": "c598fec301a2407fba02ae054fe3338b",
-        "signatureVerified": true,
-        "model": "z-ai/glm-5.3-flash",
-        "attempt": 1
-      }
+      "confidence": 1,
+      "reason": "1 smallest units of NEAR (0.000000000000000000000001); negligible, e.g. the 1 yoctoNEAR ft_transfer security deposit.",
+      "circularRef": "Technical; 9.6(6) (no realisable value)",
+      "needsQuestion": false
     },
     {
       "id": "nearblocks:receipt:8NForUUDbAi6GEJbz725Lwiz8dPMpGeeXKtbAfBTXjU",
@@ -6455,12 +6284,12 @@
       "fee": null,
       "label": "unknown",
       "assetCategory": "1",
-      "confidence": 0.4,
-      "reason": "Incoming 71.93 NEAR from hex address; purpose (gift, own funds, payment) not determinable.",
+      "confidence": 0.3,
+      "reason": "Incoming NEAR from recurring address; purpose indeterminable from on-chain data alone.",
       "circularRef": "question",
       "needsQuestion": true,
       "evidence": {
-        "chatId": "c598fec301a2407fba02ae054fe3338b",
+        "chatId": "e35e89e438c047b6876a02303d6c0b15",
         "signatureVerified": true,
         "model": "z-ai/glm-5.3-flash",
         "attempt": 1

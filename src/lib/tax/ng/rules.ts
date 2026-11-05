@@ -3,6 +3,7 @@
  * { label, confidence: 1, method: "rule", reason } for the records it is certain about.
  */
 import { STAKING_POOL_RE } from "../../history/fetch";
+import { toUnits } from "../../history/summary";
 import type { NormalizedTx } from "../../history/types";
 import { CONTRACTS, DEX_CONTRACTS, LIQUID_STAKING_CONTRACTS, costBasisAsset, type LabelId } from "./labels";
 
@@ -152,12 +153,88 @@ export function ruleSwapPairing(records: NormalizedTx[], alreadyMatched: Set<str
   return out;
 }
 
+// ---------- technical non-taxable rules (D12) ----------
+
+/** Amounts below this many smallest units of the asset (yocto for NEAR) are dust. */
+export const DUST_THRESHOLD_UNITS = BigInt(1000);
+
+/** Zero or < 1000 smallest-unit amounts. Never applied to staking rewards. */
+export function ruleDust(tx: NormalizedTx): RuleMatch | null {
+  if (tx.kind === "staking_reward") return null;
+  const units = toUnits(tx.amount, tx.asset.decimals);
+  if (units >= DUST_THRESHOLD_UNITS) return null;
+  return match(
+    "dust",
+    "dust_no_value",
+    units === BigInt(0)
+      ? `Zero-value ${tx.kind}${tx.method ? ` (${tx.method})` : ""}; no economic movement.`
+      : `${units} smallest units of ${sym(tx)} (${tx.amount}); negligible, e.g. the 1 yoctoNEAR ft_transfer security deposit.`,
+  );
+}
+
+const sameAsset = (a: NormalizedTx, b: NormalizedTx) => a.asset.contract === b.asset.contract && (a.asset.contract !== null || a.asset.symbol === b.asset.symbol);
+
+/**
+ * Within one transaction, an outgoing and an incoming leg of the same asset (same contract, or both
+ * native) with the same exact amount: a round trip (e.g. a failed swap refunding its input). Legs are
+ * matched one-to-one. Runs before swap pairing.
+ */
+export function ruleRoundTrip(records: NormalizedTx[], alreadyMatched: Set<string>): Map<string, RuleMatch> {
+  const out = new Map<string, RuleMatch>();
+  for (const legs of byTx(records).values()) {
+    const free = legs.filter((l) => !alreadyMatched.has(l.id) && l.success && l.kind !== "staking_reward");
+    const ins = free.filter((l) => l.direction === "in");
+    const used = new Set<string>();
+    for (const o of free.filter((l) => l.direction === "out")) {
+      const back = ins.find((i) => !used.has(i.id) && sameAsset(o, i) && i.amount === o.amount);
+      if (!back) continue;
+      used.add(back.id);
+      const why = `${o.amount} ${sym(o)} sent to ${o.counterparty ?? "(none)"} and the same amount returned from ${back.counterparty ?? "(none)"} in the same transaction`;
+      out.set(o.id, match("round_trip", "round_trip", `Round trip: ${why}.`));
+      out.set(back.id, match("round_trip", "round_trip", `Round trip (return leg): ${why}.`));
+    }
+  }
+  return out;
+}
+
+const STORAGE_METHOD_RE = /(^|_)storage_(deposit|withdraw|unregister)$/;
+const isStorageDepositMethod = (m: string) => m === "storage_deposit" || m.endsWith("_storage_deposit");
+const methods = (tx: NormalizedTx) => (tx.method ?? "").split(",").filter(Boolean);
+
+/**
+ * NEAR storage staking: outgoing storage_deposit (incl. *_storage_deposit variants such as
+ * tokens_storage_deposit) and NEAR refunds from a contract the account called with a
+ * storage_deposit / storage_withdraw / storage_unregister method in the same transaction.
+ */
+export function ruleStorageDeposit(records: NormalizedTx[], alreadyMatched: Set<string>): Map<string, RuleMatch> {
+  const out = new Map<string, RuleMatch>();
+  for (const legs of byTx(records).values()) {
+    const storageContracts = new Set(
+      legs.filter((l) => l.direction === "out" && l.counterparty && methods(l).some((m) => STORAGE_METHOD_RE.test(m))).map((l) => l.counterparty!),
+    );
+    if (!storageContracts.size) continue;
+    for (const l of legs) {
+      if (alreadyMatched.has(l.id) || l.asset.contract !== null) continue;
+      if (l.direction === "out" && l.counterparty && storageContracts.has(l.counterparty) && methods(l).some(isStorageDepositMethod)) {
+        out.set(l.id, match("storage_deposit", "storage_deposit", `Refundable storage deposit of ${l.amount} NEAR to ${l.counterparty} (${l.method}).`));
+      } else if (l.direction === "in" && l.counterparty && storageContracts.has(l.counterparty)) {
+        out.set(l.id, match("storage_deposit", "storage_deposit", `Storage deposit refund of ${l.amount} NEAR from ${l.counterparty} in the same transaction.`));
+      }
+    }
+  }
+  return out;
+}
+
 // ---------- all rules, in order ----------
 
-/** Apply every rule in priority order; the first match for a record wins. */
+/**
+ * Apply every rule in priority order; the first match for a record wins:
+ * staking reward, pool lockup, system refund, own wallet, dust, round trip, storage deposit,
+ * wrap/unwrap, liquid staking, swap pairing.
+ */
 export function applyRules(records: NormalizedTx[], ctx: RuleContext): Map<string, RuleMatch> {
   const result = new Map<string, RuleMatch>();
-  const single = [ruleStakingReward, ruleStakingLockup, ruleGasRefund, (tx: NormalizedTx) => ruleOwnWallet(tx, ctx)];
+  const single = [ruleStakingReward, ruleStakingLockup, ruleGasRefund, (tx: NormalizedTx) => ruleOwnWallet(tx, ctx), ruleDust];
   for (const tx of records) {
     for (const rule of single) {
       const m = rule(tx);
@@ -167,6 +244,8 @@ export function applyRules(records: NormalizedTx[], ctx: RuleContext): Map<strin
       }
     }
   }
+  for (const [id, m] of ruleRoundTrip(records, new Set(result.keys()))) result.set(id, m);
+  for (const [id, m] of ruleStorageDeposit(records, new Set(result.keys()))) result.set(id, m);
   for (const [id, m] of ruleWrapUnwrap(records.filter((r) => !result.has(r.id)))) result.set(id, m);
   for (const tx of records) {
     if (result.has(tx.id)) continue;

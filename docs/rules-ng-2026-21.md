@@ -69,3 +69,30 @@ Annual chargeable income (NGN):
   basis. Pending a citable paragraph in the General Transition Guidelines for the Tax Acts 2025.
 - The report must show **BOTH** the reset gain and the no-reset gain for affected disposals, with this note.
 - Computation is implemented in Phase 5; this entry records the decision only.
+
+## D12 — Technical non-taxable labels and post-AI consistency guards (Accepted)
+Three deterministic labels for movements that are mechanics of the NEAR protocol, not economic events. They run
+before the AI and before swap pairing (order: dust, round trip, storage deposit), so the model never sees them.
+- `round_trip` — within one transaction an outgoing and an incoming leg of the **same asset** (same contract, or
+  both native NEAR) with the **same exact amount**, matched one-to-one (e.g. a failed swap that refunds its input).
+  Beneficial ownership never changes, so there is no disposal (consistent with 7.2.2). Takes precedence over swap
+  pairing so a refunded input cannot become a false `disposal_swap`.
+- `dust_no_value` — amount is zero or below 1,000 smallest units of the asset (1,000 yoctoNEAR; 0.001 USDC). Covers
+  the 1-yoctoNEAR security deposit required by `ft_transfer`/`ft_transfer_call` and zero-value relayer or harvest
+  call legs. No realisable value (9.6(6)). Never applied to `staking_reward` (D3: every reward is income).
+- `storage_deposit` — NEAR attached to `storage_deposit` (and `*_storage_deposit` variants such as
+  `tokens_storage_deposit`) and the NEAR refunded by the same contract in the same transaction, or refunded by a
+  contract called with `storage_deposit` / `storage_withdraw` / `storage_unregister`. NEAR storage staking is
+  refundable and recoverable; it is not consideration for a supply, so neither a disposal nor income. Previously the
+  refund was mislabelled `gas_refund`.
+
+Post-AI guards (applied to AI decisions after schema validation; they only set `needsQuestion` and append the reason,
+never change the label; rule outputs are not guarded because they are deterministic):
+- `disposal_swap` without a `pairingId` → "unpaired swap leg" (only the swap rule pairs legs).
+- `income_*`, `gift_received`, `acquisition_fiat` on an outgoing leg, or `disposal_*`, `gift_given` on an incoming
+  leg → "label contradicts direction".
+- `gas_refund` from any counterparty other than `system` or a contract the account called in the same transaction.
+
+Rationale: Phase 3 showed the model mislabelling a refunded swap input as a disposal at 0.85 confidence (above the
+question threshold), dust deposits as unpaired swap disposals, and zero-value or storage refunds as gas refunds.
+Deterministic rules remove those cases; the guards catch the same shape of error if the model makes it elsewhere.

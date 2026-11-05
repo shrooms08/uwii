@@ -73,6 +73,25 @@ export function toClassified(tx: NormalizedTx, d: Decision): ClassifiedTx {
 const fromRule = (tx: NormalizedTx, m: RuleMatch): ClassifiedTx =>
   toClassified(tx, { label: m.label, confidence: m.confidence, method: "rule", reason: m.reason, pairingId: m.pairingId, swapRole: m.swapRole });
 
+// ---------- post-AI consistency guards (D12): flag only, never change the label ----------
+
+const INFLOW_ONLY = (l: LabelId) => l.startsWith("income_") || l === "gift_received" || l === "acquisition_fiat";
+const OUTFLOW_ONLY = (l: LabelId) => l.startsWith("disposal_") || l === "gift_given";
+
+/** Reasons an AI label is inconsistent with the record; empty when consistent. */
+export function consistencyGuards(tx: NormalizedTx, label: LabelId, pairingId: string | undefined, all: NormalizedTx[]): string[] {
+  const reasons: string[] = [];
+  if (label === "disposal_swap" && !pairingId) reasons.push("unpaired swap leg");
+  if ((INFLOW_ONLY(label) && tx.direction === "out") || (OUTFLOW_ONLY(label) && tx.direction === "in")) {
+    reasons.push("label contradicts direction");
+  }
+  if (label === "gas_refund" && tx.counterparty !== "system") {
+    const calledInTx = !!tx.txHash && all.some((o) => o.id !== tx.id && o.txHash === tx.txHash && o.direction === "out" && o.counterparty === tx.counterparty);
+    if (!calledInTx) reasons.push("gas_refund from a counterparty that is neither 'system' nor a contract the account called in this transaction");
+  }
+  return reasons;
+}
+
 // ---------- model I/O ----------
 
 const ModelItem = z
@@ -350,6 +369,10 @@ export async function classifyHistory(history: HistoryResult, options: ClassifyO
           const shortId = [...idMap.entries()].find(([, full]) => full === tx.id)![0];
           const it = accepted.items.find((i) => i.id === shortId)!;
           const sigOk = accepted.evidence.signatureVerified;
+          const guards = consistencyGuards(tx, it.label, undefined, all);
+          let reason = it.reason;
+          if (guards.length) reason += ` [guard: ${guards.join("; ")}]`;
+          if (!sigOk) reason += ` [response signature NOT verified: ${accepted.evidence.detail}]`;
           classified.set(
             tx.id,
             toClassified(tx, {
@@ -357,9 +380,9 @@ export async function classifyHistory(history: HistoryResult, options: ClassifyO
               assetCategory: it.assetCategory,
               confidence: it.confidence,
               method: "ai",
-              reason: sigOk ? it.reason : `${it.reason} [response signature NOT verified: ${accepted.evidence.detail}]`,
+              reason,
               evidence: accepted.evidence,
-              forceQuestion: !sigOk,
+              forceQuestion: !sigOk || guards.length > 0,
             }),
           );
         }

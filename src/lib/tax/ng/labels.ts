@@ -37,6 +37,9 @@ export const LABEL_IDS = [
   "gift_given",
   "gift_received",
   "gas_refund",
+  "round_trip",
+  "dust_no_value",
+  "storage_deposit",
   "unknown",
 ] as const;
 
@@ -162,6 +165,24 @@ export const LABELS: Record<LabelId, LabelDef> = {
     treatment: "Protocol refund of unused gas or a returned deposit: technical, not income.",
     taxable: "non_taxable",
     circularRef: "not income; technical",
+  },
+  round_trip: {
+    id: "round_trip",
+    treatment: "Same asset and amount returned within one transaction; no change in beneficial ownership.",
+    taxable: "non_taxable",
+    circularRef: "Technical; consistent with 7.2.2 (no change in beneficial ownership)",
+  },
+  dust_no_value: {
+    id: "dust_no_value",
+    treatment: "Zero or negligible value (< 1000 yocto-units of the asset).",
+    taxable: "non_taxable",
+    circularRef: "Technical; 9.6(6) (no realisable value)",
+  },
+  storage_deposit: {
+    id: "storage_deposit",
+    treatment: "Refundable NEAR storage deposit or its refund; recoverable, not consideration for a supply.",
+    taxable: "non_taxable",
+    circularRef: "Technical; NEAR storage staking (refundable)",
   },
   unknown: {
     id: "unknown",
