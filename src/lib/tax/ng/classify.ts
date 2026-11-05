@@ -288,9 +288,18 @@ export function computeMetrics(records: ClassifiedTx[], aiResponses: AiResponseR
   };
 }
 
+/** Structured progress for live UIs (the scan stream). Emitted only; never changes classification. */
+export type ClassifyEvent =
+  | { type: "rules"; total: number; matched: number; pending: number }
+  | { type: "attestation_started"; model: string }
+  | { type: "attestation"; verified: boolean; checksPassed: number; checksTotal: number; detail: string }
+  | { type: "ai_response"; batch: number; attempt: number; txCount: number; received: boolean; valid: boolean; signatureVerified: boolean }
+  | { type: "ai_batch"; processed: number; accepted: number; total: number };
+
 export interface ClassifyOptions {
   ownAccounts?: string[];
   onProgress?: (message: string) => void;
+  onEvent?: (event: ClassifyEvent) => void;
 }
 
 export async function classifyHistory(history: HistoryResult, options: ClassifyOptions = {}): Promise<ClassifiedRun> {
@@ -305,6 +314,10 @@ export async function classifyHistory(history: HistoryResult, options: ClassifyO
   }
   const pending = all.filter((tx) => !classified.has(tx.id));
   log(`Rules matched ${classified.size}/${all.length}; ${pending.length} left for AI.`);
+  const emit = options.onEvent ?? (() => {});
+  emit({ type: "rules", total: all.length, matched: classified.size, pending: pending.length });
+  let processed = 0;
+  let acceptedTotal = 0;
 
   const aiResponses: AiResponseRecord[] = [];
   let model: string | null = null;
@@ -315,6 +328,7 @@ export async function classifyHistory(history: HistoryResult, options: ClassifyO
     try {
       model = (await chooseModel()).id;
       log(`Model ${model}; verifying TEE attestation (fresh nonce)…`);
+      emit({ type: "attestation_started", model });
       preflight = await preflightAttestation(model, {
         onStatus: (st) => {
           if (st.state === "retrying verification") log(`  retrying verification (${st.attempt}/${st.maxRetries}): ${st.detail}`);
@@ -337,6 +351,13 @@ export async function classifyHistory(history: HistoryResult, options: ClassifyO
       attestation = { verified: false, details: `attestation preflight failed: ${errMsg(e)}`, nonce: preflight?.nonce ?? null };
     }
     log(`Attestation ${attestation.verified ? "verified" : "NOT verified"}: ${attestation.details}`);
+    emit({
+      type: "attestation",
+      verified: attestation.verified,
+      checksPassed: attestation.checksPassed ?? 0,
+      checksTotal: attestation.checksTotal ?? 0,
+      detail: attestation.details,
+    });
 
     if (!attestation.verified || !preflight || !model) {
       for (const tx of pending) {
@@ -356,6 +377,7 @@ export async function classifyHistory(history: HistoryResult, options: ClassifyO
           } catch (e) {
             lastError = e instanceof OpenAI.APIError ? `NEAR AI API error ${e.status}: ${e.message}` : errMsg(e);
             aiResponses.push({ batch: b + 1, attempt, chatId: null, txCount: batch.length, valid: false, signatureVerified: false, detail: `request failed: ${lastError}` });
+            emit({ type: "ai_response", batch: b + 1, attempt, txCount: batch.length, received: false, valid: false, signatureVerified: false });
             continue;
           }
           const sig = await checkSignature(preflight, c);
@@ -370,6 +392,7 @@ export async function classifyHistory(history: HistoryResult, options: ClassifyO
             detail: parsed.ok ? sig.detail : `invalid output (${parsed.error}); ${sig.detail}`,
             ...(sig.signingAddress ? { signingAddress: sig.signingAddress } : {}),
           });
+          emit({ type: "ai_response", batch: b + 1, attempt, txCount: batch.length, received: Boolean(c.chatId), valid: parsed.ok, signatureVerified: sig.ok });
           log(`  chat ${c.chatId}: output ${parsed.ok ? "valid" : "INVALID"}, signature ${sig.ok ? "verified" : `NOT verified (${sig.detail})`}`);
           if (parsed.ok) {
             accepted = {
@@ -381,6 +404,9 @@ export async function classifyHistory(history: HistoryResult, options: ClassifyO
           }
         }
 
+        processed += batch.length;
+        if (accepted) acceptedTotal += batch.length;
+        emit({ type: "ai_batch", processed, accepted: acceptedTotal, total: pending.length });
         for (const tx of batch) {
           if (!accepted) {
             classified.set(tx.id, toClassified(tx, { label: "unknown", confidence: 0, method: "ai", reason: `model output invalid (${lastError.slice(0, 200)})`, forceQuestion: true }));

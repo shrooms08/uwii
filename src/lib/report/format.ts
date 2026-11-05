@@ -34,3 +34,17 @@ export function fmtQty(v: string | null | undefined): string {
   const [w, f] = (neg ? v.slice(1) : v).split(".");
   return `${neg ? "-" : ""}${groups(w)}${f ? `.${f}` : ""}`;
 }
+
+/** Token amount for lists: 2 dp half-up with separators; non-zero amounts below 0.01 are shown exactly (as in the question text). */
+export function fmtAmount(v: string): string {
+  const d = dec(v);
+  if (!d.isZero() && d.abs().lt("0.01")) return fmtQty(d.toFixed());
+  return fmtNgn(v);
+}
+
+/** "2026-10-13T08:15:00.000Z" -> "13 Oct 2026" (UTC calendar date). */
+export function fmtDate(iso: string): string {
+  const [y, m, d] = iso.slice(0, 10).split("-");
+  const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  return `${d} ${MONTHS[Number(m) - 1]} ${y}`;
+}

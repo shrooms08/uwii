@@ -87,10 +87,8 @@ const nsToISO = (ns: bigint): string => new Date(Number(ns / NS_PER_MS)).toISOSt
 
 // ---------- classification ----------
 
-const ACCOUNT_ID_RE = /^(?=.{2,64}$)(([a-z\d]+[-_])*[a-z\d]+\.)*([a-z\d]+[-_])*[a-z\d]+$/;
-export function isValidAccountId(id: string): boolean {
-  return ACCOUNT_ID_RE.test(id);
-}
+import { isValidAccountId } from "../near/account-id";
+export { isValidAccountId };
 
 /** Validator staking-pool factories on mainnet (poolv1.near, pool.near, poolv2.near). */
 export const STAKING_POOL_RE = /\.(poolv1|pool|poolv2)\.near$/;
