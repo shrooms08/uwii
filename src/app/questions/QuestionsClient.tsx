@@ -9,9 +9,10 @@ import { cx } from "@/components/ui/cx";
 import { Money } from "@/components/ui/Money";
 import { Mono } from "@/components/ui/Mono";
 import { SegmentBar } from "@/components/ui/ProgressBar";
+import { legForRequest, postJson, requestBody } from "@/lib/client/request";
 import { EMPTY_SAVED, NGN_INPUT_RE, isDemoPresetOn, loadSaved, setDemoPreset, storeSaved, stripNgn, type Saved } from "@/lib/client/storage";
 import { DEMO_ACCOUNT, ILLUSTRATIVE_ANSWERS } from "@/lib/demo/illustrative-answers";
-import { parseAccountList, shortParty } from "@/lib/near/account-id";
+import { shortParty } from "@/lib/near/account-id";
 import { fmtAmount, fmtDate, fmtUsd } from "@/lib/report/format";
 import type { ReportData } from "@/lib/tax/ng/report";
 import type { AnswerOption, GroupAnswer, Question, QuestionTx } from "@/lib/tax/ng/questions";
@@ -38,48 +39,6 @@ const FOLLOW_UP_LABEL: Record<NonNullable<AnswerOption["followUp"]>, string> = {
   ngn_paid: "How much naira did you pay?",
   ngn_received: "How much naira did you receive?",
 };
-
-/** Source leg as it will be sent: separators stripped; null until the asset and a positive quantity are given. */
-function legForRequest(leg: SourceLegInput | undefined): SourceLegInput | null {
-  if (!leg) return null;
-  const quantity = stripNgn(leg.quantity);
-  if (!leg.asset.symbol.trim() || leg.asset.contract === "" || !isPositiveQuantity(quantity)) return null;
-  return { asset: leg.asset, quantity, ...(leg.timestamp ? { timestamp: leg.timestamp } : {}) };
-}
-
-/** Request body pieces built from what is saved in this browser (naira separators stripped). */
-function requestBody(account: string, saved: Saved) {
-  const groups: Record<string, GroupAnswer> = {};
-  for (const [id, g] of Object.entries(saved.groups)) {
-    const ngn = g.ngn ? Object.fromEntries(Object.entries(g.ngn).map(([k, v]) => [k, stripNgn(v)]).filter(([, v]) => v !== "")) : undefined;
-    const legs = g.sourceLegs
-      ? Object.fromEntries(Object.entries(g.sourceLegs).flatMap(([k, v]) => {
-          const l = legForRequest(v);
-          return l ? [[k, l]] : [];
-        }))
-      : undefined;
-    groups[id] = {
-      option: g.option,
-      ...(g.overrides && Object.keys(g.overrides).length ? { overrides: g.overrides } : {}),
-      ...(ngn && Object.keys(ngn).length ? { ngn } : {}),
-      ...(legs && Object.keys(legs).length ? { sourceLegs: legs } : {}),
-    };
-  }
-  const other = stripNgn(saved.otherIncomeNgn);
-  return {
-    account,
-    ownAccounts: parseAccountList(saved.ownText).filter((a) => a !== account),
-    answers: { groups },
-    profile: { otherIncomeNgn: NGN_INPUT_RE.test(other) ? other : "" },
-  };
-}
-
-async function postJson<T>(url: string, body: unknown, signal: AbortSignal): Promise<T> {
-  const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal });
-  const json = (await res.json()) as T & { error?: string };
-  if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
-  return json;
-}
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 

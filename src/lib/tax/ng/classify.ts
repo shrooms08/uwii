@@ -31,6 +31,7 @@ import {
   type ClassificationMetrics,
   type ClassifiedRun,
   type ClassifiedTx,
+  type EvidenceCheck,
 } from "./types";
 
 export const BATCH_SIZE = 20;
@@ -246,16 +247,17 @@ async function complete(model: string, payload: PayloadItem[]): Promise<Completi
   return { chatId: completion.id ?? null, content: completion.choices[0]?.message?.content ?? "", exchange };
 }
 
-async function checkSignature(preflight: Preflight, c: Completion): Promise<{ ok: boolean; detail: string; signingAddress?: string }> {
-  if (!c.chatId) return { ok: false, detail: "no chat id in response" };
-  if (!c.exchange) return { ok: false, detail: "exact request/response bytes not captured" };
+async function checkSignature(preflight: Preflight, c: Completion): Promise<{ ok: boolean; detail: string; signingAddress?: string; checks: EvidenceCheck[] }> {
+  if (!c.chatId) return { ok: false, detail: "no chat id in response", checks: [] };
+  if (!c.exchange) return { ok: false, detail: "exact request/response bytes not captured", checks: [] };
   const r = await verifyResponse(preflight, { chatId: c.chatId, ...c.exchange });
   const failed = r.checks.find((x) => !x.ok);
-  if (r.checks.length === 0) return { ok: false, detail: "no signature checks ran" };
+  if (r.checks.length === 0) return { ok: false, detail: "no signature checks ran", checks: [] };
   const signingAddress = typeof r.summary.signing_address === "string" ? r.summary.signing_address : undefined;
+  const checks = r.checks.map(({ step, ok, detail }) => ({ step, ok, detail }));
   return failed
-    ? { ok: false, detail: `${failed.step}: ${failed.detail}`, signingAddress }
-    : { ok: true, detail: `signature verified (${String(r.summary.signature_kind)})`, signingAddress };
+    ? { ok: false, detail: `${failed.step}: ${failed.detail}`, signingAddress, checks }
+    : { ok: true, detail: `signature verified (${String(r.summary.signature_kind)})`, signingAddress, checks };
 }
 
 export function preflightVerified(p: Preflight): { ok: boolean; details: string } {
@@ -346,6 +348,7 @@ export async function classifyHistory(history: HistoryResult, options: ClassifyO
           ...preflight.models.map((m) => ({ label: m.label, address: m.signingAddress, verified: m.ok })),
         ],
         attestedAt: new Date().toISOString(),
+        checks: preflight.checks.map(({ step, ok, detail }) => ({ step, ok, detail })),
       };
     } catch (e) {
       attestation = { verified: false, details: `attestation preflight failed: ${errMsg(e)}`, nonce: preflight?.nonce ?? null };
@@ -391,6 +394,7 @@ export async function classifyHistory(history: HistoryResult, options: ClassifyO
             signatureVerified: sig.ok,
             detail: parsed.ok ? sig.detail : `invalid output (${parsed.error}); ${sig.detail}`,
             ...(sig.signingAddress ? { signingAddress: sig.signingAddress } : {}),
+            ...(sig.checks.length ? { signatureChecks: sig.checks } : {}),
           });
           emit({ type: "ai_response", batch: b + 1, attempt, txCount: batch.length, received: Boolean(c.chatId), valid: parsed.ok, signatureVerified: sig.ok });
           log(`  chat ${c.chatId}: output ${parsed.ok ? "valid" : "INVALID"}, signature ${sig.ok ? "verified" : `NOT verified (${sig.detail})`}`);

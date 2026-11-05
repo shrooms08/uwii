@@ -56,6 +56,13 @@ export interface UserSourceLeg {
   timestamp: string;
 }
 
+/** One recorded verification step (attestation preflight or response signature). */
+export interface EvidenceCheck {
+  step: string;
+  ok: boolean;
+  detail: string;
+}
+
 export const isAiEvidence = (e: ClassifiedTx["evidence"]): e is AiEvidence => !!e && "chatId" in e;
 
 export interface AiResponseRecord {
@@ -68,6 +75,8 @@ export interface AiResponseRecord {
   detail: string;
   /** Address that signed this response (when the signature was fetched). */
   signingAddress?: string;
+  /** Every response-signature check that ran for this response. */
+  signatureChecks?: EvidenceCheck[];
 }
 
 export interface ClassificationMetrics {
@@ -106,6 +115,8 @@ export interface ClassifiedRun {
     reportSigners?: { label: string; address: string; verified: boolean }[];
     /** When the attestation reports were verified. */
     attestedAt?: string;
+    /** Every preflight check that ran, in order (absent on runs recorded before this field existed). */
+    checks?: EvidenceCheck[];
   };
   aiResponses: AiResponseRecord[];
   metrics: ClassificationMetrics;

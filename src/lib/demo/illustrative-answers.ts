@@ -1,6 +1,6 @@
 /**
  * Illustrative answers for the public demo account only: the answers the Phase 4/5 tests used, plus an
- * illustrative NEAR Intents source leg (25 NEAR).
+ * illustrative NEAR Intents source leg (13 NEAR).
  * They are invented for illustration (the account holder never gave them), so whenever they are
  * loaded the UI shows "Demo account · questions answered for illustration". Never offered for any
  * other account.
@@ -26,13 +26,13 @@ export const ILLUSTRATIVE_ANSWERS: { groups: Record<string, GroupAnswer>; otherI
       option: "p2p_sell",
       ngn: { "nearblocks:receipt:DBnAjMic2r7Hb3vioL15YreAtCFqWqptpeGwCVYnDf6L": "160000" },
     },
-    // "A swap I made on NEAR Intents", with an illustrative source leg: 25 NEAR given up at the receipt time.
+    // "A swap I made on NEAR Intents", with an illustrative source leg: 13 NEAR given up at the receipt time.
     "intents:in:intents.near": {
       option: "intents_swap",
       sourceLegs: {
         "nearblocks:ft:BKPUYJD3CGoN4TPgkEXPMWVum1YgBFiFPooKTXxEAzw1:npro.nearmobile.near:21": {
           asset: { symbol: "NEAR", contract: null },
-          quantity: "25",
+          quantity: "13",
           timestamp: "2026-10-13T15:52:22.647Z",
         },
       },
