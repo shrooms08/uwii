@@ -1,0 +1,490 @@
+{
+  "generatedAt": "2026-11-05T19:02:33.551Z",
+  "quotes": {
+    "aa-harvest-moon.near|2026-10-04T20:38:55.146Z": {
+      "status": "no_verifiable_price",
+      "attempted": [
+        "CoinGecko: no listing for NEAR contract aa-harvest-moon.near",
+        "Rhea/Ref v2: no simple pool pairing aa-harvest-moon.near with wNEAR among 9006 pools; Rhea DCL v2 scanned (6436 pools); token not present"
+      ]
+    },
+    "aa-harvest-moon.near|2026-10-04T23:02:33.993Z": {
+      "status": "no_verifiable_price",
+      "attempted": [
+        "CoinGecko: no listing for NEAR contract aa-harvest-moon.near",
+        "Rhea/Ref v2: no simple pool pairing aa-harvest-moon.near with wNEAR among 9006 pools; Rhea DCL v2 scanned (6436 pools); token not present"
+      ]
+    },
+    "aa-harvest-moon.near|2026-10-05T01:04:20.768Z": {
+      "status": "no_verifiable_price",
+      "attempted": [
+        "CoinGecko: no listing for NEAR contract aa-harvest-moon.near",
+        "Rhea/Ref v2: no simple pool pairing aa-harvest-moon.near with wNEAR among 9006 pools; Rhea DCL v2 scanned (6436 pools); token not present"
+      ]
+    },
+    "aa-harvest-moon.near|2026-10-05T03:09:14.643Z": {
+      "status": "no_verifiable_price",
+      "attempted": [
+        "CoinGecko: no listing for NEAR contract aa-harvest-moon.near",
+        "Rhea/Ref v2: no simple pool pairing aa-harvest-moon.near with wNEAR among 9006 pools; Rhea DCL v2 scanned (6436 pools); token not present"
+      ]
+    },
+    "aa-harvest-moon.near|2026-10-05T05:16:33.122Z": {
+      "status": "no_verifiable_price",
+      "attempted": [
+        "CoinGecko: no listing for NEAR contract aa-harvest-moon.near",
+        "Rhea/Ref v2: no simple pool pairing aa-harvest-moon.near with wNEAR among 9006 pools; Rhea DCL v2 scanned (6436 pools); token not present"
+      ]
+    },
+    "native:NEAR|2026-10-04T20:53:46.448Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "4.954008673005946",
+        "granularity": "hourly",
+        "pointTime": "2026-10-04T21:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko near hourly point 2026-10-04T21:00:00.000Z"
+      }
+    },
+    "native:NEAR|2026-10-08T17:48:10.060Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "4.405311354355813",
+        "granularity": "hourly",
+        "pointTime": "2026-10-08T18:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko near hourly point 2026-10-08T18:00:00.000Z"
+      }
+    },
+    "native:NEAR|2026-10-08T17:54:34.025Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "4.405311354355813",
+        "granularity": "hourly",
+        "pointTime": "2026-10-08T18:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko near hourly point 2026-10-08T18:00:00.000Z"
+      }
+    },
+    "native:NEAR|2026-10-08T17:54:38.741Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "4.405311354355813",
+        "granularity": "hourly",
+        "pointTime": "2026-10-08T18:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko near hourly point 2026-10-08T18:00:00.000Z"
+      }
+    },
+    "native:NEAR|2026-10-08T17:54:42.940Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "4.405311354355813",
+        "granularity": "hourly",
+        "pointTime": "2026-10-08T18:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko near hourly point 2026-10-08T18:00:00.000Z"
+      }
+    },
+    "native:NEAR|2026-10-08T17:54:47.391Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "4.405311354355813",
+        "granularity": "hourly",
+        "pointTime": "2026-10-08T18:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko near hourly point 2026-10-08T18:00:00.000Z"
+      }
+    },
+    "native:NEAR|2026-10-08T17:54:51.551Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "4.405311354355813",
+        "granularity": "hourly",
+        "pointTime": "2026-10-08T18:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko near hourly point 2026-10-08T18:00:00.000Z"
+      }
+    },
+    "native:NEAR|2026-10-08T17:57:44.426Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "4.405311354355813",
+        "granularity": "hourly",
+        "pointTime": "2026-10-08T18:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko near hourly point 2026-10-08T18:00:00.000Z"
+      }
+    },
+    "native:NEAR|2026-10-13T15:48:17.982Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "4.944905807638033",
+        "granularity": "hourly",
+        "pointTime": "2026-10-13T16:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko near hourly point 2026-10-13T16:00:00.000Z"
+      }
+    },
+    "native:NEAR|2026-10-13T15:51:53.450Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "4.944905807638033",
+        "granularity": "hourly",
+        "pointTime": "2026-10-13T16:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko near hourly point 2026-10-13T16:00:00.000Z"
+      }
+    },
+    "native:NEAR|2026-10-13T15:54:20.588Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "4.944905807638033",
+        "granularity": "hourly",
+        "pointTime": "2026-10-13T16:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko near hourly point 2026-10-13T16:00:00.000Z"
+      }
+    },
+    "native:NEAR|2026-10-13T23:59:59.999Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "5.036515898953102",
+        "granularity": "hourly",
+        "pointTime": "2026-10-14T00:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko near hourly point 2026-10-14T00:00:00.000Z"
+      }
+    },
+    "native:NEAR|2026-10-14T23:59:59.999Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "4.881085155891693",
+        "granularity": "hourly",
+        "pointTime": "2026-10-15T00:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko near hourly point 2026-10-15T00:00:00.000Z"
+      }
+    },
+    "native:NEAR|2026-10-15T23:59:59.999Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "5.257478171188409",
+        "granularity": "hourly",
+        "pointTime": "2026-10-16T00:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko near hourly point 2026-10-16T00:00:00.000Z"
+      }
+    },
+    "native:NEAR|2026-10-16T23:59:59.999Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "5.060826870899352",
+        "granularity": "hourly",
+        "pointTime": "2026-10-17T00:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko near hourly point 2026-10-17T00:00:00.000Z"
+      }
+    },
+    "native:NEAR|2026-10-17T23:59:59.999Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "4.856513264288132",
+        "granularity": "hourly",
+        "pointTime": "2026-10-18T00:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko near hourly point 2026-10-18T00:00:00.000Z"
+      }
+    },
+    "native:NEAR|2026-10-18T23:59:59.999Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "5.007467606309968",
+        "granularity": "hourly",
+        "pointTime": "2026-10-19T00:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko near hourly point 2026-10-19T00:00:00.000Z"
+      }
+    },
+    "native:NEAR|2026-10-19T23:59:59.999Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "4.899896640657338",
+        "granularity": "hourly",
+        "pointTime": "2026-10-20T00:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko near hourly point 2026-10-20T00:00:00.000Z"
+      }
+    },
+    "native:NEAR|2026-10-20T23:59:59.999Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "4.923929210042525",
+        "granularity": "hourly",
+        "pointTime": "2026-10-21T00:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko near hourly point 2026-10-21T00:00:00.000Z"
+      }
+    },
+    "native:NEAR|2026-10-21T23:59:59.999Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "5.26112213879386",
+        "granularity": "hourly",
+        "pointTime": "2026-10-22T00:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko near hourly point 2026-10-22T00:00:00.000Z"
+      }
+    },
+    "native:NEAR|2026-10-22T23:59:59.999Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "4.878253373145789",
+        "granularity": "hourly",
+        "pointTime": "2026-10-23T00:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko near hourly point 2026-10-23T00:00:00.000Z"
+      }
+    },
+    "native:NEAR|2026-10-23T23:59:59.999Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "4.684547957475351",
+        "granularity": "hourly",
+        "pointTime": "2026-10-24T00:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko near hourly point 2026-10-24T00:00:00.000Z"
+      }
+    },
+    "native:NEAR|2026-10-24T23:59:59.999Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "4.496169195107218",
+        "granularity": "hourly",
+        "pointTime": "2026-10-25T00:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko near hourly point 2026-10-25T00:00:00.000Z"
+      }
+    },
+    "native:NEAR|2026-10-25T23:59:59.999Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "4.588817799587553",
+        "granularity": "hourly",
+        "pointTime": "2026-10-26T00:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko near hourly point 2026-10-26T00:00:00.000Z"
+      }
+    },
+    "native:NEAR|2026-10-26T03:56:00.499Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "4.455261996981728",
+        "granularity": "hourly",
+        "pointTime": "2026-10-26T04:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko near hourly point 2026-10-26T04:00:00.000Z"
+      }
+    },
+    "native:NEAR|2026-10-26T04:05:45.924Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "4.455261996981728",
+        "granularity": "hourly",
+        "pointTime": "2026-10-26T04:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko near hourly point 2026-10-26T04:00:00.000Z"
+      }
+    },
+    "native:NEAR|2026-10-26T04:05:49.672Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "4.455261996981728",
+        "granularity": "hourly",
+        "pointTime": "2026-10-26T04:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko near hourly point 2026-10-26T04:00:00.000Z"
+      }
+    },
+    "native:NEAR|2026-10-26T04:07:05.858Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "4.455261996981728",
+        "granularity": "hourly",
+        "pointTime": "2026-10-26T04:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko near hourly point 2026-10-26T04:00:00.000Z"
+      }
+    },
+    "native:NEAR|2026-10-26T23:59:59.999Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "4.501462755561354",
+        "granularity": "hourly",
+        "pointTime": "2026-10-27T00:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko near hourly point 2026-10-27T00:00:00.000Z"
+      }
+    },
+    "native:NEAR|2026-10-27T23:59:59.999Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "4.674921301296147",
+        "granularity": "hourly",
+        "pointTime": "2026-10-28T00:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko near hourly point 2026-10-28T00:00:00.000Z"
+      }
+    },
+    "native:NEAR|2026-10-28T23:59:59.999Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "4.728523337564447",
+        "granularity": "hourly",
+        "pointTime": "2026-10-29T00:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko near hourly point 2026-10-29T00:00:00.000Z"
+      }
+    },
+    "native:NEAR|2026-10-29T23:59:59.999Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "4.051593834323441",
+        "granularity": "hourly",
+        "pointTime": "2026-10-30T00:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko near hourly point 2026-10-30T00:00:00.000Z"
+      }
+    },
+    "native:NEAR|2026-10-30T23:59:59.999Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "4.287444997298165",
+        "granularity": "hourly",
+        "pointTime": "2026-10-31T00:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko near hourly point 2026-10-31T00:00:00.000Z"
+      }
+    },
+    "native:NEAR|2026-10-31T23:59:59.999Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "4.431226659092195",
+        "granularity": "hourly",
+        "pointTime": "2026-11-01T00:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko near hourly point 2026-11-01T00:00:00.000Z"
+      }
+    },
+    "native:NEAR|2026-11-01T23:59:59.999Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "4.285643684468088",
+        "granularity": "hourly",
+        "pointTime": "2026-11-02T00:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko near hourly point 2026-11-02T00:00:00.000Z"
+      }
+    },
+    "native:NEAR|2026-11-02T23:59:59.999Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "3.8633891507982865",
+        "granularity": "hourly",
+        "pointTime": "2026-11-03T00:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko near hourly point 2026-11-03T00:00:00.000Z"
+      }
+    },
+    "native:NEAR|2026-11-03T23:59:59.999Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "3.832591772442751",
+        "granularity": "hourly",
+        "pointTime": "2026-11-04T00:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko near hourly point 2026-11-04T00:00:00.000Z"
+      }
+    },
+    "native:NEAR|2026-11-04T05:19:24.459Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "3.8309514652158656",
+        "granularity": "hourly",
+        "pointTime": "2026-11-04T05:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko near hourly point 2026-11-04T05:00:00.000Z"
+      }
+    },
+    "native:NEAR|2026-11-04T05:21:12.736Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "3.8309514652158656",
+        "granularity": "hourly",
+        "pointTime": "2026-11-04T05:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko near hourly point 2026-11-04T05:00:00.000Z"
+      }
+    },
+    "npro.nearmobile.near|2026-10-13T15:52:22.647Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "0.3455278784203091",
+        "granularity": "hourly",
+        "pointTime": "2026-10-13T16:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko npro hourly point 2026-10-13T16:00:00.000Z"
+      }
+    },
+    "npro.nearmobile.near|2026-10-13T15:53:02.370Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "0.3455278784203091",
+        "granularity": "hourly",
+        "pointTime": "2026-10-13T16:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko npro hourly point 2026-10-13T16:00:00.000Z"
+      }
+    },
+    "token.rhealab.near|2026-10-08T17:57:47.814Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "0.05439009044673605",
+        "granularity": "hourly",
+        "pointTime": "2026-10-08T18:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko rhea-2 hourly point 2026-10-08T18:00:00.000Z"
+      }
+    },
+    "token.rhealab.near|2026-10-26T04:05:53.101Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "0.05574767832151882",
+        "granularity": "hourly",
+        "pointTime": "2026-10-26T04:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko rhea-2 hourly point 2026-10-26T04:00:00.000Z"
+      }
+    },
+    "wrap.near|2026-10-08T17:57:44.426Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "4.405311354355813",
+        "granularity": "hourly",
+        "pointTime": "2026-10-08T18:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko near hourly point 2026-10-08T18:00:00.000Z"
+      }
+    },
+    "wrap.near|2026-10-26T04:05:49.672Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "4.455261996981728",
+        "granularity": "hourly",
+        "pointTime": "2026-10-26T04:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko near hourly point 2026-10-26T04:00:00.000Z"
+      }
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "accountId": "rybergh44.near",
+  "date": "2026-01-01",
+  "block": {
+    "height": 179199136,
+    "hash": "BiVK1y2qKAbxmtXARdXXhr86wNVQmfh9mguo5zPzo5M9",
+    "timestampNs": "1767225600442673525"
+  },
+  "accountExisted": false,
+  "balances": [],
+  "fetchedAt": "2026-11-05T19:01:28.800Z",
+  "method": "account did not exist at the first block of the year (view_account UNKNOWN_ACCOUNT): no opening balances"
+}

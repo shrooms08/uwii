@@ -312,7 +312,11 @@ export async function classifyHistory(history: HistoryResult, options: ClassifyO
     try {
       model = (await chooseModel()).id;
       log(`Model ${model}; verifying TEE attestation (fresh nonce)…`);
-      preflight = await preflightAttestation(model);
+      preflight = await preflightAttestation(model, {
+        onStatus: (st) => {
+          if (st.state === "retrying verification") log(`  retrying verification (${st.attempt}/${st.maxRetries}): ${st.detail}`);
+        },
+      });
       const v = preflightVerified(preflight);
       attestation = { verified: v.ok, details: v.details, nonce: preflight.nonce };
     } catch (e) {

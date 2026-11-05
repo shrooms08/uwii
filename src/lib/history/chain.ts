@@ -217,3 +217,45 @@ export async function viewAtBlock(
   }
   throw new Error(`view ${contract}.${method}@${height} failed after ${ARCHIVAL_MAX_ATTEMPTS} attempts: ${lastErr}`);
 }
+
+/** First produced block with timestamp >= targetNs (closestBlock returns the adjacent pair's closer side). */
+export async function firstBlockAtOrAfter(targetNs: bigint): Promise<BlockRef> {
+  const c = await closestBlock(targetNs, await finalBlock());
+  if (c.timestampNs >= targetNs) return c;
+  const next = await firstBlockIn(c.height + 1, c.height + 500);
+  if (!next || next.timestampNs < targetNs) throw new Error(`firstBlockAtOrAfter: no block found after height ${c.height}`);
+  return next;
+}
+
+/** Account state at a block via archival RPC; null when the account did not exist at that block. */
+export async function viewAccountAtBlock(
+  accountId: string,
+  height: number,
+  onProgress?: ProgressFn,
+): Promise<{ amount: string; locked: string } | null> {
+  const body = JSON.stringify({ jsonrpc: "2.0", id: "uwii", method: "query", params: { request_type: "view_account", block_id: height, account_id: accountId } });
+  let lastErr = "";
+  for (let attempt = 1; attempt <= ARCHIVAL_MAX_ATTEMPTS; attempt++) {
+    await archivalSlot();
+    try {
+      const res = await fetch(ARCHIVAL_RPC_URL, { method: "POST", headers: { "content-type": "application/json" }, body, signal: AbortSignal.timeout(TIMEOUT_MS), cache: "no-store" });
+      if (res.status === 429 || res.status >= 500) {
+        const ra = Number(res.headers.get("retry-after"));
+        const wait = Number.isFinite(ra) && ra > 0 ? ra * 1000 + 1000 : Math.min(600_000, 60_000 * attempt);
+        lastErr = `HTTP ${res.status}`;
+        onProgress?.(`  archival RPC ${lastErr}; waiting ${Math.round(wait / 1000)}s (attempt ${attempt}/${ARCHIVAL_MAX_ATTEMPTS})`);
+        nextArchivalAt = Math.max(nextArchivalAt, Date.now() + wait);
+        continue;
+      }
+      const j = (await res.json()) as { result?: { amount?: string; locked?: string }; error?: { cause?: { name?: string } } };
+      if (j.result?.amount !== undefined) return { amount: j.result.amount, locked: j.result.locked ?? "0" };
+      if (j.error?.cause?.name === "UNKNOWN_ACCOUNT") return null;
+      throw new Error(`view_account ${accountId}@${height} failed: ${JSON.stringify(j.error ?? j.result)}`);
+    } catch (e) {
+      if (e instanceof Error && e.message.startsWith("view_account ")) throw e;
+      lastErr = e instanceof Error ? e.message : String(e);
+      onProgress?.(`  archival RPC error: ${lastErr} (attempt ${attempt}/${ARCHIVAL_MAX_ATTEMPTS})`);
+    }
+  }
+  throw new Error(`view_account ${accountId}@${height} failed after ${ARCHIVAL_MAX_ATTEMPTS} attempts: ${lastErr}`);
+}

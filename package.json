@@ -10,10 +10,13 @@
     "check:attestation": "tsx --env-file-if-exists=.env.local scripts/check-attestation.ts",
     "fetch:history": "tsx scripts/fetch-history.ts",
     "classify": "tsx --env-file-if-exists=.env.local scripts/classify-history.ts",
-    "test": "tsx --test src/lib/tax/ng/*.test.ts"
+    "test": "tsx --test src/lib/tax/ng/*.test.ts",
+    "fetch:fx": "tsx scripts/fetch-cbn-nafem.ts",
+    "report": "tsx --env-file-if-exists=.env.local scripts/report.ts"
   },
   "dependencies": {
     "@phala/dcap-qvl": "^0.7.1",
+    "decimal.js": "10.6.0",
     "ethers": "^6.17.0",
     "next": "16.4.5",
     "openai": "^7.50.0",

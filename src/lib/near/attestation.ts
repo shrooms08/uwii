@@ -88,6 +88,49 @@ async function fetchWithTimeout(url: string, init: RequestInit = {}): Promise<Re
   return fetch(url, { ...init, signal: AbortSignal.timeout(HTTP_TIMEOUT_MS) });
 }
 
+// ---------------------------------------------------------------- transient retry
+
+/** Progress reported to callers while evidence is fetched and verified. */
+export type AttestationStatus =
+  | { state: "verifying"; detail: string }
+  | { state: "retrying verification"; detail: string; attempt: number; maxRetries: number }
+  | { state: "verified" | "failed"; detail: string };
+
+export type AttestationStatusFn = (status: AttestationStatus) => void;
+
+/** Retries of a transient fetch (collateral, NRAS, report). Verdicts are never retried. */
+export const ATTESTATION_MAX_RETRIES = 3;
+const RETRY_BASE_MS = 1_000;
+
+/**
+ * Run `op` and retry up to ATTESTATION_MAX_RETRIES times with exponential backoff while it fails
+ * transiently. Every attempt runs the full verification; only a passing attempt is ever accepted.
+ */
+async function withTransientRetry<T>(
+  what: string,
+  op: () => Promise<T>,
+  isTransient: (result: { ok: true; value: T } | { ok: false; error: unknown }) => boolean,
+  onStatus?: AttestationStatusFn,
+): Promise<{ value?: T; error?: unknown; retries: number }> {
+  for (let attempt = 0; ; attempt++) {
+    let outcome: { ok: true; value: T } | { ok: false; error: unknown };
+    try {
+      outcome = { ok: true, value: await op() };
+    } catch (error) {
+      outcome = { ok: false, error };
+    }
+    if (attempt >= ATTESTATION_MAX_RETRIES || !isTransient(outcome)) {
+      return outcome.ok ? { value: outcome.value, retries: attempt } : { error: outcome.error, retries: attempt };
+    }
+    const detail = outcome.ok ? "transient response" : errMsg(outcome.error);
+    onStatus?.({ state: "retrying verification", detail: `${what}: ${detail}`, attempt: attempt + 1, maxRetries: ATTESTATION_MAX_RETRIES });
+    await new Promise((r) => setTimeout(r, RETRY_BASE_MS * 2 ** attempt));
+  }
+}
+
+const isTransientHttp = (status: number) => status === 408 || status === 429 || status >= 500;
+const retried = (n: number) => (n ? ` (after ${n} transient retr${n === 1 ? "y" : "ies"})` : "");
+
 function authHeaders(): Record<string, string> {
   return { Authorization: `Bearer ${getApiKey()}`, Accept: "application/json" };
 }
@@ -125,6 +168,7 @@ async function checkNearReport(
   report: NearReport,
   nonceHex: string,
   requireGpu: boolean,
+  onStatus?: AttestationStatusFn,
 ): Promise<ReportVerification> {
   const checks: AttestationCheck[] = [];
   const summary: Record<string, unknown> = {
@@ -140,7 +184,16 @@ async function checkNearReport(
   // 1. Verify intel_quote with Intel DCAP (dcap-qvl) and apply TCB policy.
   let quote;
   try {
-    const verified = await getCollateralAndVerify(hexBytes(report.intel_quote));
+    // Collateral is fetched from the network; a thrown error is retried, a returned verdict is not.
+    const attempt = await withTransientRetry(
+      `${label} Intel TDX collateral`,
+      () => getCollateralAndVerify(hexBytes(report.intel_quote)),
+      (o) => !o.ok,
+      onStatus,
+    );
+    if (attempt.error !== undefined) throw attempt.error;
+    const verified = attempt.value!;
+    summary.collateral_retries = attempt.retries;
     summary.tcb_status = verified.status;
     summary.advisory_ids = verified.advisory_ids;
     if (!ACCEPTED_TCB_STATUSES.includes(verified.status)) {
@@ -152,7 +205,7 @@ async function checkNearReport(
     if (verified.report.type !== "td10") return fail("Intel TDX quote type", `expected td10, got ${verified.report.type}`);
     quote = verified.report.asTd10();
     if (!quote) return fail("Intel TDX quote type", "report could not be read as TD10");
-    pass("Intel TDX quote verified (dcap-qvl)", `TCB status ${verified.status}`);
+    pass("Intel TDX quote verified (dcap-qvl)", `TCB status ${verified.status}${retried(attempt.retries)}`);
   } catch (e) {
     return fail("Intel TDX quote verification (dcap-qvl)", errMsg(e));
   }
@@ -222,7 +275,7 @@ async function checkNearReport(
 
   // 5. GPU evidence via NVIDIA NRAS (required for model reports).
   if (requireGpu) {
-    const gpu = await verifyGpuEvidence(report, nonceHex);
+    const gpu = await verifyGpuEvidence(report, nonceHex, onStatus);
     summary.gpu = gpu.summary;
     if (!gpu.ok) return fail("NVIDIA GPU attestation (NRAS)", gpu.detail);
     pass("NVIDIA GPU attestation (NRAS)", gpu.detail);
@@ -235,6 +288,7 @@ async function checkNearReport(
 async function verifyGpuEvidence(
   report: NearReport,
   nonceHex: string,
+  onStatus?: AttestationStatusFn,
 ): Promise<{ ok: boolean; detail: string; summary: Record<string, unknown> }> {
   const summary: Record<string, unknown> = {};
   if (!report.nvidia_payload) return { ok: false, detail: "nvidia_payload missing (policy requires GPU evidence)", summary };
@@ -249,17 +303,28 @@ async function verifyGpuEvidence(
   }
 
   let body: unknown;
+  let nrasRetries = 0;
   try {
-    const res = await fetchWithTimeout(NVIDIA_NRAS_URL, {
-      method: "POST",
-      headers: { Accept: "application/json", "Content-Type": "application/json" },
-      body: report.nvidia_payload, // the decoded JSON object, unchanged
-    });
-    const text = await res.text();
-    if (!res.ok) return { ok: false, detail: `NRAS HTTP ${res.status}: ${text.slice(0, 200)}`, summary };
-    body = JSON.parse(text);
+    const attempt = await withTransientRetry(
+      "NVIDIA NRAS",
+      async () => {
+        const res = await fetchWithTimeout(NVIDIA_NRAS_URL, {
+          method: "POST",
+          headers: { Accept: "application/json", "Content-Type": "application/json" },
+          body: report.nvidia_payload, // the decoded JSON object, unchanged
+        });
+        return { status: res.status, ok: res.ok, text: await res.text() };
+      },
+      (o) => !o.ok || isTransientHttp(o.value.status),
+      onStatus,
+    );
+    nrasRetries = attempt.retries;
+    if (attempt.error !== undefined) throw attempt.error;
+    const res = attempt.value!;
+    if (!res.ok) return { ok: false, detail: `NRAS HTTP ${res.status}: ${res.text.slice(0, 200)}${retried(nrasRetries)}`, summary };
+    body = JSON.parse(res.text);
   } catch (e) {
-    return { ok: false, detail: `NRAS request failed: ${errMsg(e)}`, summary };
+    return { ok: false, detail: `NRAS request failed: ${errMsg(e)}${retried(nrasRetries)}`, summary };
   }
 
   if (!Array.isArray(body) || !Array.isArray(body[0]) || body[0][0] !== "JWT" || typeof body[0][1] !== "string") {
@@ -284,7 +349,7 @@ async function verifyGpuEvidence(
   if (typeof overall.eat_nonce === "string" && overall.eat_nonce.toLowerCase() !== nonceHex.toLowerCase()) {
     return { ok: false, detail: "NRAS eat_nonce does not match client nonce", summary };
   }
-  return { ok: true, detail: `overall result true, ${(summary.gpus as unknown[]).length} GPU(s), nonce matches`, summary };
+  return { ok: true, detail: `overall result true, ${(summary.gpus as unknown[]).length} GPU(s), nonce matches${retried(nrasRetries)}`, summary };
 }
 
 // ---------------------------------------------------------------- preflight
@@ -292,8 +357,12 @@ async function verifyGpuEvidence(
 /**
  * Fetch and verify fresh gateway + NEAR model evidence BEFORE the completion.
  * Retains every verified report for the later signature match.
+ * Transient fetch failures (report, Intel collateral, NRAS) are retried up to ATTESTATION_MAX_RETRIES
+ * times with backoff; `onStatus` reports "retrying verification" while that happens.
  */
-export async function preflightAttestation(model: string): Promise<Preflight> {
+export async function preflightAttestation(model: string, options: { onStatus?: AttestationStatusFn } = {}): Promise<Preflight> {
+  const { onStatus } = options;
+  onStatus?.({ state: "verifying", detail: "fetching attestation report" });
   const nonce = randomBytes(32).toString("hex");
   const checks: AttestationCheck[] = [];
   const result: Preflight = { model, nonce, gateway: null, models: [], checks };
@@ -306,19 +375,32 @@ export async function preflightAttestation(model: string): Promise<Preflight> {
     nonce,
   });
   let report: AttestationReportResponse;
+  let reportRetries = 0;
   try {
-    const res = await fetchWithTimeout(`${NEAR_AI_API_ORIGIN}/v1/attestation/report?${params}`, {
-      headers: { ...authHeaders(), "x-no-aliasing": "true" },
-    });
-    const text = await res.text();
+    const attempt = await withTransientRetry(
+      "attestation report",
+      async () => {
+        const res = await fetchWithTimeout(`${NEAR_AI_API_ORIGIN}/v1/attestation/report?${params}`, {
+          headers: { ...authHeaders(), "x-no-aliasing": "true" },
+        });
+        return { status: res.status, ok: res.ok, text: await res.text() };
+      },
+      (o) => !o.ok || isTransientHttp(o.value.status),
+      onStatus,
+    );
+    reportRetries = attempt.retries;
+    if (attempt.error !== undefined) throw attempt.error;
+    const res = attempt.value!;
     if (!res.ok) {
-      checks.push({ step: "fetch attestation report", ok: false, detail: `HTTP ${res.status}: ${text.slice(0, 200)}` });
+      checks.push({ step: "fetch attestation report", ok: false, detail: `HTTP ${res.status}: ${res.text.slice(0, 200)}${retried(reportRetries)}` });
+      onStatus?.({ state: "failed", detail: "fetch attestation report" });
       return result;
     }
-    report = JSON.parse(text);
-    checks.push({ step: "fetch attestation report", ok: true, detail: `fresh nonce ${nonce}` });
+    report = JSON.parse(res.text);
+    checks.push({ step: "fetch attestation report", ok: true, detail: `fresh nonce ${nonce}${retried(reportRetries)}` });
   } catch (e) {
-    checks.push({ step: "fetch attestation report", ok: false, detail: errMsg(e) });
+    checks.push({ step: "fetch attestation report", ok: false, detail: `${errMsg(e)}${retried(reportRetries)}` });
+    onStatus?.({ state: "failed", detail: "fetch attestation report" });
     return result;
   }
 
@@ -331,13 +413,15 @@ export async function preflightAttestation(model: string): Promise<Preflight> {
   }
 
   const [gateway, ...models] = await Promise.all([
-    report.gateway_attestation ? checkNearReport("gateway", report.gateway_attestation, nonce, false) : Promise.resolve(null),
-    ...candidates.map((c, i) => checkNearReport(`model #${i + 1}`, c, nonce, true)),
+    report.gateway_attestation ? checkNearReport("gateway", report.gateway_attestation, nonce, false, onStatus) : Promise.resolve(null),
+    ...candidates.map((c, i) => checkNearReport(`model #${i + 1}`, c, nonce, true, onStatus)),
   ]);
   result.gateway = gateway;
   result.models = models as ReportVerification[];
   if (gateway) checks.push(...gateway.checks);
   for (const m of result.models) checks.push(...m.checks);
+  const failed = checks.find((c) => !c.ok);
+  onStatus?.(failed ? { state: "failed", detail: failed.step } : { state: "verified", detail: `${checks.length} checks passed` });
   return result;
 }
 
