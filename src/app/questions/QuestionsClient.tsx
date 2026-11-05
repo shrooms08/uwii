@@ -15,12 +15,20 @@ import { parseAccountList, shortParty } from "@/lib/near/account-id";
 import { fmtAmount, fmtDate, fmtUsd } from "@/lib/report/format";
 import type { ReportData } from "@/lib/tax/ng/report";
 import type { AnswerOption, GroupAnswer, Question, QuestionTx } from "@/lib/tax/ng/questions";
+import { isPositiveQuantity, normalizeSourceLeg, type SourceLegInput } from "@/lib/tax/ng/source-leg";
 import type { ClassificationMetrics } from "@/lib/tax/ng/types";
+
+interface AssetChoice {
+  symbol: string;
+  contract: string | null;
+}
 
 interface FlowResponse {
   questions: Question[];
   metrics: ClassificationMetrics;
   records: { id: string }[];
+  /** Assets seen in this account (source-leg choices). */
+  assets: AssetChoice[];
   error?: string;
 }
 
@@ -31,12 +39,31 @@ const FOLLOW_UP_LABEL: Record<NonNullable<AnswerOption["followUp"]>, string> = {
   ngn_received: "How much naira did you receive?",
 };
 
+/** Source leg as it will be sent: separators stripped; null until the asset and a positive quantity are given. */
+function legForRequest(leg: SourceLegInput | undefined): SourceLegInput | null {
+  if (!leg) return null;
+  const quantity = stripNgn(leg.quantity);
+  if (!leg.asset.symbol.trim() || leg.asset.contract === "" || !isPositiveQuantity(quantity)) return null;
+  return { asset: leg.asset, quantity, ...(leg.timestamp ? { timestamp: leg.timestamp } : {}) };
+}
+
 /** Request body pieces built from what is saved in this browser (naira separators stripped). */
 function requestBody(account: string, saved: Saved) {
   const groups: Record<string, GroupAnswer> = {};
   for (const [id, g] of Object.entries(saved.groups)) {
     const ngn = g.ngn ? Object.fromEntries(Object.entries(g.ngn).map(([k, v]) => [k, stripNgn(v)]).filter(([, v]) => v !== "")) : undefined;
-    groups[id] = { option: g.option, ...(g.overrides && Object.keys(g.overrides).length ? { overrides: g.overrides } : {}), ...(ngn && Object.keys(ngn).length ? { ngn } : {}) };
+    const legs = g.sourceLegs
+      ? Object.fromEntries(Object.entries(g.sourceLegs).flatMap(([k, v]) => {
+          const l = legForRequest(v);
+          return l ? [[k, l]] : [];
+        }))
+      : undefined;
+    groups[id] = {
+      option: g.option,
+      ...(g.overrides && Object.keys(g.overrides).length ? { overrides: g.overrides } : {}),
+      ...(ngn && Object.keys(ngn).length ? { ngn } : {}),
+      ...(legs && Object.keys(legs).length ? { sourceLegs: legs } : {}),
+    };
   }
   const other = stripNgn(saved.otherIncomeNgn);
   return {
@@ -128,8 +155,8 @@ export default function QuestionsClient({ account }: { account: string }) {
 
   const usdById = useMemo(() => {
     const m = new Map<string, string>();
-    // The transaction's own line only: a gas-fee line shares the record id but values the fee, not the transfer.
-    for (const l of report?.lines ?? []) if (l.usdValue && l.recordId && l.kind !== "gas_fee") m.set(l.recordId, l.usdValue);
+    // The transaction's own line only: gas-fee and source-leg lines share the record id but value another asset.
+    for (const l of report?.lines ?? []) if (l.usdValue && l.recordId && l.kind !== "gas_fee") m.set(`${l.recordId}|${l.asset}`, l.usdValue);
     return m;
   }, [report]);
 
@@ -224,6 +251,7 @@ export default function QuestionsClient({ account }: { account: string }) {
               count={n}
               answer={saved.groups[q.groupId]}
               usdById={usdById}
+              assets={flow.assets ?? []}
               setGroup={setGroup}
             />
           ))}
@@ -346,6 +374,7 @@ function QuestionCard({
   count,
   answer,
   usdById,
+  assets,
   setGroup,
 }: {
   q: Question;
@@ -353,6 +382,7 @@ function QuestionCard({
   count: number;
   answer: GroupAnswer | undefined;
   usdById: Map<string, string>;
+  assets: AssetChoice[];
   setGroup: (groupId: string, update: (g: GroupAnswer | undefined) => GroupAnswer | undefined) => void;
 }) {
   const hid = useId();
@@ -364,17 +394,31 @@ function QuestionCard({
     return o?.followUp && !NGN_INPUT_RE.test(v);
   }).length;
   const dontKnow = q.txs.some((t) => effective(t.id)?.unresolved);
-  const intentsSwap = q.txs.some((t) => effective(t.id)?.incompleteSourceLeg);
+  const swapTxs = q.txs.filter((t) => effective(t.id)?.incompleteSourceLeg);
+  const legOk = (t: QuestionTx) => {
+    const l = legForRequest(answer?.sourceLegs?.[t.id]);
+    return l !== null && normalizeSourceLeg(l, t.timestamp).ok;
+  };
+  const legsMissing = swapTxs.filter((t) => !legOk(t)).length;
 
   const pick = (optionId: string) =>
-    setGroup(q.groupId, (g) => (g?.option === optionId ? undefined : { option: optionId, ...(g?.ngn ? { ngn: g.ngn } : {}), ...(g?.overrides ? { overrides: g.overrides } : {}) }));
+    setGroup(q.groupId, (g) =>
+      g?.option === optionId
+        ? undefined
+        : { option: optionId, ...(g?.ngn ? { ngn: g.ngn } : {}), ...(g?.overrides ? { overrides: g.overrides } : {}), ...(g?.sourceLegs ? { sourceLegs: g.sourceLegs } : {}) },
+    );
 
   let note: string | null = null;
   if (!answer) note = "Not sure? Choose “I don't know”. The transaction stays flagged and your report stays a draft.";
   else if (missing > 0) note = `${plural(missing, "naira amount")} still blank. ${missing === 1 ? "That transaction stays" : "Those transactions stay"} unanswered until you add ${missing === 1 ? "it" : "them"}.`;
   else if (dontKnow) note = "Marked “I don't know”: it stays flagged in your warnings and the report stays a draft.";
-  if (intentsSwap)
-    note = `${note ? `${note} ` : ""}Uwii cannot see what you gave up inside NEAR Intents yet, so the cost uses the dollar value you received (Circular 9.1.2 Step 1(b)) and the report stays a draft.`;
+  if (swapTxs.length) {
+    const swapNote =
+      legsMissing === 0
+        ? "Recorded as a swap. What you gave up is valued at its dollar price at that time; that value is both your proceeds and the cost of what you received (Circular 9.3.2)."
+        : "Add what you gave up inside NEAR Intents to finalise. Until then the cost uses the dollar value you received (Circular 9.1.2 Step 1(b)) and the report stays a draft.";
+    note = `${note ? `${note} ` : ""}${swapNote}`;
+  }
 
   return (
     <section aria-labelledby={hid} className={cx("overflow-hidden rounded-card border bg-surface", answer ? "border-border" : "border-dash")}>
@@ -399,7 +443,7 @@ function QuestionCard({
       </div>
       <ul className="px-[clamp(10px,1.2cqi,16px)]">
         {q.txs.map((t) => (
-          <TxRow key={t.id} q={q} t={t} answer={answer} option={effective(t.id)} usd={usdById.get(t.id)} setGroup={setGroup} />
+          <TxRow key={t.id} q={q} t={t} answer={answer} option={effective(t.id)} usd={usdById.get(`${t.id}|${t.asset}`)} assets={assets} setGroup={setGroup} />
         ))}
       </ul>
       <div className="border-t border-line bg-panel px-[clamp(18px,2cqi,28px)] pt-4 pb-[clamp(18px,2cqi,24px)]">
@@ -422,6 +466,7 @@ function TxRow({
   answer,
   option,
   usd,
+  assets,
   setGroup,
 }: {
   q: Question;
@@ -429,6 +474,7 @@ function TxRow({
   answer: GroupAnswer | undefined;
   option: AnswerOption | undefined;
   usd: string | undefined;
+  assets: AssetChoice[];
   setGroup: (groupId: string, update: (g: GroupAnswer | undefined) => GroupAnswer | undefined) => void;
 }) {
   const inputId = useId();
@@ -478,8 +524,16 @@ function TxRow({
         </span>
       </div>
 
-      {(option?.followUp || canOverride) && (
+      {(option?.followUp || option?.incompleteSourceLeg || canOverride) && (
         <div className="flex flex-col gap-2.5 pr-[clamp(8px,1cqi,12px)] pb-3.5 pl-[60px]">
+          {option?.incompleteSourceLeg && (
+            <SourceLegFields
+              t={t}
+              leg={answer?.sourceLegs?.[t.id]}
+              assets={assets}
+              onChange={(leg) => setGroup(q.groupId, (g) => (g ? { ...g, sourceLegs: { ...(g.sourceLegs ?? {}), [t.id]: leg } } : g))}
+            />
+          )}
           {option?.followUp && (
             <div className="flex flex-wrap items-center gap-2.5">
               <label htmlFor={inputId} className="text-label text-ink-2">
@@ -546,5 +600,127 @@ function TxRow({
         </div>
       )}
     </li>
+  );
+}
+
+const OTHER = "__other__";
+const assetKey = (contract: string | null) => contract ?? "native";
+/** "2026-10-13T15:52:22.647Z" -> "2026-10-13T15:52:22" for a UTC datetime-local input. */
+const toUtcInput = (iso: string) => iso.slice(0, 19);
+
+/** NEAR Intents swap follow-up: what was given up (asset, quantity, UTC time; time defaults to the receipt). */
+function SourceLegFields({ t, leg, assets, onChange }: { t: QuestionTx; leg: SourceLegInput | undefined; assets: AssetChoice[]; onChange: (leg: SourceLegInput) => void }) {
+  const ids = { asset: useId(), other: useId(), qty: useId(), time: useId(), err: useId() };
+  const known = leg ? assets.some((a) => a.contract === leg.asset.contract && a.symbol === leg.asset.symbol) : false;
+  const [otherOpen, setOtherOpen] = useState(false);
+  const otherMode = otherOpen || (leg !== undefined && !known && leg.asset.contract !== null);
+  const current: SourceLegInput = leg ?? { asset: { symbol: "", contract: "" }, quantity: "" };
+  const update = (patch: Partial<SourceLegInput>) => onChange({ ...current, ...patch });
+
+  const qty = stripNgn(current.quantity);
+  const qtyInvalid = qty !== "" && !isPositiveQuantity(qty);
+  const ready = legForRequest(leg);
+  const check = ready ? normalizeSourceLeg(ready, t.timestamp) : null;
+  const error = qtyInvalid ? "Quantity must be a positive number." : check && !check.ok ? `Check this: ${check.error}.` : null;
+  const selectValue = otherMode ? OTHER : leg && known ? assetKey(leg.asset.contract) : "";
+  const field = "h-[38px] rounded-full border bg-surface text-small";
+
+  return (
+    <fieldset className="flex min-w-0 flex-col gap-2" aria-describedby={error ? ids.err : undefined}>
+      <legend className="mb-2 text-label text-ink-2">What did you give up?</legend>
+      <div className="flex flex-wrap items-center gap-2">
+        <label htmlFor={ids.asset} className="sr-only">
+          Asset given up
+        </label>
+        <select
+          id={ids.asset}
+          value={selectValue}
+          onChange={(e) => {
+            const v = e.target.value;
+            if (v === OTHER) {
+              setOtherOpen(true);
+              update({ asset: { symbol: "", contract: "" } });
+              return;
+            }
+            setOtherOpen(false);
+            const a = assets.find((x) => assetKey(x.contract) === v);
+            if (a) update({ asset: { symbol: a.symbol, contract: a.contract } });
+          }}
+          className={cx(field, "max-w-full px-3.5", selectValue ? "border-border-strong" : "border-ink")}
+        >
+          <option value="" disabled>
+            Choose asset
+          </option>
+          {assets.map((a) => (
+            <option key={assetKey(a.contract)} value={assetKey(a.contract)}>
+              {a.contract ? `${a.symbol} (${a.contract})` : `${a.symbol} (native)`}
+            </option>
+          ))}
+          <option value={OTHER}>Other token contract</option>
+        </select>
+        {otherMode && (
+          <>
+            <label htmlFor={ids.other} className="sr-only">
+              Token contract account
+            </label>
+            <input
+              id={ids.other}
+              value={current.asset.contract ?? ""}
+              onChange={(e) => {
+                const c = e.target.value.trim().toLowerCase();
+                update({ asset: { symbol: c, contract: c } });
+              }}
+              placeholder="token.example.near"
+              spellCheck={false}
+              autoCapitalize="none"
+              className={cx(field, "w-[200px] max-w-full px-3.5 font-mono", current.asset.contract ? "border-border-strong" : "border-ink")}
+            />
+          </>
+        )}
+        <span className={cx("flex flex-[0_1_180px] items-center pr-3.5 pl-1", field, qtyInvalid ? "border-red-dot" : qty ? "border-border-strong" : "border-ink")}>
+          <label htmlFor={ids.qty} className="sr-only">
+            Quantity given up
+          </label>
+          <input
+            id={ids.qty}
+            inputMode="decimal"
+            autoComplete="off"
+            value={current.quantity}
+            onChange={(e) => update({ quantity: e.target.value })}
+            placeholder="Quantity"
+            aria-invalid={qtyInvalid || undefined}
+            className="h-[34px] min-w-0 flex-1 rounded-full px-2.5 font-mono text-small text-ink"
+          />
+          {current.asset.symbol && current.asset.symbol !== current.asset.contract && (
+            <span aria-hidden="true" className="font-mono text-caption text-ink-2">
+              {current.asset.symbol}
+            </span>
+          )}
+        </span>
+        <span className="flex items-center gap-1.5">
+          <label htmlFor={ids.time} className="sr-only">
+            Date and time given up, UTC
+          </label>
+          <input
+            id={ids.time}
+            type="datetime-local"
+            step="1"
+            value={toUtcInput(current.timestamp ?? t.timestamp)}
+            max={toUtcInput(t.timestamp)}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v) update({ timestamp: `${v.length === 16 ? `${v}:00` : v}Z` });
+            }}
+            className={cx(field, "border-border-strong px-3 font-mono")}
+          />
+          <span className="text-caption text-ink-2">UTC</span>
+        </span>
+      </div>
+      {error && (
+        <p id={ids.err} role="alert" className="text-label text-red-ink">
+          {error}
+        </p>
+      )}
+    </fieldset>
   );
 }

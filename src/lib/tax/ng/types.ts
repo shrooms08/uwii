@@ -44,7 +44,17 @@ export type ClassifiedTx = NormalizedTx & {
   userFiat?: { ngn: string };
   /** The swap source leg is not in the captured data (e.g. inside NEAR Intents). */
   incompleteSourceLeg?: boolean;
+  /** User-supplied source leg of a NEAR Intents swap (what was given up); priced and disposed by the engine (9.3.2, D1). */
+  userSourceLeg?: UserSourceLeg;
 };
+
+export interface UserSourceLeg {
+  asset: { symbol: string; contract: string | null };
+  /** Exact decimal string, > 0. */
+  quantity: string;
+  /** ISO timestamp of the disposal (defaults to the receipt time). */
+  timestamp: string;
+}
 
 export const isAiEvidence = (e: ClassifiedTx["evidence"]): e is AiEvidence => !!e && "chatId" in e;
 

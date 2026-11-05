@@ -28,6 +28,16 @@ const Body = z
               option: z.string().max(40),
               overrides: z.record(z.string().max(300), z.string().max(40)).optional(),
               ngn: z.record(z.string().max(300), z.string().max(30)).optional(),
+              sourceLegs: z
+                .record(
+                  z.string().max(300),
+                  z.object({
+                    asset: z.object({ symbol: z.string().max(64), contract: z.string().max(64).nullable() }),
+                    quantity: z.string().max(80),
+                    timestamp: z.string().max(40).optional(),
+                  }),
+                )
+                .optional(),
             }),
           )
           .default({}),
@@ -71,6 +81,10 @@ export async function POST(request: Request) {
       incompleteSourceLeg: r.incompleteSourceLeg ?? false,
       previousLabel: r.evidence && "previous" in r.evidence ? r.evidence.previous.label : null,
     }));
+    // Assets seen in this account (for the "what did you give up" source-leg answer).
+    const assetMap = new Map<string, { symbol: string; contract: string | null }>();
+    for (const r of run.records) assetMap.set(r.asset.contract ?? "native", { symbol: r.asset.symbol, contract: r.asset.contract });
+    const assets = [...assetMap.values()];
     return Response.json(
       {
         account: run.accountId,
@@ -81,6 +95,7 @@ export async function POST(request: Request) {
         metrics: flow.metrics,
         profile: { otherIncomeNgn: body.profile.otherIncomeNgn || null },
         records,
+        assets,
       },
       { headers: noStore },
     );

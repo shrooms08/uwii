@@ -9,7 +9,8 @@ import type { NormalizedTx } from "../../history/types";
 import { computeMetrics, toClassified } from "./classify";
 import type { LabelId } from "./labels";
 import { applyRules } from "./rules";
-import type { ClassificationMetrics, ClassifiedRun, ClassifiedTx } from "./types";
+import { USER_SOURCE_LEG_NOTE, normalizeSourceLeg, type SourceLegInput } from "./source-leg";
+import type { ClassificationMetrics, ClassifiedRun, ClassifiedTx, UserSourceLeg } from "./types";
 
 // ---------- options ----------
 
@@ -154,6 +155,8 @@ export interface GroupAnswer {
   overrides?: Record<string, string>;
   /** Naira amounts for P2P options, keyed by record id (decimal string, up to 2 dp). */
   ngn?: Record<string, string>;
+  /** NEAR Intents swaps: what was given up, keyed by record id (timestamp defaults to the receipt time). */
+  sourceLegs?: Record<string, SourceLegInput>;
 }
 
 export interface Answers {
@@ -184,8 +187,9 @@ export function baseTx(c: ClassifiedTx): NormalizedTx {
   return out as unknown as NormalizedTx;
 }
 
-function applyOption(c: ClassifiedTx, option: AnswerOption, ngn: string | undefined): ClassifiedTx {
-  const reason = `User answer: ${option.text}${option.note ? ` — ${option.note}` : ""}`;
+function applyOption(c: ClassifiedTx, option: AnswerOption, ngn: string | undefined, sourceLeg?: UserSourceLeg): ClassifiedTx {
+  const note = option.incompleteSourceLeg && sourceLeg ? USER_SOURCE_LEG_NOTE : option.note;
+  const reason = `User answer: ${option.text}${note ? ` — ${note}` : ""}`;
   const next = toClassified(baseTx(c), {
     label: option.label,
     assetCategory: c.assetCategory,
@@ -204,7 +208,10 @@ function applyOption(c: ClassifiedTx, option: AnswerOption, ngn: string | undefi
     },
   };
   if (ngn !== undefined) next.userFiat = { ngn };
-  if (option.incompleteSourceLeg) next.incompleteSourceLeg = true;
+  if (option.incompleteSourceLeg) {
+    if (sourceLeg) next.userSourceLeg = sourceLeg;
+    else next.incompleteSourceLeg = true;
+  }
   return next;
 }
 
@@ -232,7 +239,14 @@ export function applyAnswers(records: ClassifiedTx[], questions: Question[], ans
           continue;
         }
       }
-      byId.set(qt.id, applyOption(current, option, ngn));
+      let sourceLeg: UserSourceLeg | undefined;
+      const legInput = option.incompleteSourceLeg ? ga.sourceLegs?.[qt.id] : undefined;
+      if (legInput) {
+        const v = normalizeSourceLeg(legInput, current.timestamp);
+        if (v.ok) sourceLeg = v.leg;
+        else summary.invalid.push(`${q.groupId}/${qt.id}: source leg ${v.error}`);
+      }
+      byId.set(qt.id, applyOption(current, option, ngn, sourceLeg));
     }
   }
   const out = records.map((r) => byId.get(r.id)!);

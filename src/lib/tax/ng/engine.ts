@@ -11,6 +11,7 @@ import { LABELS, costBasisAsset, type LabelId } from "./labels";
 import type { OpeningBalance } from "./opening";
 import { RESET_PRICE_TIME } from "./opening";
 import { pit, type PitBandUse } from "./pit";
+import { USER_SOURCE_LEG_NOTE, USER_SOURCE_LEG_REF } from "./source-leg";
 import type { ClassifiedTx } from "./types";
 
 // ---------- types ----------
@@ -400,10 +401,48 @@ export async function runEngine(input: EngineInput): Promise<EngineResult> {
     return total;
   };
 
-  // ---- records in time order ----
-  const ordered = [...input.records].sort((a, b) => (a.timestamp < b.timestamp ? -1 : a.timestamp > b.timestamp ? 1 : a.id < b.id ? -1 : 1));
+  // ---- user-provided Intents source legs (9.3.2, D1) ----
+  // Each is its own event at the leg timestamp (never after its receipt), so FIFO consumes the given-up
+  // asset in time order; the acquisition then takes the same dollar FMV as its cost.
+  const knownDecimals = (contract: string | null) =>
+    contract === null ? 24 : (input.records.find((x) => x.asset.contract === contract)?.asset.decimals ?? 0);
+  const sourceLegFmv = new Map<string, Dec | null>();
+  async function disposeSourceLeg(r: ClassifiedTx) {
+    const leg = r.userSourceLeg!;
+    used.add("D1");
+    used.add("D14");
+    const asset: Asset = { symbol: leg.asset.symbol, contract: leg.asset.contract, decimals: knownDecimals(leg.asset.contract) };
+    const line = baseLine(r, { ts: leg.timestamp, label: "disposal_swap", kind: "disposal", asset, qty: leg.quantity, circularRef: USER_SOURCE_LEG_REF, method: "user" });
+    line.notes.push(USER_SOURCE_LEG_NOTE);
+    const fmv = await withPrice(line, asset, leg.timestamp, r);
+    const rate = withFx(line);
+    const received = await fmvOfLegs([r]);
+    if (received !== null) line.fmvReceivedUsd = full(received);
+    line.notes.push(`paired with acquisition_swap of ${r.amount} ${r.asset.symbol} on ${dateOf(r.timestamp)}; proceeds = dollar FMV of asset given up (9.3.2, D1)`);
+    settleDisposal(line, keyOf(asset), dec(leg.quantity), fmv, rate, r);
+    lines.push(line);
+    sourceLegFmv.set(r.id, fmv);
+  }
 
-  for (const r of ordered) {
+  // ---- records in time order ----
+  type Step = { r: ClassifiedTx; ts: string; sourceLeg: boolean };
+  const steps: Step[] = [
+    ...input.records.map((r) => ({ r, ts: r.timestamp, sourceLeg: false })),
+    ...input.records
+      .filter((r) => r.userSourceLeg && r.success && r.label === "acquisition_swap" && !r.needsQuestion)
+      .map((r) => ({ r, ts: r.userSourceLeg!.timestamp, sourceLeg: true })),
+  ];
+  // Same order as before for records; a source leg sorts before records at the same instant.
+  const ordered = steps.sort((a, b) =>
+    a.ts < b.ts ? -1 : a.ts > b.ts ? 1 : a.sourceLeg !== b.sourceLeg ? (a.sourceLeg ? -1 : 1) : a.r.id < b.r.id ? -1 : a.r.id > b.r.id ? 1 : 0,
+  );
+
+  for (const step of ordered) {
+    const r = step.r;
+    if (step.sourceLeg) {
+      await disposeSourceLeg(r);
+      continue;
+    }
     // Gas fee first: paid when the transaction is submitted (D2). Fees are paid even if the tx fails.
     if (r.fee) {
       used.add("D2");
@@ -495,7 +534,14 @@ export async function runEngine(input: EngineInput): Promise<EngineResult> {
         const rate = withFx(line);
         let cost: Dec | null = null;
         const pair = r.pairingId ? pairings.get(r.pairingId) : undefined;
-        if (pair && !r.incompleteSourceLeg) {
+        if (r.userSourceLeg && sourceLegFmv.has(r.id)) {
+          const given = sourceLegFmv.get(r.id)!;
+          line.notes.push(USER_SOURCE_LEG_NOTE);
+          if (given !== null) {
+            cost = given;
+            line.notes.push(`cost = dollar FMV of asset given up $${full(given)}: ${r.userSourceLeg.quantity} ${r.userSourceLeg.asset.symbol} (9.3.2, D1)`);
+          }
+        } else if (pair && !r.incompleteSourceLeg) {
           const given = await fmvOfLegs(pair.disposed);
           if (given !== null) {
             // Split the FMV given up across acquired legs by their received FMV (or equally if unpriced).

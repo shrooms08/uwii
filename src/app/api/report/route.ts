@@ -26,6 +26,16 @@ const Body = z
               option: z.string().max(40),
               overrides: z.record(z.string().max(300), z.string().max(40)).optional(),
               ngn: z.record(z.string().max(300), z.string().max(30)).optional(),
+              sourceLegs: z
+                .record(
+                  z.string().max(300),
+                  z.object({
+                    asset: z.object({ symbol: z.string().max(64), contract: z.string().max(64).nullable() }),
+                    quantity: z.string().max(80),
+                    timestamp: z.string().max(40).optional(),
+                  }),
+                )
+                .optional(),
             }),
           )
           .default({}),

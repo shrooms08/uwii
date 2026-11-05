@@ -60,6 +60,10 @@ export async function prequote(records: ClassifiedTx[], opening: OpeningPosition
     if (r.fee) await prices.quote(near, r.timestamp);
     if (!r.success || TECHNICAL.has(r.label) || r.amount === "0") continue;
     await prices.quote(r.asset, r.timestamp);
+    if (r.userSourceLeg) {
+      const leg = r.userSourceLeg;
+      await prices.quote({ symbol: leg.asset.symbol, contract: leg.asset.contract, decimals: 0 }, leg.timestamp);
+    }
   }
   for (const b of opening.balances) await prices.quote(b.asset, RESET_PRICE_TIME);
 }
