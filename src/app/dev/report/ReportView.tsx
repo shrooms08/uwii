@@ -126,6 +126,32 @@ export default function ReportView({ account }: { account: string }) {
         classification {data.origin.classification} · prices {data.origin.prices} · opening {data.origin.opening}
       </p>
 
+      {data.status === "draft" ? (
+        <section
+          data-testid="draft-banner"
+          role="alert"
+          style={{ border: "2px solid #b00020", background: "#fdecee", padding: "10px 14px", marginBottom: 16, borderRadius: 4 }}
+        >
+          <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#b00020" }}>
+            {data.blockingQuestions > 0 ? (
+              <>
+                Draft: answer {data.blockingQuestions} question{data.blockingQuestions === 1 ? "" : "s"} to finalise.{" "}
+                <a href={`/dev/questions?account=${encodeURIComponent(data.account)}`}>Go to questions →</a>
+              </>
+            ) : (
+              <>Draft: not for filing until the issues below are resolved.</>
+            )}
+          </p>
+          <ul style={{ margin: "6px 0 0", fontSize: 13 }}>
+            {data.draftReasons.map((r) => <li key={r.code}>{r.message}</li>)}
+          </ul>
+        </section>
+      ) : (
+        <p data-testid="final-badge" style={{ display: "inline-block", padding: "4px 10px", background: "#1a7f37", color: "#fff", borderRadius: 4, fontWeight: 600 }}>
+          Final: every transaction is resolved
+        </p>
+      )}
+
       <section data-testid="exports" style={{ border: "1px solid #ccc", padding: 12, marginBottom: 16 }}>
         <p style={{ margin: "0 0 6px" }}>
           <strong>Report fingerprint (SHA-256):</strong>{" "}

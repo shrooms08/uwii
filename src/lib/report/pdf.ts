@@ -36,6 +36,29 @@ export function pdfText(s: string): string {
     .replace(/[^\x09\x0A\x0D\x20-\x7E\xA0-\xFF]/g, "?");
 }
 
+/** Diagonal, translucent "DRAFT, NOT FOR FILING" centred on the page. */
+function drawWatermark(doc: import("jspdf").jsPDF, GState: typeof import("jspdf").GState, W: number, H: number) {
+  const label = "DRAFT, NOT FOR FILING";
+  // Along the page diagonal, scaled so the text spans ~75% of it and never runs off the page.
+  const rad = Math.atan2(H, W);
+  const angle = (rad * 180) / Math.PI;
+  doc.saveGraphicsState();
+  doc.setGState(new GState({ opacity: 0.13 }));
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(100);
+  const target = Math.hypot(W, H) * 0.75;
+  const size = (100 * target) / doc.getTextWidth(label);
+  doc.setFontSize(size);
+  doc.setTextColor(176, 0, 32);
+  const w = doc.getTextWidth(label);
+  const capHalf = (size * 0.3528 * 0.7) / 2; // half the cap height in mm (1pt = 0.3528mm)
+  // jsPDF rotates counter-clockwise about the text origin (baseline start); offset so the text centre sits at the page centre.
+  const x = W / 2 - (w / 2) * Math.cos(rad) - capHalf * Math.sin(rad);
+  const y = H / 2 + (w / 2) * Math.sin(rad) + capHalf * Math.cos(rad);
+  doc.text(label, x, y, { angle });
+  doc.restoreGraphicsState();
+}
+
 const short = (s: string | null | undefined, n: number) => (s ? (s.length > n ? `${s.slice(0, n)}...` : s) : "-");
 
 interface AutoTableDoc {
@@ -43,7 +66,7 @@ interface AutoTableDoc {
 }
 
 export async function buildWorksheetPdf(report: ReportData, personal: PersonalFields = {}, generatedAt = new Date()): Promise<Uint8Array> {
-  const { jsPDF } = await import("jspdf");
+  const { jsPDF, GState } = await import("jspdf");
   const { autoTable } = await import("jspdf-autotable");
 
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4", compress: true });
@@ -132,6 +155,36 @@ export async function buildWorksheetPdf(report: ReportData, personal: PersonalFi
   text(report.fingerprint, M.left + 50, y, { size: 8.5, font: "courier" });
   y += 3.5;
   paragraph("The fingerprint covers the computation (lines, totals, tax, warnings, decisions, sources, privacy proof); personal fields and other-income inputs are excluded.", 7.2);
+
+  // ---- draft box (page 1) ----
+  if (report.status === "draft") {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8.5);
+    const bullets = report.draftReasons.map((r) => doc.splitTextToSize(pdfText(`- ${r.message}`), contentW - 8) as string[]);
+    const lh = 8.5 * 0.42;
+    const boxH = 9 + bullets.reduce((n, b) => n + b.length, 0) * lh + 2;
+    y += 2;
+    doc.setDrawColor(176, 0, 32);
+    doc.setFillColor(253, 236, 238);
+    doc.setLineWidth(0.5);
+    doc.rect(M.left, y, contentW, boxH, "FD");
+    doc.setLineWidth(0.2);
+    text(
+      `DRAFT, NOT FOR FILING${report.blockingQuestions ? ` - answer ${report.blockingQuestions} question${report.blockingQuestions === 1 ? "" : "s"} to finalise` : ""}`,
+      M.left + 4,
+      y + 5.5,
+      { size: 10.5, bold: true, color: 120 },
+    );
+    let by = y + 10;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8.5);
+    doc.setTextColor(60);
+    for (const b of bullets) {
+      doc.text(b, M.left + 4, by);
+      by += b.length * lh;
+    }
+    y += boxH + 1;
+  }
 
   // ---- b. summary ----
   const t = report.totals;
@@ -256,10 +309,11 @@ export async function buildWorksheetPdf(report: ReportData, personal: PersonalFi
     7.2,
   );
 
-  // ---- i. footer on every page ----
+  // ---- i. footer (and draft watermark) on every page ----
   const pages = doc.getNumberOfPages();
   for (let i = 1; i <= pages; i++) {
     doc.setPage(i);
+    if (report.status === "draft") drawWatermark(doc, GState, W, H);
     doc.setDrawColor(180);
     doc.line(M.left, H - 15, W - M.right, H - 15);
     doc.setFont("helvetica", "normal");

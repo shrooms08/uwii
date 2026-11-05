@@ -10,6 +10,7 @@ import { FIXTURE_DIR, readJsonIfExists, writeJson } from "../../history/paths";
 import { FixturePriceProvider, LivePriceProvider, RecordingPriceProvider, loadPriceFixture, writePriceFixture, type PriceProvider } from "../../prices/provider";
 import { reportFingerprint } from "../../report/fingerprint";
 import { privacyProofFromRun, type PrivacyProof } from "../../report/privacy";
+import { reportStatus, type DraftReason, type ReportStatus } from "../../report/status";
 import { getClassification } from "./cache";
 import { runEngine, type EngineResult } from "./engine";
 import { fetchOpeningPosition, OPENING_YEAR, RESET_PRICE_TIME, type OpeningPosition } from "./opening";
@@ -42,6 +43,11 @@ export interface ReportData extends EngineResult {
   privacyProof: PrivacyProof;
   /** SHA-256 of the canonical report JSON, personal fields excluded (src/lib/report/fingerprint.ts). */
   fingerprint: string;
+  /** "draft" while anything unresolved could distort the figures; covered by the fingerprint. */
+  status: ReportStatus;
+  draftReasons: DraftReason[];
+  /** Question groups still unanswered. */
+  blockingQuestions: number;
 }
 
 export const priceFixturePath = (account: string) => path.join(FIXTURE_DIR, `${account}-${OPENING_YEAR}.prices.json`);
@@ -98,11 +104,16 @@ export async function buildReport(req: ReportRequest): Promise<{ report: ReportD
     warnings.push({ code: "ai_signature_unverified", message: `${privacyProof.aiDecisions - privacyProof.aiDecisionsSignatureVerified} AI decision(s) without a verified response signature` });
   }
 
+  const status = reportStatus({ records: flow.records, warnings, questions: flow.questions });
+
   const report: ReportData = {
     ...engine,
     warnings,
     privacyProof,
     fingerprint: "",
+    status: status.status,
+    draftReasons: status.draftReasons,
+    blockingQuestions: status.blockingQuestions,
     account: req.account,
     from,
     to,
