@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "check:attestation": "tsx --env-file-if-exists=.env.local scripts/check-attestation.ts",
-    "fetch:history": "tsx scripts/fetch-history.ts"
+    "fetch:history": "tsx scripts/fetch-history.ts",
+    "classify": "tsx --env-file-if-exists=.env.local scripts/classify-history.ts",
+    "test": "tsx --test src/lib/tax/ng/*.test.ts"
   },
   "dependencies": {
     "@phala/dcap-qvl": "^0.7.1",

@@ -1,0 +1,66 @@
+# Uwii decision log — Nigeria, NRS Information Circular No. 2026/21
+
+Source: NRS Information Circular No. 2026/21, "Guidelines on the Taxation of Virtual Assets" (31 July 2026).
+Scope: individuals only. Label table: `src/lib/tax/ng/labels.ts` (each label carries its circular reference).
+
+Status key: **Accepted** = implemented or binding on later phases; **Open** = pending confirmation.
+
+## D1 — Swap proceeds valued at FMV of the asset given up (Accepted)
+- A crypto-to-crypto swap is a disposal of the asset given up. Proceeds = fair market value of the asset **given up**
+  at the time of the swap (para 9.3.2; Illustration 3). The FMV becomes the cost base of the asset received.
+- Inconsistency flagged: para 9.1.2 Step 2(b) words proceeds as the value of the asset **received**. In an
+  arm's-length swap the two are close but not equal (fees, slippage).
+- Implementation: store **both** values (FMV given up and FMV received) for every swap so the report can show the
+  difference. Swap legs are paired by `pairingId` (`swap:<txHash>`) with `swapRole` disposed/acquired.
+
+## D2 — Gas fees (Accepted)
+- Each gas payment in NEAR is a disposal of NEAR (para 7.1 event 5: using a virtual asset to pay for a service).
+- Gas is not deductible against gains. Fees are shown separately in the report.
+- Data: `fee` on exactly one record per transaction signed by the account (Phase 2b). Protocol refunds from
+  `system` are `gas_refund` (not income).
+
+## D3 — Native staking rewards recognised daily on receipt (Accepted)
+- Staking rewards are income when received (para 7.1 event 9; 9.5(4)). Rewards accrue in the pool without a
+  transaction, so they are recognised per UTC day from pool balance snapshots (`staking_reward` records, Phase 2b).
+- FMV at recognition is the cost base of the rewarded NEAR.
+
+## D4 — Liquid staking tokens (Accepted)
+- Depositing NEAR for a liquid-staking token (stNEAR from `meta-pool.near`, LiNEAR from `linear-protocol.near`) is a
+  deposit for a receipt token (para 10.2): `defi_receipt`, not a disposal.
+- The token's value accrual is not income as it accrues; it is taxed as gain on disposal/redemption.
+
+## D5 — Cost method: FIFO (Accepted)
+- First-in, first-out per asset (para 9.3.3(3)). wNEAR is the same asset as NEAR for cost-base purposes.
+
+## D6 — Personal income tax bands (Accepted)
+Annual chargeable income (NGN):
+
+| Band | Rate |
+| --- | --- |
+| First 800,000 | 0% |
+| Next 2,200,000 | 15% |
+| Next 9,000,000 | 18% |
+| Next 13,000,000 | 21% |
+| Next 25,000,000 | 23% |
+| Above 50,000,000 | 25% |
+
+- Optional user input "other income" (non-crypto) so the report can apply the correct marginal rate.
+
+## D7 — Prices (Accepted)
+- CoinGecko historical prices until NRS publishes its approved aggregator list (para 9.2(2)).
+
+## D8 — FX (Accepted)
+- USD to NGN at the CBN / NAFEM closing rate on the transaction date.
+
+## D9 — Gifts (Accepted)
+- Gift received: cost base = market value at receipt (NTA s.36(1)).
+- Gift given: the circular imposes no tax on the donor (para 7.1 event 15).
+- Possible conflict: commentary on the Nigeria Tax Act treats a gift as a disposal by the donor at market value.
+  Flagged; `gift_given` is labelled non-taxable per the circular and called out in the report.
+
+## D10 — VAT on professional fees (Accepted, out of scope)
+- VAT on professional fees received in virtual assets is out of MVP scope. The report will note it.
+
+## OPEN D11 — Grandfathering of pre-2026 holdings
+- Proposed: for holdings acquired before 1 January 2026, cost base = higher of original cost or FMV at
+  31 December 2025. Pending confirmation.
