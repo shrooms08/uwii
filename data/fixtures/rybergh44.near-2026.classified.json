@@ -5,12 +5,12 @@
   "to": "2026-12-31",
   "ownAccounts": [],
   "historyFetchedAt": "2026-11-04T22:06:31.171Z",
-  "classifiedAt": "2026-11-05T19:18:19.596Z",
+  "classifiedAt": "2026-11-05T22:54:41.186Z",
   "model": "z-ai/glm-5.3-flash",
   "attestation": {
     "verified": true,
-    "details": "gateway + 1 model report(s) verified (14 checks, nonce 4cd6a569f3395b43f45058e14a9458d8e71e07feae82640cf2c60af0003705b6)",
-    "nonce": "4cd6a569f3395b43f45058e14a9458d8e71e07feae82640cf2c60af0003705b6",
+    "details": "gateway + 1 model report(s) verified (14 checks, nonce e61ecc8c2dd316eb6148a022a88ff5e560639d67760f7201efbcf665ab1e4617)",
+    "nonce": "e61ecc8c2dd316eb6148a022a88ff5e560639d67760f7201efbcf665ab1e4617",
     "checksPassed": 14,
     "checksTotal": 14,
     "reportSigners": [
@@ -25,18 +25,112 @@
         "verified": true
       }
     ],
-    "attestedAt": "2026-11-05T19:18:00.061Z"
+    "attestedAt": "2026-11-05T22:54:22.914Z",
+    "checks": [
+      {
+        "step": "fetch attestation report",
+        "ok": true,
+        "detail": "fresh nonce e61ecc8c2dd316eb6148a022a88ff5e560639d67760f7201efbcf665ab1e4617"
+      },
+      {
+        "step": "gateway: Intel TDX quote verified (dcap-qvl)",
+        "ok": true,
+        "detail": "TCB status UpToDate"
+      },
+      {
+        "step": "gateway: TDX debug mode",
+        "ok": true,
+        "detail": "disabled"
+      },
+      {
+        "step": "gateway: report data binds signer + nonce",
+        "ok": true,
+        "detail": "verified quote report_data = signing_address (padded) || client nonce"
+      },
+      {
+        "step": "gateway: echoed request_nonce",
+        "ok": true,
+        "detail": "matches client nonce"
+      },
+      {
+        "step": "gateway: RTMR3 event-log replay",
+        "ok": true,
+        "detail": "matches quote RTMR3"
+      },
+      {
+        "step": "gateway: MRCONFIGID matches app_compose",
+        "ok": true,
+        "detail": "compose sha256 dc14d62b75ffde97f64fdba40c6be681b6818eb12312e1adee60b3cd4de2533b"
+      },
+      {
+        "step": "model #1: Intel TDX quote verified (dcap-qvl)",
+        "ok": true,
+        "detail": "TCB status UpToDate"
+      },
+      {
+        "step": "model #1: TDX debug mode",
+        "ok": true,
+        "detail": "disabled"
+      },
+      {
+        "step": "model #1: report data binds signer + nonce",
+        "ok": true,
+        "detail": "verified quote report_data = signing_address (padded) || client nonce"
+      },
+      {
+        "step": "model #1: echoed request_nonce",
+        "ok": true,
+        "detail": "matches client nonce"
+      },
+      {
+        "step": "model #1: RTMR3 event-log replay",
+        "ok": true,
+        "detail": "matches quote RTMR3"
+      },
+      {
+        "step": "model #1: MRCONFIGID matches app_compose",
+        "ok": true,
+        "detail": "compose sha256 a0e3c6f4f21a60ea3f5c96bc7ef319b03a184ca2049605399275fbcea74e8c5f"
+      },
+      {
+        "step": "model #1: NVIDIA GPU attestation (NRAS)",
+        "ok": true,
+        "detail": "overall result true, 8 GPU(s), nonce matches"
+      }
+    ]
   },
   "aiResponses": [
     {
       "batch": 1,
       "attempt": 1,
-      "chatId": "0b4df1acc9074fc18f9a4ed2f920b466",
+      "chatId": "88ec1e8921bc48e6aed12577e5921be3",
       "txCount": 8,
       "valid": true,
       "signatureVerified": true,
       "detail": "signature verified (provider_tee)",
-      "signingAddress": "0x3b753b4406613c5e70ae640508632b600424fa0c"
+      "signingAddress": "0x3b753b4406613c5e70ae640508632b600424fa0c",
+      "signatureChecks": [
+        {
+          "step": "fetch response signature",
+          "ok": true,
+          "detail": "signature_kind=provider_tee"
+        },
+        {
+          "step": "signed text matches exact request/response bytes",
+          "ok": true,
+          "detail": "z-ai/glm-5.3-flash:c93b0f421d39be1c05ea26a19ddfda785bcfe63dda786b109ace236c2d4420cf:c1297088b03ded4c5f83da0d7c199c56d472951607a576874dfe378e19926b32"
+        },
+        {
+          "step": "ECDSA (EIP-191) signature valid",
+          "ok": true,
+          "detail": "recovered signer 0x3b753b4406613c5e70ae640508632b600424fa0c"
+        },
+        {
+          "step": "signer matches verified preflight evidence",
+          "ok": true,
+          "detail": "provider_tee signer = verified model #1"
+        }
+      ]
     }
   ],
   "metrics": {
@@ -517,12 +611,12 @@
       "fee": null,
       "label": "unknown",
       "assetCategory": "1",
-      "confidence": 0.3,
-      "reason": "Incoming NEAR from an external address; purpose (gift, own funds, payment) cannot be determined on-chain.",
+      "confidence": 0.5,
+      "reason": "Incoming NEAR from same counterparty as later transfers; could be own funds from an exchange, gift, or payment — purpose not determinable on-chain.",
       "circularRef": "question",
       "needsQuestion": true,
       "evidence": {
-        "chatId": "0b4df1acc9074fc18f9a4ed2f920b466",
+        "chatId": "88ec1e8921bc48e6aed12577e5921be3",
         "signatureVerified": true,
         "model": "z-ai/glm-5.3-flash",
         "attempt": 1
@@ -1189,12 +1283,12 @@
       "fee": null,
       "label": "unknown",
       "assetCategory": "1",
-      "confidence": 0.3,
-      "reason": "Incoming NEAR from same external address; intent not ascertainable from on-chain data.",
+      "confidence": 0.5,
+      "reason": "Repeated incoming NEAR from the same counterparty; likely exchange withdrawal of own funds but intent cannot be confirmed from on-chain data.",
       "circularRef": "question",
       "needsQuestion": true,
       "evidence": {
-        "chatId": "0b4df1acc9074fc18f9a4ed2f920b466",
+        "chatId": "88ec1e8921bc48e6aed12577e5921be3",
         "signatureVerified": true,
         "model": "z-ai/glm-5.3-flash",
         "attempt": 1
@@ -3317,12 +3411,12 @@
       "fee": null,
       "label": "unknown",
       "assetCategory": "1",
-      "confidence": 0.3,
-      "reason": "Incoming NEAR from same external address; intent not ascertainable from on-chain data.",
+      "confidence": 0.5,
+      "reason": "Incoming NEAR from the same recurring counterparty; purpose (own funds vs income/gift) not ascertainable on-chain.",
       "circularRef": "question",
       "needsQuestion": true,
       "evidence": {
-        "chatId": "0b4df1acc9074fc18f9a4ed2f920b466",
+        "chatId": "88ec1e8921bc48e6aed12577e5921be3",
         "signatureVerified": true,
         "model": "z-ai/glm-5.3-flash",
         "attempt": 1
@@ -3376,12 +3470,12 @@
       },
       "label": "unknown",
       "assetCategory": "1",
-      "confidence": 0.4,
-      "reason": "Outgoing NEAR to an external address; could be payment (disposal) or own-wallet transfer; intent unknown.",
+      "confidence": 0.5,
+      "reason": "Outgoing NEAR to a new address; could be a payment, gift, or transfer to own wallet — ownership of receiving address unknown.",
       "circularRef": "question",
       "needsQuestion": true,
       "evidence": {
-        "chatId": "0b4df1acc9074fc18f9a4ed2f920b466",
+        "chatId": "88ec1e8921bc48e6aed12577e5921be3",
         "signatureVerified": true,
         "model": "z-ai/glm-5.3-flash",
         "attempt": 1
@@ -3481,13 +3575,13 @@
       },
       "fee": null,
       "label": "unknown",
-      "assetCategory": "unknown",
-      "confidence": 0.3,
-      "reason": "Incoming NPRO from intents.near; could be swap result, reward or transfer; purpose not determinable. NPRO category unknown.",
+      "assetCategory": "4",
+      "confidence": 0.5,
+      "reason": "NPRO (utility token, category 4) received from intents.near, likely a swap/bridge result, but no matching outgoing leg is shown; classification uncertain.",
       "circularRef": "question",
       "needsQuestion": true,
       "evidence": {
-        "chatId": "0b4df1acc9074fc18f9a4ed2f920b466",
+        "chatId": "88ec1e8921bc48e6aed12577e5921be3",
         "signatureVerified": true,
         "model": "z-ai/glm-5.3-flash",
         "attempt": 1
@@ -3591,13 +3685,13 @@
       },
       "fee": null,
       "label": "disposal_payment",
-      "assetCategory": "unknown",
+      "assetCategory": "4",
       "confidence": 0.6,
-      "reason": "NPRO sent via ft_transfer_call to premium.nearmobile.near, suggesting payment for a premium service; disposal at FMV. NPRO category unknown.",
+      "reason": "NPRO sent via ft_transfer_call to premium.nearmobile.near, suggesting payment for a premium service; disposal at FMV. Low confidence as exact purpose unverified.",
       "circularRef": "7.1 event 5",
       "needsQuestion": true,
       "evidence": {
-        "chatId": "0b4df1acc9074fc18f9a4ed2f920b466",
+        "chatId": "88ec1e8921bc48e6aed12577e5921be3",
         "signatureVerified": true,
         "model": "z-ai/glm-5.3-flash",
         "attempt": 1
@@ -4576,12 +4670,12 @@
       "fee": null,
       "label": "unknown",
       "assetCategory": "1",
-      "confidence": 0.3,
-      "reason": "Incoming NEAR from same external address; intent not ascertainable from on-chain data.",
+      "confidence": 0.5,
+      "reason": "Incoming NEAR from the same recurring counterparty; purpose not determinable from on-chain data alone.",
       "circularRef": "question",
       "needsQuestion": true,
       "evidence": {
-        "chatId": "0b4df1acc9074fc18f9a4ed2f920b466",
+        "chatId": "88ec1e8921bc48e6aed12577e5921be3",
         "signatureVerified": true,
         "model": "z-ai/glm-5.3-flash",
         "attempt": 1
@@ -6270,12 +6364,12 @@
       "fee": null,
       "label": "unknown",
       "assetCategory": "1",
-      "confidence": 0.3,
-      "reason": "Incoming NEAR from same external address; intent not ascertainable from on-chain data.",
+      "confidence": 0.5,
+      "reason": "Incoming NEAR from the same recurring counterparty; could be own funds moved from an exchange or income — needs user confirmation.",
       "circularRef": "question",
       "needsQuestion": true,
       "evidence": {
-        "chatId": "0b4df1acc9074fc18f9a4ed2f920b466",
+        "chatId": "88ec1e8921bc48e6aed12577e5921be3",
         "signatureVerified": true,
         "model": "z-ai/glm-5.3-flash",
         "attempt": 1

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { cx } from "./ui/cx";
 import { DemoLabel } from "./DemoLabel";
@@ -43,7 +44,12 @@ export function AppShell({ step, account, children, mainClassName, landing }: { 
             </a>{" "}
             APIs
           </span>
-          <span>Based on NRS Information Circular 2026/21</span>
+          <span className="flex flex-wrap gap-x-4 gap-y-1">
+            <Link href="/verify" className="text-ink underline underline-offset-[3px]">
+              Verify a report
+            </Link>
+            <span>Based on NRS Information Circular 2026/21</span>
+          </span>
         </footer>
       </div>
     </div>

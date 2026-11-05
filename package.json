@@ -10,9 +10,10 @@
     "check:attestation": "tsx --env-file-if-exists=.env.local scripts/check-attestation.ts",
     "fetch:history": "tsx scripts/fetch-history.ts",
     "classify": "tsx --env-file-if-exists=.env.local scripts/classify-history.ts",
-    "test": "tsx --test src/lib/tax/ng/*.test.ts src/lib/report/*.test.ts src/lib/scan/*.test.ts",
+    "test": "tsx --test src/lib/tax/ng/*.test.ts src/lib/report/*.test.ts src/lib/scan/*.test.ts src/lib/near/*.test.ts",
     "fetch:fx": "tsx scripts/fetch-cbn-nafem.ts",
-    "report": "tsx --env-file-if-exists=.env.local scripts/report.ts"
+    "report": "tsx --env-file-if-exists=.env.local scripts/report.ts",
+    "deploy:anchor": "tsx --env-file-if-exists=.env.local scripts/deploy-anchor.ts"
   },
   "dependencies": {
     "@phala/dcap-qvl": "^0.7.1",
@@ -20,6 +21,7 @@
     "ethers": "^6.17.0",
     "jspdf": "4.2.1",
     "jspdf-autotable": "5.0.9",
+    "near-api-js": "7.3.1",
     "next": "16.4.5",
     "openai": "^7.50.0",
     "react": "19.3.0",

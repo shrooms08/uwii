@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-05T19:02:33.551Z",
+  "generatedAt": "2026-11-05T22:55:21.446Z",
   "quotes": {
     "aa-harvest-moon.near|2026-10-04T20:38:55.146Z": {
       "status": "no_verifiable_price",
@@ -127,6 +127,16 @@
       }
     },
     "native:NEAR|2026-10-13T15:51:53.450Z": {
+      "status": "ok",
+      "quote": {
+        "usd": "4.944905807638033",
+        "granularity": "hourly",
+        "pointTime": "2026-10-13T16:00:00.000Z",
+        "source": "CoinGecko",
+        "method": "CoinGecko near hourly point 2026-10-13T16:00:00.000Z"
+      }
+    },
+    "native:NEAR|2026-10-13T15:52:22.647Z": {
       "status": "ok",
       "quote": {
         "usd": "4.944905807638033",

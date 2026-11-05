@@ -1,11 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useId, useState } from "react";
+import Link from "next/link";
+import { AnchorCard } from "@/components/report/AnchorCard";
 import { PrivacyPanel, proofAllVerified, proofCounts } from "@/components/report/PrivacyPanel";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
 import { Money } from "@/components/ui/Money";
+import { requestBody } from "@/lib/client/request";
+import type { StoredAnchor } from "@/lib/client/storage";
 import { download, useReport } from "@/lib/client/useReport";
 import { parseAccountList } from "@/lib/near/account-id";
 import { linesCsv, summaryCsv } from "@/lib/report/csv";
@@ -50,6 +54,8 @@ export default function ExportClient({ account }: { account: string }) {
   const [pdfError, setPdfError] = useState<string | null>(null);
   const [proofOpen, setProofOpen] = useState(false);
   const closeProof = useCallback(() => setProofOpen(false), []);
+  const [anchor, setAnchor] = useState<StoredAnchor | null>(null);
+  const onAnchor = useCallback((a: StoredAnchor) => setAnchor(a), []);
   const ids = { name: useId(), tin: useId(), state: useId() };
 
   useEffect(() => {
@@ -113,7 +119,7 @@ export default function ExportClient({ account }: { account: string }) {
     setPdfError(null);
     try {
       const { buildWorksheetPdf } = await import("@/lib/report/pdf");
-      const bytes = await buildWorksheetPdf(r, { ...personal, ownAccounts });
+      const bytes = await buildWorksheetPdf(r, { ...personal, ownAccounts }, new Date(), anchor && anchor.fingerprint === r.fingerprint ? anchor : null);
       download(`${base}-worksheet${isDraft ? "-DRAFT" : ""}.pdf`, bytes as BlobPart, "application/pdf");
     } catch (e) {
       setPdfError(e instanceof Error ? e.message : String(e));
@@ -235,6 +241,8 @@ export default function ExportClient({ account }: { account: string }) {
           </Card>
         </div>
 
+        <div className="flex flex-col gap-4">
+        <AnchorCard fingerprint={r.fingerprint} isFinal={!isDraft} body={saved ? requestBody(account, saved) : { account }} onAnchor={onAnchor} />
         <section aria-label="Worksheet contents" className="flex flex-col gap-4 rounded-card bg-ink p-[clamp(20px,2.4cqi,32px)] text-white">
           <div className="flex items-center justify-between gap-3">
             <span className="text-small text-onink">In this worksheet</span>
@@ -258,10 +266,14 @@ export default function ExportClient({ account }: { account: string }) {
             View privacy proof
           </Button>
         </section>
+        </div>
       </div>
 
       <p className="mt-10 max-w-[760px] border-t border-rule pt-[22px] text-small leading-normal text-ink-2">
-        Computation for review; not tax advice. File personal income tax with your State Internal Revenue Service by 31 March.
+        Computation for review; not tax advice. File personal income tax with your State Internal Revenue Service by 31 March.{" "}
+        <Link href={`/verify?fingerprint=${r.fingerprint}`} className="text-ink underline underline-offset-[3px]">
+          Verify a report fingerprint
+        </Link>
       </p>
 
       {proofOpen && <PrivacyPanel proof={r.privacyProof} account={account} ruleCount={flow.total - r.privacyProof.aiDecisions} onClose={closeProof} />}

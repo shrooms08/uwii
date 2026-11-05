@@ -65,7 +65,17 @@ interface AutoTableDoc {
   lastAutoTable?: { finalY: number };
 }
 
-export async function buildWorksheetPdf(report: ReportData, personal: PersonalFields = {}, generatedAt = new Date()): Promise<Uint8Array> {
+/** A NEAR testnet anchor of this report fingerprint (Phase 8), printed in the header when it matches. */
+export interface PdfAnchor {
+  fingerprint: string;
+  txHash: string | null;
+  blockHeight: string;
+  anchoredAt: string;
+  contractId: string;
+  network: string;
+}
+
+export async function buildWorksheetPdf(report: ReportData, personal: PersonalFields = {}, generatedAt = new Date(), anchor?: PdfAnchor | null): Promise<Uint8Array> {
   const { jsPDF, GState } = await import("jspdf");
   const { autoTable } = await import("jspdf-autotable");
 
@@ -155,6 +165,10 @@ export async function buildWorksheetPdf(report: ReportData, personal: PersonalFi
   text(report.fingerprint, M.left + 50, y, { size: 8.5, font: "courier" });
   y += 3.5;
   paragraph("The fingerprint covers the computation (lines, totals, tax, warnings, decisions, sources, privacy proof); personal fields and other-income inputs are excluded.", 7.2);
+  if (anchor && anchor.fingerprint === report.fingerprint) {
+    const when = anchor.anchoredAt.replace("T", " ").slice(0, 19) + " UTC";
+    paragraph(`Anchored on NEAR ${anchor.network}: ${anchor.txHash ?? "transaction not located"}, block ${anchor.blockHeight}, ${when}, contract ${anchor.contractId}`, 7.6);
+  }
 
   // ---- draft box (page 1) ----
   if (report.status === "draft") {
