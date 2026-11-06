@@ -5,6 +5,7 @@
  */
 import type { FxQuote, NafemTable } from "../../fx/nafem";
 import { Dec, ZERO_D, dec, full } from "../../money";
+import { sanitizeSymbol } from "../../history/sanitize";
 import type { PriceProvider, PriceResult } from "../../prices/provider";
 import type { Asset } from "../../history/types";
 import { LABELS, costBasisAsset, type LabelId } from "./labels";
@@ -293,7 +294,7 @@ export async function runEngine(input: EngineInput): Promise<EngineResult> {
       txHash: r?.txHash ?? "",
       label: p.label,
       kind: p.kind,
-      asset: p.asset.symbol,
+      asset: sanitizeSymbol(p.asset.symbol), // on-chain string: safe form for UI, PDF and CSV (M2)
       assetKey: keyOf(p.asset),
       qty: p.qty,
       usdPrice: null,

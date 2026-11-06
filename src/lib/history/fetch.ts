@@ -2,6 +2,7 @@ import { z } from "zod";
 import { NS_PER_MS, ZERO, absBig, formatUnits, parseUnits } from "./amount";
 import { resolveFtMetadata } from "./ft-metadata";
 import { NEARBLOCKS_SOURCE, fetchAllInRange, type ProgressFn, type RangeNs } from "./nearblocks";
+import { sanitizeMethodName } from "./sanitize";
 import { deriveStakingRewards } from "./staking-rewards";
 import { HISTORY_SCHEMA_VERSION, NEAR_ASSET, type Direction, type HistoryResult, type NormalizedTx, type TxKind } from "./types";
 
@@ -105,7 +106,8 @@ const STAKING_METHOD_KIND: Record<string, TxKind> = {
 
 /** Distinct function-call method names of a receipt, comma-joined, or null. */
 function methodsOf(receipt: ReceiptRow | undefined): string | null {
-  const names = (receipt?.actions ?? []).map((a) => a.method).filter((m): m is string => !!m);
+  // Method names come from the chain (untrusted): reduced to [A-Za-z0-9_], 48 characters (M2).
+  const names = (receipt?.actions ?? []).map((a) => sanitizeMethodName(a.method)).filter((m): m is string => m !== null);
   return names.length ? [...new Set(names)].join(",") : null;
 }
 

@@ -4,6 +4,7 @@
  * answers as method "user" labels. Pure functions: answers are never stored or logged here.
  */
 import { formatUnits } from "../../history/amount";
+import { sanitizeSymbol } from "../../history/sanitize";
 import { toUnits } from "../../history/summary";
 import type { NormalizedTx } from "../../history/types";
 import { computeMetrics, toClassified } from "./classify";
@@ -285,7 +286,9 @@ export interface QuestionFlowResult {
   metrics: ClassificationMetrics;
 }
 
-export function runQuestionFlow(run: ClassifiedRun, input: { ownAccounts: string[]; answers: Answers }): QuestionFlowResult {
+export function runQuestionFlow(input0: ClassifiedRun, input: { ownAccounts: string[]; answers: Answers }): QuestionFlowResult {
+  // Token symbols are on-chain strings: every downstream message, question and line uses the safe form (M2).
+  const run: ClassifiedRun = { ...input0, records: input0.records.map((r) => (r.asset.symbol === sanitizeSymbol(r.asset.symbol) ? r : { ...r, asset: { ...r.asset, symbol: sanitizeSymbol(r.asset.symbol) } })) };
   const withOwn = reapplyRules(run, input.ownAccounts);
   const questions = groupQuestions(withOwn);
   const { records, summary } = applyAnswers(withOwn, questions, input.answers);

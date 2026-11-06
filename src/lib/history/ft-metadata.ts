@@ -3,6 +3,7 @@
  * Used to confirm token decimals/symbol rather than trusting the indexer alone.
  */
 import type { ProgressFn } from "./nearblocks";
+import { sanitizeSymbol } from "./sanitize";
 
 const RPC_URLS = ["https://free.rpc.fastnear.com", "https://rpc.mainnet.near.org"];
 const RPC_TIMEOUT_MS = 15_000;
@@ -42,7 +43,7 @@ async function rpcFtMetadata(contract: string): Promise<{ symbol: string; decima
       if (json.error || !json.result?.result) return null;
       const meta = JSON.parse(Buffer.from(json.result.result).toString("utf8")) as { symbol?: unknown; decimals?: unknown };
       if (typeof meta.decimals !== "number" || !Number.isInteger(meta.decimals) || meta.decimals < 0) return null;
-      return { symbol: typeof meta.symbol === "string" ? meta.symbol : contract, decimals: meta.decimals };
+      return { symbol: sanitizeSymbol(meta.symbol), decimals: meta.decimals };
     } catch {
       // try next RPC
     }
@@ -70,7 +71,7 @@ export async function resolveFtMetadata(
     }
     if (typeof fallback.decimals === "number" && Number.isInteger(fallback.decimals) && fallback.decimals >= 0) {
       out.set(contract, {
-        symbol: typeof fallback.symbol === "string" ? fallback.symbol : contract,
+        symbol: sanitizeSymbol(fallback.symbol),
         decimals: fallback.decimals,
         origin: "indexer",
       });

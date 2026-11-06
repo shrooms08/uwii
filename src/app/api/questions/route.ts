@@ -3,6 +3,7 @@
  * (they live only in the user's browser) and are never stored or logged server-side.
  */
 import { z } from "zod";
+import { sanitizeSymbol } from "@/lib/history/sanitize";
 import { isValidAccountId } from "@/lib/history/fetch";
 import { NotScannedError, getClassification } from "@/lib/tax/ng/cache";
 import { ReliefsBody, RunField, RunSigField, resolveRun } from "@/lib/api/report-body";
@@ -94,7 +95,7 @@ export async function POST(request: Request) {
     }));
     // Assets seen in this account (for the "what did you give up" source-leg answer).
     const assetMap = new Map<string, { symbol: string; contract: string | null }>();
-    for (const r of run.records) assetMap.set(r.asset.contract ?? "native", { symbol: r.asset.symbol, contract: r.asset.contract });
+    for (const r of run.records) assetMap.set(r.asset.contract ?? "native", { symbol: sanitizeSymbol(r.asset.symbol), contract: r.asset.contract });
     const assets = [...assetMap.values()];
     return Response.json(
       {
