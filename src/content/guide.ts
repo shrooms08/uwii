@@ -3,6 +3,7 @@
  *
  * Rules: every claim cites the Circular (NRS Information Circular No. 2026/21) or the Nigeria Tax Act 2025
  * (NTA), or is marked as a Uwii decision linked to the decision log (docs/rules-ng-2026-21.md).
+ * The last section (privacy proof) describes Uwii's own attestation checks (src/content/privacy-scope.ts).
  * Illustrations 2 and 3 use the Circular's own numbers (verified by the engine tests in
  * src/lib/tax/ng/engine.test.ts).
  */
@@ -10,6 +11,7 @@ import { ZERO_D, dec } from "../lib/money";
 import { fmtNgn } from "../lib/report/format";
 import { PIT_BANDS } from "../lib/tax/ng/pit";
 import { RELIEFS, RELIEFS_NOTE } from "../lib/tax/ng/reliefs";
+import { PRIVACY_SCOPE } from "./privacy-scope";
 import { REPO_URL } from "./landing";
 
 /** A heading in docs/rules-ng-2026-21.md on GitHub. */
@@ -251,6 +253,15 @@ export const guideSections: GuideSection[] = [
         body: "Generally yes. Under the Nigeria Tax Administration Act 2025, individuals with income are expected to file an annual return even when no tax is due. Confirm with your State IRS or a tax professional.",
         cite: "Nigeria Tax Administration Act 2025",
       },
+    ],
+  },
+  {
+    id: "privacy",
+    title: "What Uwii's privacy proof covers",
+    intro: "The AI step runs on NEAR AI Cloud in a trusted execution environment (TEE), and Uwii checks the evidence on every scan. Here is exactly what that proves.",
+    items: [
+      ...PRIVACY_SCOPE.covers.map((c) => ({ title: c.title, body: c.text, cite: "Checked on every scan" })),
+      ...PRIVACY_SCOPE.notCovered.map((c) => ({ title: c.title, body: c.text, cite: "Not covered" })),
     ],
   },
 ];

@@ -8,6 +8,29 @@ asks the owner about anything it cannot tell, and computes the 2026 Nigerian tax
 
 Computation for review; not tax advice.
 
+## What the privacy proof covers
+
+The AI step runs on NEAR AI Cloud in a trusted execution environment (TEE). On every scan Uwii checks:
+
+- genuine Intel TDX and NVIDIA GPU hardware (the TDX quote verified with Intel DCAP, the GPU evidence by
+  NVIDIA's attestation service);
+- debug mode is off;
+- a fresh nonce from Uwii is inside every attestation report;
+- the key that signs the AI's responses is bound to the attested hardware;
+- each AI response is signed over its exact bytes, and every signature is checked.
+
+It does **not** cover:
+
+- a pinned allowlist of approved software builds (Uwii checks that the reported configuration matches the
+  hardware measurement, not that it is a build it has approved);
+- that TLS terminates inside the attested gateway;
+- local validation of NVIDIA's attestation token (Uwii relies on NVIDIA's service over HTTPS);
+- your answers, other income and reliefs: they are processed on Uwii's server (not in a TEE) and are not
+  stored. The AI only ever receives public on-chain data.
+
+The same list is in the privacy panel and the guide (`src/content/privacy-scope.ts`). Security review:
+[docs/SECURITY-AUDIT.md](docs/SECURITY-AUDIT.md).
+
 ## Run locally
 
 Requirements: Node.js 24, npm.

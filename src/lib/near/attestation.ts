@@ -284,6 +284,13 @@ async function checkNearReport(
   return { label, ok: true, signingAddress: report.signing_address, signingAlgo: report.signing_algo, checks, summary };
 }
 
+/** NVIDIA's overall token must echo the client nonce: a missing eat_nonce is a failure, not a pass (M3). */
+export function nrasNonceProblem(overall: Record<string, unknown>, nonceHex: string): string | null {
+  if (typeof overall.eat_nonce !== "string" || overall.eat_nonce === "") return "NRAS eat_nonce missing";
+  if (overall.eat_nonce.toLowerCase() !== nonceHex.toLowerCase()) return "NRAS eat_nonce does not match client nonce";
+  return null;
+}
+
 /** Docs: "Verify GPU evidence when present". */
 async function verifyGpuEvidence(
   report: NearReport,
@@ -346,9 +353,8 @@ async function verifyGpuEvidence(
   if (overall["x-nvidia-overall-att-result"] !== true) {
     return { ok: false, detail: `x-nvidia-overall-att-result is ${JSON.stringify(overall["x-nvidia-overall-att-result"])}`, summary };
   }
-  if (typeof overall.eat_nonce === "string" && overall.eat_nonce.toLowerCase() !== nonceHex.toLowerCase()) {
-    return { ok: false, detail: "NRAS eat_nonce does not match client nonce", summary };
-  }
+  const nonceProblem = nrasNonceProblem(overall, nonceHex);
+  if (nonceProblem) return { ok: false, detail: nonceProblem, summary };
   return { ok: true, detail: `overall result true, ${(summary.gpus as unknown[]).length} GPU(s), nonce matches${retried(nrasRetries)}`, summary };
 }
 

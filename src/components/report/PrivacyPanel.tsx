@@ -7,6 +7,7 @@ import { Chip } from "@/components/ui/Chip";
 import { useModal } from "@/components/ui/useModal";
 import { download } from "@/lib/client/useReport";
 import type { ProofCheck, PrivacyProof } from "@/lib/report/privacy";
+import { PRIVACY_SCOPE } from "@/content/privacy-scope";
 
 export const shortAddr = (a: string) => (a.length > 12 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a);
 const utc = (iso: string) => `${iso.slice(0, 10)} ${iso.slice(11, 19)} UTC`;
@@ -72,7 +73,7 @@ export function PrivacyPanel({ proof, account, ruleCount, onClose }: { proof: Pr
   const heading = noAi ? "No AI was needed" : all ? "Verified private" : "Not fully verified";
   const explanation = noAi
     ? `Every transaction matched a deterministic NRS rule on Uwii's server, so nothing was sent to an AI model and no attestation was needed.`
-    : `The ${proof.aiDecisions} transactions the rules could not label were classified by an AI model running in sealed hardware (a TEE on NEAR AI Cloud), built so the operator cannot read what it processes. ` +
+    : `The ${proof.aiDecisions} transactions the rules could not label were classified by an AI model running in a TEE on NEAR AI Cloud, on hardware whose attestation Uwii verified (Intel TDX and NVIDIA GPU, debug off, a fresh nonce, the response-signing key bound to that hardware). ` +
       `Before anything was sent, Uwii verified the hardware's attestation; afterwards it verified the signature on every AI response. ` +
       `${ruleCount !== null ? `The other ${ruleCount} transactions` : "The rest"} were labelled by deterministic NRS rules on Uwii's server. Here is the evidence from this run.`;
 
@@ -205,6 +206,33 @@ export function PrivacyPanel({ proof, account, ruleCount, onClose }: { proof: Pr
                 signatures verified. The individual check results were not recorded; run a new scan to record them.
               </div>
             ))}
+
+          <section aria-labelledby="proof-scope" className="grid gap-4 rounded-tile bg-muted p-5 @min-[640px]:grid-cols-2">
+            <div className="flex flex-col gap-2">
+              <h3 id="proof-scope" className="text-small font-semibold">
+                {PRIVACY_SCOPE.title}
+              </h3>
+              <ul className="flex flex-col gap-1.5 text-label leading-normal text-ink-soft">
+                {PRIVACY_SCOPE.covers.map((c) => (
+                  <li key={c.title} className="flex gap-2">
+                    <span aria-hidden="true" className="text-lime-ink">✓</span>
+                    {c.text}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="flex flex-col gap-2">
+              <h3 className="text-small font-semibold">{PRIVACY_SCOPE.notTitle}</h3>
+              <ul className="flex flex-col gap-1.5 text-label leading-normal text-ink-soft">
+                {PRIVACY_SCOPE.notCovered.map((c) => (
+                  <li key={c.title} className="flex gap-2">
+                    <span aria-hidden="true" className="text-ink-2">–</span>
+                    {c.text}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </section>
 
           <div className="flex flex-wrap items-center justify-between gap-3">
             <TextButton onClick={downloadJson}>Download attestation report (JSON)</TextButton>
