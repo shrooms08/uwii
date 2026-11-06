@@ -33,7 +33,7 @@ values in the repository. Values marked secret must be "Sensitive".
 | `NEAR_NETWORK` | yes | no | Must be `testnet`. Anything else is refused. |
 | `NEAR_ANCHOR_CONTRACT_ID` | for anchoring and /verify | no | The anchor contract account, `uwii-anchor.testnet`. Needed by `/verify` (read-only) and `/api/anchor`. |
 | `NEAR_ANCHOR_ACCOUNT_ID` | for anchoring | no | The account that signs `anchor()` calls (the contract owner, `uwii-anchor.testnet`). |
-| `NEAR_ANCHOR_PRIVATE_KEY` | for anchoring | yes | `ed25519:` private key of that account (from `.env.local`). Testnet only. |
+| `NEAR_ANCHOR_PRIVATE_KEY` | for anchoring | yes | `ed25519:` private key of a **function-call** access key on that account, limited to receiver `uwii-anchor.testnet`, method `anchor`, 1 NEAR gas allowance (see "Anchor key rotation"). The server refuses to sign with a full-access key. Testnet only. |
 | `MAX_AI_CALLS_PER_DAY` | no | no | Global cap on AI requests per UTC day. Default 150. `0` disables live scans (cached demo only). |
 | `MAX_ANCHORS_PER_DAY` | no | no | Global cap on new anchor transactions per UTC day. Default 100. |
 | `NEAR_ARCHIVAL_RPC_URL` | no | if it embeds a token | Faster mainnet archival RPC for staking snapshots of uncached accounts. |
@@ -91,3 +91,33 @@ Vercel sets `VERCEL` and `VERCEL_GIT_COMMIT_SHA` itself; do not set them.
 5. Watch usage: NEAR AI Cloud credit balance and the `uwii-anchor.testnet` balance (top up from the
    testnet faucet if it runs low). To stop live AI use without redeploying code, set
    `MAX_AI_CALLS_PER_DAY=0` and redeploy.
+
+## Anchor key rotation (function-call key on the server)
+
+The anchoring account `uwii-anchor.testnet` is also the contract account, so its full-access key could
+redeploy the contract or move funds. The server therefore holds only a **function-call** key:
+
+| Key | Permission | Where it lives |
+| --- | --- | --- |
+| `ed25519:A6nj86jEDeczEJrKNhVLLRmbhh2HKR4S7a2LwpR5QRtE` | FunctionCall: receiver `uwii-anchor.testnet`, method `anchor`, allowance 1 NEAR | `NEAR_ANCHOR_PRIVATE_KEY` in `.env.local` and Vercel |
+| `ed25519:DM5vW6wwzNQvGYww76SFbuuc14aY6Xn2HpMJK97Q3Zdm` | FullAccess (admin) | `NEAR_ANCHOR_ADMIN_PRIVATE_KEY` in `.env.anchor-admin.local` only (gitignored by `.env*.local`; Next.js never loads it); never in Vercel |
+
+- The function-call key was added on 2026-11-06 in tx `C1UFJHBTogw6asLXh3TrBn7C5jnf9X1M5JeuXU3BjQZs`
+  (near-cli-rs `account add-key … grant-function-call-access --allowance '1 NEAR' --contract-account-id
+  uwii-anchor.testnet --function-names anchor`, signed with the full-access key).
+- Checked on testnet with the function-call key: a transfer and a contract deploy were both refused
+  ("Transaction requires a full permission access key").
+- `src/lib/near/anchor.ts` checks the key's on-chain permission before the first signature and refuses a
+  full-access key, or one not limited to `anchor` on the contract.
+- `npm run deploy:anchor` loads `.env.anchor-admin.local` explicitly; it is the only thing that uses the
+  admin key.
+
+To rotate again:
+
+1. Generate a key pair locally (for example `near account add-key uwii-anchor.testnet
+   grant-function-call-access --allowance '1 NEAR' --contract-account-id uwii-anchor.testnet
+   --function-names anchor autogenerate-new-keypair …`, signed with the admin key).
+2. Put the new private key in `.env.local` and in Vercel as `NEAR_ANCHOR_PRIVATE_KEY`, then redeploy.
+3. Delete the old function-call key with the admin key: `near account delete-keys uwii-anchor.testnet
+   public-keys <old public key> network-config testnet sign-with-…`.
+4. When the 1 NEAR allowance runs low, rotate the same way (an allowance cannot be raised in place).

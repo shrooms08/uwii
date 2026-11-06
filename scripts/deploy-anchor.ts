@@ -1,14 +1,17 @@
 // Usage: npm run deploy:anchor   (after: cd contracts/anchor && cargo near build non-reproducible-wasm)
 // Deploys contracts/anchor to NEAR_ANCHOR_CONTRACT_ID on testnet and initialises it with the contract
-// account as owner, in one transaction. Reads the key from .env.local; never prints it.
+// account as owner, in one transaction. Needs the FULL-ACCESS admin key, NEAR_ANCHOR_ADMIN_PRIVATE_KEY in
+// .env.anchor-admin.local (gitignored; the app never loads it; see docs/DEPLOY.md). Never prints it.
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { Account, KeyPairSigner, actions, teraToGas, type KeyPairString } from "near-api-js";
 import { anchorConfig, explorerTxUrl, nearProvider } from "../src/lib/near/anchor";
 
 async function main() {
-  const cfg = anchorConfig();
-  if (!cfg || !cfg.accountId || !cfg.privateKey) throw new Error("Set NEAR_ANCHOR_ACCOUNT_ID, NEAR_ANCHOR_CONTRACT_ID and NEAR_ANCHOR_PRIVATE_KEY in .env.local");
+  const cfg = anchorConfig({ ...process.env, NEAR_ANCHOR_PRIVATE_KEY: process.env.NEAR_ANCHOR_ADMIN_PRIVATE_KEY });
+  if (!cfg || !cfg.accountId || !cfg.privateKey) {
+    throw new Error("Set NEAR_ANCHOR_ACCOUNT_ID, NEAR_ANCHOR_CONTRACT_ID and NEAR_ANCHOR_ADMIN_PRIVATE_KEY in .env.anchor-admin.local");
+  }
   if (cfg.accountId !== cfg.contractId) throw new Error("This script deploys to the anchoring account itself (account id must equal contract id)");
   const wasm = await readFile(path.join(process.cwd(), "contracts/anchor/target/near/anchor.wasm"));
   const provider = nearProvider(cfg);

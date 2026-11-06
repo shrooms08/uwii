@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { handleAnchor, handleVerify, type AnchorDeps } from "../api/anchor-handlers";
 import { ILLUSTRATIVE_ANSWERS } from "../demo/illustrative-answers";
 import { buildReport } from "../tax/ng/report";
-import { anchorArgs, anchorConfig, anchorFingerprint, verifyFingerprint, type AnchorClient, type AnchorConfig, type ContractAnchor } from "./anchor";
+import { anchorArgs, anchorConfig, anchorFingerprint, keyPermissionProblem, verifyFingerprint, type AnchorClient, type AnchorConfig, type ContractAnchor } from "./anchor";
 
 const FP = "a4a1c78044e9c3c21602267480350e7b9cce3fdaf8fdcedfc6e03992f1a994df";
 const cfg: AnchorConfig = {
@@ -161,4 +161,13 @@ test("verify page CSV reading: summary CSV states the fingerprint; lines CSV has
   assert.deepEqual(readUwiiCsv(summaryCsv(report)), { kind: "summary", fingerprint: report.fingerprint });
   assert.deepEqual(readUwiiCsv(linesCsv(report)), { kind: "lines", rows: report.lines.length });
   assert.deepEqual(readUwiiCsv("a,b\n1,2\n"), { kind: "unknown" });
+});
+
+test("H2: the server signs only with a function-call key limited to anchor() on the anchor contract", () => {
+  const fc = (receiver_id: string, method_names: string[]) => ({ FunctionCall: { allowance: "1000000000000000000000000", receiver_id, method_names } });
+  assert.match(keyPermissionProblem("FullAccess", "uwii-anchor.testnet", "anchor")!, /full-access/);
+  assert.equal(keyPermissionProblem(fc("uwii-anchor.testnet", ["anchor"]), "uwii-anchor.testnet", "anchor"), null);
+  assert.match(keyPermissionProblem(fc("other.testnet", ["anchor"]), "uwii-anchor.testnet", "anchor")!, /not uwii-anchor\.testnet/);
+  assert.match(keyPermissionProblem(fc("uwii-anchor.testnet", []), "uwii-anchor.testnet", "anchor")!, /limited to anchor/, "an empty list allows every method");
+  assert.match(keyPermissionProblem(fc("uwii-anchor.testnet", ["new"]), "uwii-anchor.testnet", "anchor")!, /limited to anchor/);
 });

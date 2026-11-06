@@ -122,6 +122,32 @@ export function nearProvider(cfg: AnchorConfig): FailoverRpcProvider {
   return new FailoverRpcProvider(cfg.rpcUrls.map((url) => new JsonRpcProvider({ url })));
 }
 
+/** Permission of an access key, as returned by view_access_key. */
+export type KeyPermission = "FullAccess" | { FunctionCall: { allowance: string | null; receiver_id: string; method_names: string[] } };
+
+/**
+ * The server signs only with a function-call key limited to the anchor contract and method (H2):
+ * a leaked key can then call anchor() and nothing else (no deploys, transfers or key changes).
+ */
+export function keyPermissionProblem(permission: KeyPermission, contractId: string, method: string): string | null {
+  if (permission === "FullAccess") return "Refusing to sign with a full-access key. Configure a function-call key limited to anchor() (docs/DEPLOY.md).";
+  const fc = permission.FunctionCall;
+  if (fc.receiver_id !== contractId) return `The anchoring key is for ${fc.receiver_id}, not ${contractId}.`;
+  if (fc.method_names.length === 0 || !fc.method_names.includes(method)) return `The anchoring key must be limited to ${method}().`;
+  return null;
+}
+
+const checkedKeys = new Set<string>();
+
+async function assertFunctionCallKey(cfg: AnchorConfig, publicKey: string, method: string): Promise<void> {
+  const cacheKey = `${cfg.accountId}|${publicKey}|${method}`;
+  if (checkedKeys.has(cacheKey)) return;
+  const r = (await jsonRpc(cfg.rpcUrls, "query", { request_type: "view_access_key", finality: "final", account_id: cfg.accountId, public_key: publicKey })) as { permission: KeyPermission };
+  const problem = keyPermissionProblem(r.permission, cfg.contractId, method);
+  if (problem) throw new Error(problem);
+  checkedKeys.add(cacheKey);
+}
+
 /** near-api-js backed client. Signing is only possible when the account id and key are configured. */
 export function nearAnchorClient(cfg: AnchorConfig): AnchorClient {
   const provider = nearProvider(cfg);
@@ -129,7 +155,9 @@ export function nearAnchorClient(cfg: AnchorConfig): AnchorClient {
     view: (method, args) => provider.callFunction({ contractId: cfg.contractId, method, args }),
     async call(method, args) {
       if (!cfg.accountId || !cfg.privateKey) throw new Error("anchoring account is not configured on this server");
-      const account = new Account(cfg.accountId, provider, KeyPairSigner.fromSecretKey(cfg.privateKey as KeyPairString));
+      const signer = KeyPairSigner.fromSecretKey(cfg.privateKey as KeyPairString);
+      await assertFunctionCallKey(cfg, (await signer.getPublicKey()).toString(), method);
+      const account = new Account(cfg.accountId, provider, signer);
       const outcome = await account.callFunctionRaw({ contractId: cfg.contractId, methodName: method, args, gas: teraToGas("30"), waitUntil: "FINAL" });
       return { txHash: outcome.transaction_outcome.id, result: getTransactionLastResult(outcome) };
     },
