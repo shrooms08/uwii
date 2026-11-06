@@ -97,13 +97,23 @@ export const LIMITS = {
   anchorsPerIpPerHour: 3,
   defaultAiCallsPerDay: 150,
   defaultAnchorsPerDay: 100,
+  /** /api/report, /api/questions and /api/verify: each, per IP, per minute. */
+  apiPerIpPerMinute: 60,
 };
+
+export const MINUTE_MS = 60 * 1000;
+
+/** Request bodies above this are refused with 413 (Vercel's own platform limit is 4.5 MB). */
+export const MAX_BODY_BYTES = 4_500_000;
 
 interface LimitState {
   scanPerIp: SlidingWindowLimiter;
   anchorPerIp: SlidingWindowLimiter;
   aiCallsDaily: DailyCap;
   anchorsDaily: DailyCap;
+  reportPerIp: SlidingWindowLimiter;
+  questionsPerIp: SlidingWindowLimiter;
+  verifyPerIp: SlidingWindowLimiter;
 }
 
 /** One shared state per server process (kept on globalThis so dev hot reloads do not reset it). */
@@ -114,6 +124,9 @@ export function limitState(): LimitState {
     anchorPerIp: new SlidingWindowLimiter(LIMITS.anchorsPerIpPerHour, HOUR_MS),
     aiCallsDaily: new DailyCap(envInt("MAX_AI_CALLS_PER_DAY", LIMITS.defaultAiCallsPerDay)),
     anchorsDaily: new DailyCap(envInt("MAX_ANCHORS_PER_DAY", LIMITS.defaultAnchorsPerDay)),
+    reportPerIp: new SlidingWindowLimiter(LIMITS.apiPerIpPerMinute, MINUTE_MS),
+    questionsPerIp: new SlidingWindowLimiter(LIMITS.apiPerIpPerMinute, MINUTE_MS),
+    verifyPerIp: new SlidingWindowLimiter(LIMITS.apiPerIpPerMinute, MINUTE_MS),
   };
   return g.__uwiiLimits;
 }
@@ -125,6 +138,8 @@ export function clientKey(request: Request): string {
   return createHash("sha256").update(`uwii-limit:${ip}`).digest("hex").slice(0, 16);
 }
 
+export const SLOW_DOWN_MESSAGE = "Too many requests from this connection. Wait a minute and try again.";
+
 export const BUSY_MESSAGE = "The hosted demo is busy. Try again later, or load the cached demo report.";
 
 export function tooManyRequests(code: "rate_limited" | "daily_cap", retryAfterSec: number, error = BUSY_MESSAGE): Response {
@@ -132,4 +147,35 @@ export function tooManyRequests(code: "rate_limited" | "daily_cap", retryAfterSe
     { error, code, retryAfterSec },
     { status: 429, headers: { "cache-control": "no-store", "retry-after": String(retryAfterSec) } },
   );
+}
+
+/** Per-IP limit for a cheap API route: null when allowed, else the 429 response. */
+export function apiLimit(limiter: "reportPerIp" | "questionsPerIp" | "verifyPerIp", request: Request): Response | null {
+  const r = limitState()[limiter].hit(clientKey(request));
+  return r.ok ? null : tooManyRequests("rate_limited", r.retryAfterSec, SLOW_DOWN_MESSAGE);
+}
+
+/** Reads a JSON body, refusing anything over MAX_BODY_BYTES with 413 (checked on the header and the bytes read). */
+export async function readJsonBody(request: Request, max = MAX_BODY_BYTES): Promise<{ ok: true; value: unknown } | { ok: false; response: Response }> {
+  const tooLarge = () => ({
+    ok: false as const,
+    response: Response.json(
+      { error: `The request is too large (over ${(max / 1_000_000).toFixed(1)} MB).`, code: "too_large" },
+      { status: 413, headers: { "cache-control": "no-store" } },
+    ),
+  });
+  const declared = Number(request.headers.get("content-length") ?? "0");
+  if (Number.isFinite(declared) && declared > max) return tooLarge();
+  let text: string;
+  try {
+    text = await request.text();
+  } catch {
+    return { ok: false, response: Response.json({ error: "body must be JSON" }, { status: 400, headers: { "cache-control": "no-store" } }) };
+  }
+  if (Buffer.byteLength(text, "utf8") > max) return tooLarge();
+  try {
+    return { ok: true, value: JSON.parse(text) };
+  } catch {
+    return { ok: false, response: Response.json({ error: "body must be JSON" }, { status: 400, headers: { "cache-control": "no-store" } }) };
+  }
 }

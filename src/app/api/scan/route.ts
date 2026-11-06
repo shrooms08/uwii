@@ -18,7 +18,7 @@ import { ON_VERCEL } from "@/lib/history/paths";
 import { isValidAccountId } from "@/lib/near/account-id";
 import { cachedScanEvents } from "@/lib/scan/cached";
 import { FetchProgressTracker, OUT_OF_TIME_MESSAGE, TOO_LARGE_MESSAGE, sseEncode, type ScanEvent } from "@/lib/scan/events";
-import { BUSY_MESSAGE, DailyCap, clientKey, envInt, limitState, tooManyRequests } from "@/lib/server/limits";
+import { BUSY_MESSAGE, DailyCap, clientKey, envInt, limitState, readJsonBody, tooManyRequests } from "@/lib/server/limits";
 import { getClassification } from "@/lib/tax/ng/cache";
 import { readJsonIfExists } from "@/lib/history/paths";
 import { fetchOpeningPosition, openingInputsFromHistory, type OpeningPosition } from "@/lib/tax/ng/opening";
@@ -116,14 +116,11 @@ function sseResponse(run: (send: (e: ScanEvent) => void, isOpen: () => boolean, 
 }
 
 export async function POST(request: Request) {
-  let body: z.infer<typeof Body>;
-  try {
-    const parsed = Body.safeParse(await request.json());
-    if (!parsed.success) return Response.json({ error: z.prettifyError(parsed.error) }, { status: 400, headers: { "cache-control": "no-store" } });
-    body = parsed.data;
-  } catch {
-    return Response.json({ error: "body must be JSON" }, { status: 400, headers: { "cache-control": "no-store" } });
-  }
+  const raw = await readJsonBody(request, 64_000);
+  if (!raw.ok) return raw.response;
+  const parsed = Body.safeParse(raw.value);
+  if (!parsed.success) return Response.json({ error: z.prettifyError(parsed.error) }, { status: 400, headers: { "cache-control": "no-store" } });
+  const body = parsed.data;
   const { account, ownAccounts } = body;
 
   // ---- cached demo result: the committed classified fixture, replayed (no AI, no network) ----

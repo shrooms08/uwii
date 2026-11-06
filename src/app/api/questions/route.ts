@@ -6,7 +6,8 @@ import { z } from "zod";
 import { sanitizeSymbol } from "@/lib/history/sanitize";
 import { isValidAccountId } from "@/lib/history/fetch";
 import { NotScannedError, getClassification } from "@/lib/tax/ng/cache";
-import { ReliefsBody, RunField, RunSigField, resolveRun } from "@/lib/api/report-body";
+import { AnswersBody, ReliefsBody, RunField, RunSigField, resolveRun } from "@/lib/api/report-body";
+import { apiLimit, readJsonBody } from "@/lib/server/limits";
 import { NGN_RE, runQuestionFlow } from "@/lib/tax/ng/questions";
 
 /** Vercel Hobby (Fluid compute): 300 s default and maximum per invocation. */
@@ -22,30 +23,7 @@ const Body = z
     from: datePart.default("2026-01-01"),
     to: datePart.default("2026-12-31"),
     ownAccounts: z.array(accountId).max(50).default([]),
-    answers: z
-      .object({
-        groups: z
-          .record(
-            z.string().max(200),
-            z.object({
-              option: z.string().max(40),
-              overrides: z.record(z.string().max(300), z.string().max(40)).optional(),
-              ngn: z.record(z.string().max(300), z.string().max(30)).optional(),
-              sourceLegs: z
-                .record(
-                  z.string().max(300),
-                  z.object({
-                    asset: z.object({ symbol: z.string().max(64), contract: z.string().max(64).nullable() }),
-                    quantity: z.string().max(80),
-                    timestamp: z.string().max(40).optional(),
-                  }),
-                )
-                .optional(),
-            }),
-          )
-          .default({}),
-      })
-      .default({ groups: {} }),
+    answers: AnswersBody,
     profile: z.object({ otherIncomeNgn: ngn.optional().or(z.literal("")), reliefs: ReliefsBody.optional() }).default({}),
     /** "fixture": the cached demo result (committed classified fixture, no live AI). */
     classificationSource: z.literal("fixture").optional(),
@@ -57,14 +35,13 @@ const Body = z
 const noStore = { "cache-control": "no-store" };
 
 export async function POST(request: Request) {
-  let body: z.infer<typeof Body>;
-  try {
-    const parsed = Body.safeParse(await request.json());
-    if (!parsed.success) return Response.json({ error: z.prettifyError(parsed.error) }, { status: 400, headers: noStore });
-    body = parsed.data;
-  } catch {
-    return Response.json({ error: "body must be JSON" }, { status: 400, headers: noStore });
-  }
+  const limited = apiLimit("questionsPerIp", request);
+  if (limited) return limited;
+  const raw = await readJsonBody(request);
+  if (!raw.ok) return raw.response;
+  const parsed = Body.safeParse(raw.value);
+  if (!parsed.success) return Response.json({ error: z.prettifyError(parsed.error) }, { status: 400, headers: noStore });
+  const body = parsed.data;
 
   // The signed run from the browser, or the committed fixture (cached demo); never the shared cache.
   const resolved = await resolveRun(body);

@@ -64,7 +64,10 @@ Vercel sets `VERCEL` and `VERCEL_GIT_COMMIT_SHA` itself; do not set them.
   limit), checked in the browser first.
 - **`/dev/*` is off.** The developer pages return 404 in production unless `UWII_ENABLE_DEV_PAGES=1`.
 - **Limits (best-effort, in memory, per instance):**
-  - scans: 5 per IP per hour; anchors: 3 per IP per hour;
+  - scans: 5 per IP per hour; anchors: 3 per IP per hour (checked before the report is rebuilt);
+  - `/api/report`, `/api/questions`, `/api/verify`: 60 per IP per minute each;
+  - request bodies over 4.5 MB get 413; answers are capped at 200 groups and 500 overrides, naira amounts
+    or source legs per group;
   - global per UTC day: `MAX_AI_CALLS_PER_DAY` AI requests (checked before any AI call from the
     deterministic rule pre-pass) and `MAX_ANCHORS_PER_DAY` new anchors;
   - when a limit is hit the API returns 429 and the scan page offers "Load the cached demo report",

@@ -36,6 +36,9 @@ class LimitHit extends Error {
 const ANCHOR_BUSY = "The hosted demo has reached its anchoring limit. Try again later; your report and fingerprint are unaffected.";
 
 export async function handleAnchor(request: Request, deps: AnchorDeps = defaultDeps): Promise<Response> {
+  // Per-IP limit first: every anchor request rebuilds a report, so it is limited before any work (N3).
+  const perIp = limitState().anchorPerIp.hit(clientKey(request));
+  if (!perIp.ok) return tooManyRequests("rate_limited", perIp.retryAfterSec, ANCHOR_BUSY);
   const parsed = await parseReportBody(request);
   if (!parsed.ok) return parsed.response;
   const resolved = await resolveReportRequest(parsed.body);
@@ -59,11 +62,9 @@ export async function handleAnchor(request: Request, deps: AnchorDeps = defaultD
   if (!cfg || !cfg.accountId || !cfg.privateKey) return fail(503, "Anchoring is not configured on this server.");
   try {
     const limits = limitState();
-    const key = clientKey(request);
     const { anchor, alreadyAnchored } = await anchorFingerprint(deps.client(cfg), cfg, report.fingerprint, () => {
+      // The global daily cap counts only new anchor transactions.
       if (limits.anchorsDaily.remaining() < 1) throw new LimitHit("daily_cap", DailyCap.secondsToReset());
-      const r = limits.anchorPerIp.hit(key);
-      if (!r.ok) throw new LimitHit("rate_limited", r.retryAfterSec);
       limits.anchorsDaily.add(1);
     });
     const body: AnchorResponse = { ...anchor, alreadyAnchored };

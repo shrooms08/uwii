@@ -4,12 +4,15 @@
  */
 import { noStore, parseReportBody, resolveReportRequest } from "@/lib/api/report-body";
 import { NotScannedError } from "@/lib/tax/ng/cache";
+import { apiLimit } from "@/lib/server/limits";
 import { buildReport } from "@/lib/tax/ng/report";
 
 /** Vercel Hobby (Fluid compute): 300 s default and maximum per invocation. */
 export const maxDuration = 300;
 
 export async function POST(request: Request) {
+  const limited = apiLimit("reportPerIp", request);
+  if (limited) return limited;
   const parsed = await parseReportBody(request);
   if (!parsed.ok) return parsed.response;
   const resolved = await resolveReportRequest(parsed.body);
