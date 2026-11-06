@@ -8,6 +8,7 @@ import { isValidAccountId } from "@/lib/history/fetch";
 import { NotScannedError, getClassification } from "@/lib/tax/ng/cache";
 import { AnswersBody, ReliefsBody, RunField, RunSigField, resolveRun } from "@/lib/api/report-body";
 import { apiLimit, readJsonBody } from "@/lib/server/limits";
+import { serverError } from "@/lib/server/errors";
 import { NGN_RE, runQuestionFlow } from "@/lib/tax/ng/questions";
 
 /** Vercel Hobby (Fluid compute): 300 s default and maximum per invocation. */
@@ -90,6 +91,6 @@ export async function POST(request: Request) {
     );
   } catch (e) {
     if (e instanceof NotScannedError) return Response.json({ error: e.message, code: "not_scanned" }, { status: 409, headers: noStore });
-    return Response.json({ error: `question flow failed: ${e instanceof Error ? e.message : String(e)}` }, { status: 500, headers: noStore });
+    return serverError("questions", e);
   }
 }

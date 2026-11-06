@@ -63,6 +63,9 @@ Vercel sets `VERCEL` and `VERCEL_GIT_COMMIT_SHA` itself; do not set them.
   otherwise the report computes it (cached per instance). Request bodies are limited to 4.5 MB (Vercel's
   limit), checked in the browser first.
 - **`/dev/*` is off.** The developer pages return 404 in production unless `UWII_ENABLE_DEV_PAGES=1`.
+- **Errors.** Unexpected failures return "Something went wrong on our side … quote error <id>" (5xx). The
+  internal message is logged once with that id (`[uwii error <id>]` in the Vercel function logs); no request
+  body, answers or personal fields are ever logged.
 - **Limits (best-effort, in memory, per instance):**
   - scans: 5 per IP per hour; anchors: 3 per IP per hour (checked before the report is rebuilt);
   - `/api/report`, `/api/questions`, `/api/verify`: 60 per IP per minute each;

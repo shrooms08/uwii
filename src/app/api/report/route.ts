@@ -5,6 +5,7 @@
 import { noStore, parseReportBody, resolveReportRequest } from "@/lib/api/report-body";
 import { NotScannedError } from "@/lib/tax/ng/cache";
 import { apiLimit } from "@/lib/server/limits";
+import { serverError } from "@/lib/server/errors";
 import { buildReport } from "@/lib/tax/ng/report";
 
 /** Vercel Hobby (Fluid compute): 300 s default and maximum per invocation. */
@@ -22,6 +23,6 @@ export async function POST(request: Request) {
     return Response.json(report, { headers: noStore });
   } catch (e) {
     if (e instanceof NotScannedError) return Response.json({ error: e.message, code: "not_scanned" }, { status: 409, headers: noStore });
-    return Response.json({ error: `report failed: ${e instanceof Error ? e.message : String(e)}` }, { status: 500, headers: noStore });
+    return serverError("report", e);
   }
 }

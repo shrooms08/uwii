@@ -19,6 +19,7 @@ import { isValidAccountId } from "@/lib/near/account-id";
 import { cachedScanEvents } from "@/lib/scan/cached";
 import { FetchProgressTracker, OUT_OF_TIME_MESSAGE, TOO_LARGE_MESSAGE, sseEncode, type ScanEvent } from "@/lib/scan/events";
 import { BUSY_MESSAGE, DailyCap, clientKey, envInt, limitState, readJsonBody, tooManyRequests } from "@/lib/server/limits";
+import { publicError } from "@/lib/server/errors";
 import { getClassification } from "@/lib/tax/ng/cache";
 import { readJsonIfExists } from "@/lib/history/paths";
 import { fetchOpeningPosition, openingInputsFromHistory, type OpeningPosition } from "@/lib/tax/ng/opening";
@@ -61,8 +62,6 @@ async function withinMs<T>(p: Promise<T | null>, ms: number): Promise<T | null> 
     clearTimeout(timer);
   }
 }
-
-const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 /** Time budget for one scan: SCAN_TIME_BUDGET_MS, else maxDuration minus a margin on Vercel, else none. */
 function timeBudgetMs(): number | null {
@@ -130,8 +129,8 @@ export async function POST(request: Request) {
       const { run } = await getClassification(account, FROM, TO, { ownAccounts: [], fixtureOnly: true });
       const flow = runQuestionFlow(run, { ownAccounts, answers: { groups: {} } });
       events = cachedScanEvents(run, { questions: flow.questions.length, needsYou: flow.questions.reduce((n, q) => n + q.txs.length, 0) });
-    } catch (e) {
-      return Response.json({ error: errMsg(e) }, { status: 404, headers: { "cache-control": "no-store" } });
+    } catch {
+      return Response.json({ error: "There is no cached demo result for this account.", code: "no_cached_demo" }, { status: 404, headers: { "cache-control": "no-store" } });
     }
     return sseResponse(async (send) => {
       for (const e of events) send(e);
@@ -226,7 +225,7 @@ export async function POST(request: Request) {
         runSig,
       });
     } catch (e) {
-      send({ type: "error", stage, message: errMsg(e) });
+      send({ type: "error", stage, message: publicError(`scan (${stage})`, e).message });
     } finally {
       finished = true;
       if (deadline) clearTimeout(deadline);

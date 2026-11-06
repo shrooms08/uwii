@@ -5,6 +5,7 @@
  */
 import { FINGERPRINT_RE, anchorConfig, anchorFingerprint, nearAnchorClient, verifyFingerprint, type AnchorClient, type AnchorConfig, type AnchorInfo } from "@/lib/near/anchor";
 import { DailyCap, clientKey, limitState, tooManyRequests } from "@/lib/server/limits";
+import { serverError } from "@/lib/server/errors";
 import { NotScannedError } from "@/lib/tax/ng/cache";
 import { buildReport, type ReportData, type ReportRequest } from "@/lib/tax/ng/report";
 import { noStore, parseReportBody, resolveReportRequest } from "./report-body";
@@ -48,7 +49,7 @@ export async function handleAnchor(request: Request, deps: AnchorDeps = defaultD
     report = (await deps.build(resolved.req)).report;
   } catch (e) {
     if (e instanceof NotScannedError) return fail(409, e.message, { code: "not_scanned" });
-    return fail(500, `report failed: ${e instanceof Error ? e.message : String(e)}`);
+    return serverError("anchor: report", e);
   }
   if (report.status !== "final") {
     return fail(409, "Only final reports can be anchored. Finalise the report first.", { status: report.status, draftReasons: report.draftReasons.map((d) => d.code) });
@@ -57,7 +58,7 @@ export async function handleAnchor(request: Request, deps: AnchorDeps = defaultD
   try {
     cfg = deps.config();
   } catch (e) {
-    return fail(503, e instanceof Error ? e.message : String(e));
+    return serverError("anchor: config", e, 503);
   }
   if (!cfg || !cfg.accountId || !cfg.privateKey) return fail(503, "Anchoring is not configured on this server.");
   try {
@@ -71,7 +72,7 @@ export async function handleAnchor(request: Request, deps: AnchorDeps = defaultD
     return Response.json(body, { headers: noStore });
   } catch (e) {
     if (e instanceof LimitHit) return tooManyRequests(e.code, e.retryAfterSec, ANCHOR_BUSY);
-    return fail(502, `anchoring failed: ${e instanceof Error ? e.message : String(e)}`);
+    return serverError("anchor: transaction", e, 502);
   }
 }
 
@@ -82,13 +83,13 @@ export async function handleVerify(fingerprint: string | null, deps: Pick<Anchor
   try {
     cfg = deps.config();
   } catch (e) {
-    return fail(503, e instanceof Error ? e.message : String(e));
+    return serverError("verify: config", e, 503);
   }
   if (!cfg) return fail(503, "Verification is not configured on this server.");
   try {
     const result = await verifyFingerprint(deps.client(cfg), cfg, fp);
     return Response.json({ fingerprint: fp, network: cfg.network, contractId: cfg.contractId, ...result }, { headers: noStore });
   } catch (e) {
-    return fail(502, `lookup failed: ${e instanceof Error ? e.message : String(e)}`);
+    return serverError("verify: lookup", e, 502);
   }
 }
