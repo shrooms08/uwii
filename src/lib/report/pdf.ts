@@ -21,7 +21,7 @@ import { privacyProofText } from "./privacy";
 import { lineSections, reconcileSections, splitRef, type LineSection, type SectionId, type SectionRow } from "./sections";
 import { plainWarnings } from "./warnings";
 import { taxTips } from "./tips";
-import { RELIEFS } from "../tax/ng/reliefs";
+import { RELIEFS, RELIEFS_NOTE } from "../tax/ng/reliefs";
 import { Dec, dec, full } from "../money";
 
 export interface PersonalFields {
@@ -564,7 +564,7 @@ export async function buildWorksheetPdf(
   // Both tables sit side by side on one page: move them together if they would not fit.
   const compact = { cellPadding: { top: 1.45, bottom: 1.45, left: 2.2, right: 2.2 } };
   const rel = report.tax.reliefs ?? null;
-  const summaryRows = 6 + (rel ? 2 : 0);
+  const summaryRows = 6 + (rel ? 3 : 0);
   if (y + 6 + summaryRows * 5.6 + 5.5 + 8 > bottomY) newPage();
   draw("Summary", M.left, y + 3.6, { family: "Geist", bold: true, size: 9.4 });
   draw("By section", rightX, y + 3.6, { family: "Geist", bold: true, size: 9.4 });
@@ -585,7 +585,7 @@ export async function buildWorksheetPdf(
       ["Tax attributable to virtual assets", ngn(report.tax.taxAttributableToVaNgn), `PIT bands (D6); ${taxBasis}`],
       ...(rel
         ? [
-            ["Reliefs and deductions", ngn(rel.totalNgn), `${rel.items.map((i) => `${i.label} ${ngn(i.allowedNgn)}${i.capped ? " (capped)" : ""}`).join("; ")} (NTA 2025 s.30; D15)`],
+            ["Reliefs and deductions", ngn(rel.totalNgn), `${rel.items.map((i) => `${i.label} ${ngn(i.allowedNgn)}${i.capped ? " (capped)" : ""}`).join("; ")} (NTA 2025 s.30; D15). ${RELIEFS_NOTE}`],
             ["Saved by reliefs", ngn(rel.reliefSavingNgn), `On the crypto tax (without reliefs ${ngn(rel.taxAttributableWithoutReliefsNgn)}); total income tax lower by ${ngn(rel.totalPitSavingNgn)}`],
           ]
         : []),
@@ -788,6 +788,7 @@ export async function buildWorksheetPdf(
       ],
       columnStyles: { 0: { cellWidth: 52, fontStyle: "bold" }, 2: { cellWidth: "wrap", halign: "right", font: "GeistMono" }, 3: { cellWidth: 52, textColor: C.ink2 } },
     });
+    paragraph(`${RELIEFS_NOTE} (D17)`, { family: "Geist", size: 7.6 }, C.amberInk);
   }
 
   // ================= data sources =================

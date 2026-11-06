@@ -2,8 +2,7 @@
  * Landing page copy. Edit words here; layout lives in src/app/page.tsx.
  *
  * Rules: every claim must be true of the current product. No reviews, ratings, user counts, press
- * mentions or guarantees. Answers that state law rather than how Uwii works carry a TODO-REVIEW comment
- * until a tax professional confirms them.
+ * mentions or guarantees. Answers that state law name their source (the Circular or the Act).
  */
 
 export const REPO_URL = "https://github.com/shrooms08/uwii";

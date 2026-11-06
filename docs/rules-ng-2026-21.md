@@ -123,9 +123,9 @@ Deterministic rules remove those cases; the guards catch the same shape of error
 - Privacy: answers and the optional profile ("other taxable income in 2026 (NGN)", for D6) live only in the
   browser (localStorage) and are sent in each request body. The server stores and logs neither.
 
-## D15 — Reliefs and deductions (Accepted, pending professional review)
+## D15 — Reliefs and deductions (Accepted; see D17)
 - Source: Nigeria Tax Act 2025 s.30. Config: `src/lib/tax/ng/reliefs.ts` (id, label, plain explanation, rule, cap,
-  citation). Every entry is marked TODO-REVIEW until a tax professional confirms it.
+  citation). They are Uwii's reading of s.30 and carry a confirm-with-your-adviser note everywhere they appear (D17).
 - Reliefs (optional profile inputs, NGN):
   - `rent_relief` — 20% of annual rent paid, capped at NGN 500,000.
   - `pension` — contributions under the Pension Reform Act, in full.
@@ -146,3 +146,11 @@ Deterministic rules remove those cases; the guards catch the same shape of error
 - The Circular was published on 31 July 2026 and does not state an effective date.
 - Uwii applies it to the 2026 year of assessment (1 January to 31 December 2026), the first year under the Nigeria
   Tax Act 2025. This is a Uwii decision, not a quote from the Circular; the guide marks it as such.
+
+## D17 — Reliefs as Uwii reads NTA 2025 s.30 (Decided)
+- The six reliefs in D15 are kept exactly as implemented (rent relief 20% of rent capped at NGN 500,000; pension,
+  NHF, NHIS, life insurance or deferred annuity premiums, and owner-occupied mortgage interest in full).
+- They are Uwii's reading of the Nigeria Tax Act 2025 s.30, not a professional confirmation. Every surface that shows
+  reliefs (Questions reliefs card, Result reliefs breakdown, guide reliefs section, PDF reliefs rows) carries the note:
+  "Reliefs follow Nigeria Tax Act 2025 s.30 as Uwii reads it. Confirm them with your tax adviser before filing."
+- Text: `RELIEFS_NOTE` in `src/lib/tax/ng/reliefs.ts`. Labelling only; no computation change.

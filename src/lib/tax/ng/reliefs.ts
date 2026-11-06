@@ -3,9 +3,12 @@
  * Each allowed amount is deducted from the income base before the PIT bands (D6) apply.
  * Amounts are exact decimal strings; no floating point.
  *
- * Every entry is pending confirmation by a tax professional (TODO-REVIEW markers below).
+ * The rules are Uwii's reading of s.30 (decision D17): every surface that shows reliefs carries RELIEFS_NOTE.
  */
 import { Dec, ZERO_D, dec, full } from "../../money";
+
+/** Shown wherever reliefs appear (Questions, Result, guide, PDF); decision D17. */
+export const RELIEFS_NOTE = "Reliefs follow Nigeria Tax Act 2025 s.30 as Uwii reads it. Confirm them with your tax adviser before filing.";
 
 export type ReliefId = "rent_relief" | "pension" | "nhf" | "nhis" | "life_insurance" | "mortgage_interest";
 
@@ -40,7 +43,6 @@ export interface ReliefDef {
 }
 
 export const RELIEFS: ReliefDef[] = [
-  // TODO-REVIEW: rent relief = 20% of annual rent paid, capped at NGN 500,000 (NTA 2025 s.30).
   {
     id: "rent_relief",
     input: "rentPaidNgn",
@@ -52,7 +54,6 @@ export const RELIEFS: ReliefDef[] = [
     rate: "0.2",
     citation: "NTA 2025 s.30",
   },
-  // TODO-REVIEW: pension contributions under the Pension Reform Act are deductible in full (NTA 2025 s.30).
   {
     id: "pension",
     input: "pensionNgn",
@@ -64,7 +65,6 @@ export const RELIEFS: ReliefDef[] = [
     rate: "1",
     citation: "NTA 2025 s.30; Pension Reform Act",
   },
-  // TODO-REVIEW: National Housing Fund contributions are deductible in full (NTA 2025 s.30).
   {
     id: "nhf",
     input: "nhfNgn",
@@ -76,7 +76,6 @@ export const RELIEFS: ReliefDef[] = [
     rate: "1",
     citation: "NTA 2025 s.30",
   },
-  // TODO-REVIEW: National Health Insurance contributions are deductible in full (NTA 2025 s.30).
   {
     id: "nhis",
     input: "nhisNgn",
@@ -88,7 +87,6 @@ export const RELIEFS: ReliefDef[] = [
     rate: "1",
     citation: "NTA 2025 s.30",
   },
-  // TODO-REVIEW: life insurance or deferred annuity premiums are deductible in full, with no cap (NTA 2025 s.30).
   {
     id: "life_insurance",
     input: "lifeInsuranceNgn",
@@ -100,7 +98,6 @@ export const RELIEFS: ReliefDef[] = [
     rate: "1",
     citation: "NTA 2025 s.30",
   },
-  // TODO-REVIEW: interest on a loan for an owner-occupied residential house is deductible in full (NTA 2025 s.30).
   {
     id: "mortgage_interest",
     input: "mortgageInterestNgn",

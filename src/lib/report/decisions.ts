@@ -15,6 +15,7 @@ export const DECISION_LOG: { id: string; text: string }[] = [
   { id: "D13", text: "acquisition_swap for the received leg; loans received/repaid are non-taxable; repayment in a different asset is flagged." },
   { id: "D14", text: "User answers apply as method 'user' labels; answers and personal inputs stay in the browser." },
   { id: "D15", text: "Reliefs and deductions (NTA 2025 s.30): rent relief 20% of rent capped at 500,000; pension, NHF, NHIS, life insurance and owner-occupied mortgage interest in full; deducted from the income base before the PIT bands." },
+  { id: "D17", text: "Reliefs are applied as Uwii reads NTA 2025 s.30, with a visible note on every surface that shows them to confirm them with a tax adviser before filing." },
 ];
 
 const TECHNICAL_D12 = ["round_trip", "dust_no_value", "storage_deposit"];
@@ -26,6 +27,7 @@ const TECHNICAL_D12 = ["round_trip", "dust_no_value", "storage_deposit"];
 export function appliedDecisionIds(report: { decisionsApplied: { id: string }[]; skippedTechnical: Record<string, number>; lines: { label: string }[] }): Set<string> {
   const ids = new Set(report.decisionsApplied.map((d) => d.id));
   if (TECHNICAL_D12.some((l) => (report.skippedTechnical[l] ?? 0) > 0)) ids.add("D12");
+  if (ids.has("D15")) ids.add("D17");
   if (report.lines.some((l) => l.label === "acquisition_swap" || l.label === "loan_received" || l.label === "loan_repayment")) ids.add("D13");
   return ids;
 }

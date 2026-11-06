@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/Card";
 import { cx } from "@/components/ui/cx";
 import { NGN_INPUT_RE, stripNgn } from "@/lib/client/storage";
 import { fmtNgn } from "@/lib/report/format";
-import { RELIEFS, type ReliefInputKey } from "@/lib/tax/ng/reliefs";
+import { RELIEFS, RELIEFS_NOTE, type ReliefInputKey } from "@/lib/tax/ng/reliefs";
 import type { TaxReliefs } from "@/lib/tax/ng/engine";
 
 type Values = Partial<Record<ReliefInputKey, string>>;
@@ -51,6 +51,7 @@ export function ReliefsCard({
         </button>
       </h2>
       <p className="text-label leading-normal text-ink-2">Optional. Each one is taken off your income before the tax bands apply (Nigeria Tax Act 2025 s.30).</p>
+      <p className="rounded-inset border border-amber-line bg-amber-tint px-3 py-2 text-caption leading-normal text-amber-ink">{RELIEFS_NOTE}</p>
       {open && (
         <div id="reliefs-body" className="flex flex-col gap-4 border-t border-line pt-4">
           {RELIEFS.map((r) => {

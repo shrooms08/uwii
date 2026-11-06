@@ -2,14 +2,14 @@
  * "Crypto tax in Nigeria, explained" (/guide). Edit words here; layout lives in src/app/guide/page.tsx.
  *
  * Rules: every claim cites the Circular (NRS Information Circular No. 2026/21) or the Nigeria Tax Act 2025
- * (NTA). Any sentence not yet confirmed by a tax professional carries a TODO-REVIEW comment.
+ * (NTA), or is marked as a Uwii decision linked to the decision log (docs/rules-ng-2026-21.md).
  * Illustrations 2 and 3 use the Circular's own numbers (verified by the engine tests in
  * src/lib/tax/ng/engine.test.ts).
  */
 import { ZERO_D, dec } from "../lib/money";
 import { fmtNgn } from "../lib/report/format";
 import { PIT_BANDS } from "../lib/tax/ng/pit";
-import { RELIEFS } from "../lib/tax/ng/reliefs";
+import { RELIEFS, RELIEFS_NOTE } from "../lib/tax/ng/reliefs";
 import { REPO_URL } from "./landing";
 
 /** A heading in docs/rules-ng-2026-21.md on GitHub. */
@@ -205,10 +205,9 @@ export const guideSections: GuideSection[] = [
   {
     id: "reliefs",
     title: "Reliefs and deductions",
-    intro: "These are taken off your income before the bands apply. Uwii applies them if you enter them on the Questions page.",
-    // TODO-REVIEW: every relief below and its rule (see src/lib/tax/ng/reliefs.ts).
+    intro: "These are taken off your income before the bands apply. Uwii applies them if you enter them on the Questions page. Gas fees and other transaction costs are not reliefs; gas fees are not deductible (D2).",
     items: RELIEFS.map((r) => ({ title: r.label, body: `${r.rule}.`, cite: r.citation })),
-    note: "Gas fees and other transaction costs are not reliefs; gas fees are not deductible (D2).",
+    note: RELIEFS_NOTE,
   },
   {
     id: "dates",
@@ -220,13 +219,12 @@ export const guideSections: GuideSection[] = [
         cite: "Uwii decision D16",
         decision: { id: "D16", href: DECISION_LOG_URL("d16--effective-date-2026-year-of-assessment-decided") },
       },
-      // TODO-REVIEW: "Coins you held before 2026 use the higher of what they cost you or their value at 31 December 2025 as their cost." Based on public statements by the Presidential Fiscal Policy and Tax Reforms Committee, pending a citable paragraph (decision D11).
       {
         title: "Coins held before 2026",
-        body: "Uwii uses the higher of what they cost you or their value at 31 December 2025 as their cost, and shows the gain both ways.",
-        cite: "Decision D11 (pending a citable paragraph)",
+        body: "Uwii uses the higher of what they cost you or their value at 31 December 2025 as their cost, and shows the gain both ways. This rests on public statements by the Presidential Fiscal Policy and Tax Reforms Committee; no citable paragraph has been published yet.",
+        cite: "Uwii decision D11",
+        decision: { id: "D11", href: DECISION_LOG_URL("d11--pre-2026-holdings-cost-base-reset-decided") },
       },
-      // TODO-REVIEW: citation of the Nigeria Tax Administration Act 2025 for the 31 March deadline (section not confirmed).
       {
         title: "Filing deadline",
         body: "The annual return for 2026 income is due by 31 March 2027.",
@@ -238,7 +236,6 @@ export const guideSections: GuideSection[] = [
     id: "file",
     title: "Where to file",
     items: [
-      // TODO-REVIEW: citation of the Nigeria Tax Administration Act 2025 for filing with the State IRS (section not confirmed; the wording itself is approved).
       {
         title: "Your State Internal Revenue Service",
         body: "With the Internal Revenue Service of the state you live in (FCT residents: FCT-IRS). The annual return for 2026 income is due by 31 March 2027.",

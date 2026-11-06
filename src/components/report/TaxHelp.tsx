@@ -6,7 +6,7 @@ import { fmtNgn } from "@/lib/report/format";
 import { REVIEW_COPY, reviewContactUrl } from "@/lib/report/review";
 import type { TaxTip } from "@/lib/report/tips";
 import { dec } from "@/lib/money";
-import { RELIEFS } from "@/lib/tax/ng/reliefs";
+import { RELIEFS, RELIEFS_NOTE } from "@/lib/tax/ng/reliefs";
 import type { TaxReliefs } from "@/lib/tax/ng/engine";
 
 const naira = (v: string) => `₦${fmtNgn(v)}`;
@@ -50,6 +50,7 @@ export function ReliefsBreakdown({ rel }: { rel: TaxReliefs }) {
         <dt className="py-2.5 pr-3 text-ink-2">Saved on your total income tax</dt>
         <dd className="py-2.5 text-right font-mono tabular-nums">{naira(rel.totalPitSavingNgn)}</dd>
       </dl>
+      <p className="rounded-inset border border-amber-line bg-amber-tint px-3.5 py-2.5 text-label leading-normal text-amber-ink">{RELIEFS_NOTE}</p>
     </Card>
   );
 }
