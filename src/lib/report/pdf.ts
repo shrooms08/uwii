@@ -20,6 +20,8 @@ import { fmtDate, fmtNgn, fmtPrice, fmtQty, fmtUsd } from "./format";
 import { privacyProofText } from "./privacy";
 import { lineSections, reconcileSections, splitRef, type LineSection, type SectionId, type SectionRow } from "./sections";
 import { plainWarnings } from "./warnings";
+import { taxTips } from "./tips";
+import { RELIEFS } from "../tax/ng/reliefs";
 import { Dec, dec, full } from "../money";
 
 export interface PersonalFields {
@@ -561,7 +563,9 @@ export async function buildWorksheetPdf(
   const rightW = contentW - leftW - 6;
   // Both tables sit side by side on one page: move them together if they would not fit.
   const compact = { cellPadding: { top: 1.45, bottom: 1.45, left: 2.2, right: 2.2 } };
-  if (y + 6 + 6 * 5.6 + 5.5 + 8 > bottomY) newPage();
+  const rel = report.tax.reliefs ?? null;
+  const summaryRows = 6 + (rel ? 2 : 0);
+  if (y + 6 + summaryRows * 5.6 + 5.5 + 8 > bottomY) newPage();
   draw("Summary", M.left, y + 3.6, { family: "Geist", bold: true, size: 9.4 });
   draw("By section", rightX, y + 3.6, { family: "Geist", bold: true, size: 9.4 });
   y += 6;
@@ -579,6 +583,12 @@ export async function buildWorksheetPdf(
       ["Net disposal gains", ngn(t.netGainsNgn), `Gains ${ngn(t.disposalGainsNgn)} less losses ${ngn(t.disposalLossesNgn)} (9.1.2 Step 4; 9.4)`],
       ["Chargeable virtual-asset amount", ngn(t.chargeableVaNgn), "Income + max(net gains, 0) (9.4)"],
       ["Tax attributable to virtual assets", ngn(report.tax.taxAttributableToVaNgn), `PIT bands (D6); ${taxBasis}`],
+      ...(rel
+        ? [
+            ["Reliefs and deductions", ngn(rel.totalNgn), `${rel.items.map((i) => `${i.label} ${ngn(i.allowedNgn)}${i.capped ? " (capped)" : ""}`).join("; ")} (NTA 2025 s.30; D15)`],
+            ["Saved by reliefs", ngn(rel.reliefSavingNgn), `On the crypto tax (without reliefs ${ngn(rel.taxAttributableWithoutReliefsNgn)}); total income tax lower by ${ngn(rel.totalPitSavingNgn)}`],
+          ]
+        : []),
       ["Loss carried forward", ngn(report.carryForwardLossNgn), "Net disposal loss; not offset against income (9.4)"],
       ["Gas fees total", ngn(t.gasFeesNgn), "Not deductible (D2); each fee is a small NEAR disposal"],
     ],
@@ -612,11 +622,25 @@ export async function buildWorksheetPdf(
     `Reconciles with the totals: income ${ngn(sec("income").subtotalNgn)}; net disposal gains ${ngn(t.netGainsNgn)} = disposals ${ngn(sec("disposals").subtotalNgn)} + gain on the NEAR spent as gas ${ngn(sec("gas").gainNgn)}; gas fees ${ngn(sec("gas").subtotalNgn)}.` +
     (recon.income && recon.netGains && recon.gas ? "" : " (Mismatch: check the line totals.)");
   paragraph(reconText, { family: "Geist", size: 7 }, C.ink2, rightW, rightX);
-  y = Math.max(y, leftEnd);
+  // Tax notes sit in the right column under the reconciliation (page 1 stays one page).
   if (report.tax.notes.length) {
     y += 1;
-    for (const n of report.tax.notes) paragraph(`Note: ${n}`, { family: "Geist", size: 7.2 }, C.ink2);
+    const nf: FontSpec = { family: "Geist", size: 7 };
+    const notesText = `Notes: ${report.tax.notes.map((n) => n.replace(/\.$/, "")).join(". ")}.`;
+    const noteLines = [wrap(notesText, rightW, nf)];
+    const need = noteLines.reduce((h, ls) => h + ls.length * lineH(nf.size) + 1.2, 0);
+    // They may use the space down to the footer rule; otherwise they flow onto the next page.
+    if (y + need <= H - 18) {
+      for (const ls of noteLines) {
+        for (const ln of ls) {
+          draw(ln, rightX, y + nf.size * 0.3528 * 0.8, nf, C.ink2);
+          y += lineH(nf.size);
+        }
+        y += 1.2;
+      }
+    } else paragraph(notesText, nf, C.ink2, rightW, rightX);
   }
+  y = Math.max(y, leftEnd);
 
   // ================= sections =================
   const d11 = report.lines.some((l) => l.kind === "disposal" && l.noResetGainUsd !== undefined);
@@ -720,6 +744,18 @@ export async function buildWorksheetPdf(
     columnStyles: { 0: { cellWidth: 78, fontStyle: "bold" }, 1: { font: "GeistMono" } },
   });
 
+  // ================= ways to pay less, legally =================
+  const tips = taxTips(report);
+  if (tips.length) {
+    heading("Ways to pay less, legally");
+    paragraph("Worked out from this report only. Each one cites the rule it relies on.", { family: "Geist", size: 7.6 }, C.ink2);
+    baseTable({
+      head: [["Tip", "What it means for you", "Amount", "Reference"]],
+      body: tips.map((tp) => [tp.title, tp.text, tp.amountNgn !== null ? `${ngn(tp.amountNgn)}${tp.amountLabel ? `\n${tp.amountLabel}` : ""}` : "–", tp.citation]),
+      columnStyles: { 0: { cellWidth: 52, fontStyle: "bold" }, 2: { cellWidth: "wrap", halign: "right", font: "GeistMono" }, 3: { cellWidth: 44, textColor: C.ink2 } },
+    });
+  }
+
   // ================= what to do next =================
   heading(NEXT_STEPS_TITLE, 30);
   if (isDraft) paragraph(NEXT_STEPS_DRAFT, { family: "Geist", size: 9 }, C.ink);
@@ -742,6 +778,17 @@ export async function buildWorksheetPdf(
     body: DECISION_LOG.map((d) => [d.id, d.text, applied.has(d.id) ? "yes" : "–"]),
     columnStyles: { 0: { cellWidth: 12, font: "GeistMono" }, 2: { cellWidth: 16, textColor: C.ink2 } },
   });
+  if (rel) {
+    heading("Method appendix: reliefs used (D15)", 30);
+    baseTable({
+      head: [["Relief", "Rule", "Allowed", "Reference"]],
+      body: [
+        ...rel.items.map((i) => [i.label, `${RELIEFS.find((d) => d.id === i.id)?.rule ?? ""}${i.capped ? " (cap reached)" : ""}`, ngn(i.allowedNgn), RELIEFS.find((d) => d.id === i.id)?.citation ?? "NTA 2025 s.30"]),
+        ["Total", "Deducted from the income base before the bands (D15)", ngn(rel.totalNgn), "NTA 2025 s.30"],
+      ],
+      columnStyles: { 0: { cellWidth: 52, fontStyle: "bold" }, 2: { cellWidth: "wrap", halign: "right", font: "GeistMono" }, 3: { cellWidth: 52, textColor: C.ink2 } },
+    });
+  }
 
   // ================= data sources =================
   heading("Data sources", 28);

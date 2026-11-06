@@ -105,9 +105,7 @@ export const faq = {
     },
     {
       q: "Where do I file?",
-      // TODO-REVIEW: confirm that individuals file their annual personal income tax return with the State
-      // Internal Revenue Service of their state of residence, due 31 March (FCT residents: FCT-IRS?).
-      a: "With the State Internal Revenue Service of the state you live in. The annual return is due by 31 March; for 2026 income that is 31 March 2027.",
+      a: "With the Internal Revenue Service of the state you live in (FCT residents: FCT-IRS). The annual return for 2026 income is due by 31 March 2027.",
     },
     {
       q: "Can Uwii see my data?",
@@ -123,9 +121,7 @@ export const faq = {
     },
     {
       q: "Do I need to file if I owe nothing?",
-      // TODO-REVIEW: confirm whether an individual whose computed tax is nil (or who has crypto income or
-      // gains below the tax-free band) must still file an annual return with their State IRS.
-      a: "Possibly. Whether you must file depends on your total income and your state's rules, not only on your crypto. A nil figure here doesn't by itself mean you don't need to file; check with your State Internal Revenue Service or a tax professional.",
+      a: "Generally yes. Under the Nigeria Tax Administration Act 2025, individuals with income are expected to file an annual return even when no tax is due. Confirm with your State IRS or a tax professional.",
     },
   ],
 };

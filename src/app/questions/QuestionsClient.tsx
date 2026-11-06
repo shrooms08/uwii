@@ -18,6 +18,7 @@ import type { ReportData } from "@/lib/tax/ng/report";
 import type { AnswerOption, GroupAnswer, Question, QuestionTx } from "@/lib/tax/ng/questions";
 import { isPositiveQuantity, normalizeSourceLeg, type SourceLegInput } from "@/lib/tax/ng/source-leg";
 import type { ClassificationMetrics } from "@/lib/tax/ng/types";
+import { ReliefsCard } from "./ReliefsCard";
 
 interface AssetChoice {
   symbol: string;
@@ -52,12 +53,15 @@ export default function QuestionsClient({ account }: { account: string }) {
   const [updating, setUpdating] = useState(false);
   const [retry, setRetry] = useState(0);
   const [demoOn, setDemoOn] = useState(false);
+  const [reliefsOpen, setReliefsOpen] = useState(false);
   const first = useRef(true);
 
   useEffect(() => {
     // Hydrate from this browser's storage after mount (unavailable during server render).
+    const s = loadSaved(account);
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setSaved(loadSaved(account));
+    setSaved(s);
+    setReliefsOpen(Object.values(s.reliefs ?? {}).some((v) => (v ?? "").trim() !== ""));
     setDemoOn(isDemoPresetOn(account));
     setLoaded(true);
   }, [account]);
@@ -216,7 +220,7 @@ export default function QuestionsClient({ account }: { account: string }) {
           ))}
         </div>
 
-        <aside className="sticky top-6 flex max-w-full flex-[1_1_340px] flex-col gap-4 self-start">
+        <aside className={cx("flex max-w-full flex-[1_1_340px] flex-col gap-4 self-start", !reliefsOpen && "sticky top-6")}>
           <Card aria-label="Summary" className="flex flex-col gap-5 p-6">
             <div className="flex flex-col gap-2.5">
               <div className="flex items-baseline justify-between">
@@ -269,6 +273,13 @@ export default function QuestionsClient({ account }: { account: string }) {
             </ButtonLink>
           </Card>
           <OtherIncome value={saved.otherIncomeNgn} onChange={(v) => setSaved((s) => ({ ...s, otherIncomeNgn: v }))} />
+          <ReliefsCard
+            values={saved.reliefs ?? {}}
+            onChange={(key, v) => setSaved((s) => ({ ...s, reliefs: { ...s.reliefs, [key]: v } }))}
+            open={reliefsOpen}
+            onToggle={() => setReliefsOpen((o) => !o)}
+            applied={report?.tax.reliefs ?? null}
+          />
         </aside>
       </div>
 

@@ -11,6 +11,7 @@ import { LABELS, costBasisAsset, type LabelId } from "./labels";
 import type { OpeningBalance } from "./opening";
 import { RESET_PRICE_TIME } from "./opening";
 import { pit, type PitBandUse } from "./pit";
+import { RELIEFS, computeReliefs, hasReliefInputs, type ReliefInputs, type ReliefItem } from "./reliefs";
 import { USER_SOURCE_LEG_NOTE, USER_SOURCE_LEG_REF } from "./source-leg";
 import type { ClassifiedTx } from "./types";
 
@@ -111,6 +112,8 @@ export interface EngineResult {
     taxAttributableToVaNgn: string;
     bands: PitBandUse[];
     notes: string[];
+    /** Reliefs and deductions (NTA 2025 s.30, D15); present only when the user entered any. */
+    reliefs?: TaxReliefs;
   };
   warnings: Warning[];
   decisionsApplied: { id: string; text: string }[];
@@ -129,6 +132,21 @@ export interface EngineInput {
   /** Optional user-provided original dollar cost per cost-basis asset key ("NEAR" or contract). */
   originalCostUsd?: Record<string, string>;
   otherIncomeNgn?: string | null;
+  /** Optional reliefs and deductions (NTA 2025 s.30, D15), NGN decimal strings. */
+  reliefs?: ReliefInputs | null;
+}
+
+/** Reliefs used in the tax computation (D15). `inputs` are the raw personal amounts (excluded from the fingerprint). */
+export interface TaxReliefs {
+  inputs: ReliefInputs;
+  items: ReliefItem[];
+  totalNgn: string;
+  /** Tax attributable to VA computed without any reliefs. */
+  taxAttributableWithoutReliefsNgn: string;
+  /** Tax attributable to VA without reliefs minus with reliefs (can be 0). */
+  reliefSavingNgn: string;
+  /** Drop in total PIT on other income + chargeable VA from the reliefs (includes the part on other income). */
+  totalPitSavingNgn: string;
 }
 
 // ---------- decisions ----------
@@ -146,6 +164,7 @@ const DECISIONS: Record<string, string> = {
   D11: "Pre-2026 holdings: cost base = higher of original cost or FMV at 2025-12-31 23:59:59 UTC; both gains shown.",
   D13: "Loan received is a liability (no income); loan repaid in a different asset is flagged.",
   D14: "User answers applied as method 'user' labels.",
+  D15: "Reliefs and deductions (NTA 2025 s.30) deducted from the income base before the PIT bands; rent relief 20% of rent capped at 500,000.",
 };
 
 const TECHNICAL: ReadonlySet<LabelId> = new Set(["wrap_unwrap", "staking_lockup", "round_trip", "dust_no_value", "storage_deposit", "gas_refund", "loan_collateralised"]);
@@ -717,21 +736,39 @@ export async function runEngine(input: EngineInput): Promise<EngineResult> {
 
   const notes: string[] = [];
   const other = input.otherIncomeNgn ? dec(input.otherIncomeNgn) : null;
-  let pitWith: Dec;
-  let pitWithout: Dec;
-  let bands: PitBandUse[];
-  if (other) {
-    const w = pit(other.plus(chargeable));
-    pitWith = w.tax;
-    pitWithout = pit(other).tax;
-    bands = w.bands;
-    notes.push("tax attributable to VA = PIT(other income + chargeable VA) - PIT(other income) (D6 marginal)");
-  } else {
-    const w = pit(chargeable);
-    pitWith = w.tax;
-    pitWithout = ZERO_D;
-    bands = w.bands;
-    notes.push("assumes no other income");
+  // D15: reliefs reduce the income base on both sides of the marginal computation, floored at zero.
+  // With no reliefs (R = 0) this is exactly PIT(other + chargeable) - PIT(other), or PIT(chargeable) - 0.
+  const reliefsUsed = hasReliefInputs(input.reliefs);
+  const rel = reliefsUsed ? computeReliefs(input.reliefs) : null;
+  const R = rel ? dec(rel.totalNgn) : ZERO_D;
+  const base = other ?? ZERO_D;
+  const floor0 = (d: Dec) => Dec.max(d, ZERO_D);
+  const w = pit(floor0(base.plus(chargeable).minus(R)));
+  const pitWith: Dec = w.tax;
+  const pitWithout: Dec = pit(floor0(base.minus(R))).tax;
+  const bands: PitBandUse[] = w.bands;
+  if (other) notes.push(rel ? "tax attributable to VA = PIT(max(0, other income + chargeable VA - reliefs)) - PIT(max(0, other income - reliefs)) (D6 marginal; D15)" : "tax attributable to VA = PIT(other income + chargeable VA) - PIT(other income) (D6 marginal)");
+  else notes.push("assumes no other income");
+  let reliefs: TaxReliefs | undefined;
+  if (rel) {
+    used.add("D15");
+    const noReliefWith = pit(base.plus(chargeable)).tax;
+    const noReliefAttributable = noReliefWith.minus(pit(base).tax);
+    const attributable = pitWith.minus(pitWithout);
+    const inputs: ReliefInputs = {};
+    for (const d of RELIEFS) {
+      const v = input.reliefs?.[d.input];
+      if (typeof v === "string" && v.trim() !== "") inputs[d.input] = full(dec(v));
+    }
+    reliefs = {
+      inputs,
+      items: rel.items,
+      totalNgn: rel.totalNgn,
+      taxAttributableWithoutReliefsNgn: full(noReliefAttributable),
+      reliefSavingNgn: full(noReliefAttributable.minus(attributable)),
+      totalPitSavingNgn: full(noReliefWith.minus(pitWith)),
+    };
+    notes.push("Reliefs and deductions (NTA 2025 s.30, D15) are deducted from the income base before the bands.");
   }
   notes.push("No withholding tax credits are visible on-chain; any WHT deducted at source is not credited here.");
   if (carryForward.gt(0)) notes.push("Net disposal loss is carried forward and not offset against income (9.4).");
@@ -762,6 +799,7 @@ export async function runEngine(input: EngineInput): Promise<EngineResult> {
       taxAttributableToVaNgn: full(pitWith.minus(pitWithout)),
       bands,
       notes,
+      ...(reliefs ? { reliefs } : {}),
     },
     warnings,
     decisionsApplied: [...used].sort((a, b) => Number(a.slice(1)) - Number(b.slice(1))).map((id) => ({ id, text: DECISIONS[id] })),

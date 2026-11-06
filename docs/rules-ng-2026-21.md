@@ -122,3 +122,22 @@ Deterministic rules remove those cases; the guards catch the same shape of error
   is not captured, so the cost base uses the dollar FMV of the asset received (9.1.2 Step 1(b)) pending source data.
 - Privacy: answers and the optional profile ("other taxable income in 2026 (NGN)", for D6) live only in the
   browser (localStorage) and are sent in each request body. The server stores and logs neither.
+
+## D15 — Reliefs and deductions (Accepted, pending professional review)
+- Source: Nigeria Tax Act 2025 s.30. Config: `src/lib/tax/ng/reliefs.ts` (id, label, plain explanation, rule, cap,
+  citation). Every entry is marked TODO-REVIEW until a tax professional confirms it.
+- Reliefs (optional profile inputs, NGN):
+  - `rent_relief` — 20% of annual rent paid, capped at NGN 500,000.
+  - `pension` — contributions under the Pension Reform Act, in full.
+  - `nhf` — National Housing Fund contributions, in full.
+  - `nhis` — National Health Insurance contributions, in full.
+  - `life_insurance` — life insurance or deferred annuity premiums, in full.
+  - `mortgage_interest` — interest on a loan for an owner-occupied residential house, in full.
+- Computation: R = sum of allowed amounts after caps. Tax attributable to VA =
+  PIT(max(0, other income + chargeable VA − R)) − PIT(max(0, other income − R)). With no reliefs this is exactly the
+  D6 marginal computation. `reliefSavingNgn` = attributable tax without reliefs − with reliefs (can be 0, e.g. when
+  both bases stay in the same band); `totalPitSavingNgn` = the drop in PIT on other income + chargeable VA.
+- Privacy and fingerprint: relief amounts live only in the browser and request bodies. The raw inputs
+  (`tax.reliefs.inputs`) are excluded from the fingerprint like `tax.otherIncomeNgn`; the allowed amounts, totals and
+  savings are computed values and are covered. When no relief is entered, `tax.reliefs` is absent and the report
+  (and its fingerprint) is unchanged.

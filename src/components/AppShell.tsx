@@ -28,11 +28,16 @@ export function AppShell({ step, account, children, mainClassName, landing }: { 
         <header className="flex items-center justify-between gap-4 py-5">
           <Wordmark />
           {step && account && <StepNav current={step} account={account} />}
-          {account ? (
-            <AccountPill account={account} />
-          ) : (
-            <span className="inline-flex h-8 items-center rounded-full border border-border bg-surface px-3.5 text-label font-medium">Tax year 2026</span>
-          )}
+          <span className="flex min-w-0 items-center gap-4">
+            <Link href="/guide" className={cx("text-label font-medium text-ink underline-offset-[3px] hover:underline", account && "hidden @min-[760px]:inline")}>
+              Tax guide
+            </Link>
+            {account ? (
+              <AccountPill account={account} />
+            ) : (
+              <span className="inline-flex h-8 items-center rounded-full border border-border bg-surface px-3.5 text-label font-medium whitespace-nowrap">Tax year 2026</span>
+            )}
+          </span>
         </header>
         {step && step !== "scan" && <StepBar current={step} />}
         {account && (
@@ -52,6 +57,9 @@ export function AppShell({ step, account, children, mainClassName, landing }: { 
           </span>
           <span className="flex flex-wrap gap-x-4 gap-y-1">
             <span>Computation for review; not tax advice.</span>
+            <Link href="/guide" className="text-ink underline underline-offset-[3px]">
+              Crypto tax guide
+            </Link>
             <Link href="/verify" className="text-ink underline underline-offset-[3px]">
               Verify a report
             </Link>

@@ -5,6 +5,7 @@
 import { z } from "zod";
 import { isValidAccountId } from "@/lib/history/fetch";
 import { NotScannedError, getClassification } from "@/lib/tax/ng/cache";
+import { ReliefsBody } from "@/lib/api/report-body";
 import { NGN_RE, runQuestionFlow } from "@/lib/tax/ng/questions";
 
 /** Vercel Hobby (Fluid compute): 300 s default and maximum per invocation. */
@@ -44,7 +45,7 @@ const Body = z
           .default({}),
       })
       .default({ groups: {} }),
-    profile: z.object({ otherIncomeNgn: ngn.optional().or(z.literal("")) }).default({}),
+    profile: z.object({ otherIncomeNgn: ngn.optional().or(z.literal("")), reliefs: ReliefsBody.optional() }).default({}),
     /** "fixture": the cached demo result (committed classified fixture, no live AI). */
     classificationSource: z.literal("fixture").optional(),
   })

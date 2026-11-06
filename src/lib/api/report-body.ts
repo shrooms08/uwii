@@ -6,9 +6,24 @@ import { z } from "zod";
 import { isValidAccountId } from "@/lib/near/account-id";
 import { NGN_RE } from "@/lib/tax/ng/questions";
 import type { ReportRequest } from "@/lib/tax/ng/report";
+import type { ReliefInputs } from "@/lib/tax/ng/reliefs";
 
 const accountId = z.string().trim().toLowerCase().refine(isValidAccountId, "invalid NEAR account id");
 const ngn = z.string().trim().regex(NGN_RE, "NGN amount must be a decimal with up to 2 places");
+/** Reliefs and deductions (NTA 2025 s.30), NGN amounts; empty strings mean "not entered". */
+const ngnOpt = ngn.optional().or(z.literal(""));
+export const ReliefsBody = z
+  .object({ rentPaidNgn: ngnOpt, pensionNgn: ngnOpt, nhfNgn: ngnOpt, nhisNgn: ngnOpt, lifeInsuranceNgn: ngnOpt, mortgageInterestNgn: ngnOpt })
+  .strict();
+
+/** Entered relief amounts only (empty strings dropped), or null when none. */
+export function reliefInputs(r: z.infer<typeof ReliefsBody> | undefined): ReliefInputs | null {
+  if (!r) return null;
+  const out: ReliefInputs = {};
+  for (const [k, v] of Object.entries(r)) if (v) out[k as keyof ReliefInputs] = v;
+  return Object.keys(out).length ? out : null;
+}
+
 const usd = z.string().trim().regex(/^\d{1,15}(\.\d{1,8})?$/, "USD amount must be a decimal");
 
 export const ReportBody = z
@@ -39,7 +54,7 @@ export const ReportBody = z
           .default({}),
       })
       .default({ groups: {} }),
-    profile: z.object({ otherIncomeNgn: ngn.optional().or(z.literal("")) }).default({}),
+    profile: z.object({ otherIncomeNgn: ngn.optional().or(z.literal("")), reliefs: ReliefsBody.optional() }).default({}),
     originalCostUsd: z.record(z.string().max(100), usd).optional(),
     /** "fixture": the cached demo result (committed classified fixture, no live AI). */
     classificationSource: z.literal("fixture").optional(),
@@ -66,7 +81,7 @@ export function reportRequest(body: ReportBodyInput): ReportRequest {
     account: body.account,
     ownAccounts: body.ownAccounts,
     answers: body.answers,
-    profile: { otherIncomeNgn: body.profile.otherIncomeNgn || null },
+    profile: { otherIncomeNgn: body.profile.otherIncomeNgn || null, reliefs: reliefInputs(body.profile.reliefs) },
     originalCostUsd: body.originalCostUsd,
     classificationSource: body.classificationSource,
     // Live AI classification only runs through the rate-limited /api/scan.

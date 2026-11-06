@@ -3,6 +3,7 @@
  * key /dev/questions uses, and are sent only in request bodies; the server never stores them.
  */
 import type { GroupAnswer } from "@/lib/tax/ng/questions";
+import type { ReliefInputKey } from "@/lib/tax/ng/reliefs";
 
 export interface Saved {
   /** Other accounts the user owns, comma / whitespace / newline separated. */
@@ -10,6 +11,8 @@ export interface Saved {
   groups: Record<string, GroupAnswer>;
   /** Other taxable income in 2026 (NGN), as typed. */
   otherIncomeNgn: string;
+  /** Reliefs and deductions (NTA 2025 s.30), as typed, keyed by input. */
+  reliefs?: Partial<Record<ReliefInputKey, string>>;
 }
 
 export const EMPTY_SAVED: Saved = { ownText: "", groups: {}, otherIncomeNgn: "" };

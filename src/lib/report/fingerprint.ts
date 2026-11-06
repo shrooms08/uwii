@@ -6,12 +6,13 @@
  * Hash: SHA-256 (Web Crypto, available in Node >= 20 and browsers), lowercase hex.
  *
  * Excluded from the fingerprint:
- *  - personal fields: `personal` (taxpayer name, TIN, state of residence) and `tax.otherIncomeNgn`;
+ *  - personal fields: `personal` (taxpayer name, TIN, state of residence), `tax.otherIncomeNgn` and the raw
+ *    relief amounts `tax.reliefs.inputs` (the allowed amounts and relief totals are computed, so covered);
  *  - volatile delivery metadata that does not change the computation: `generatedAt`, `origin`;
  *  - the `fingerprint` field itself.
  */
 
-export const FINGERPRINT_EXCLUDED_PATHS = ["fingerprint", "generatedAt", "origin", "personal", "tax.otherIncomeNgn"] as const;
+export const FINGERPRINT_EXCLUDED_PATHS = ["fingerprint", "generatedAt", "origin", "personal", "tax.otherIncomeNgn", "tax.reliefs.inputs"] as const;
 
 const EXCLUDED = new Set<string>(FINGERPRINT_EXCLUDED_PATHS);
 

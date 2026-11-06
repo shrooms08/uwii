@@ -16,6 +16,7 @@ import { runEngine, type EngineResult } from "./engine";
 import { fetchOpeningPosition, OPENING_YEAR, RESET_PRICE_TIME, type OpeningPosition } from "./opening";
 import { runQuestionFlow, type Answers, type ApplySummary } from "./questions";
 import type { ClassifiedTx } from "./types";
+import type { ReliefInputs } from "./reliefs";
 
 const TECHNICAL = new Set(["wrap_unwrap", "staking_lockup", "round_trip", "dust_no_value", "storage_deposit", "gas_refund", "loan_collateralised"]);
 
@@ -25,7 +26,7 @@ export interface ReportRequest {
   to?: string;
   ownAccounts?: string[];
   answers?: Answers;
-  profile?: { otherIncomeNgn?: string | null };
+  profile?: { otherIncomeNgn?: string | null; reliefs?: ReliefInputs | null };
   originalCostUsd?: Record<string, string>;
   /** "fixture": use only the committed classified fixture (the cached demo result). */
   classificationSource?: "fixture";
@@ -103,6 +104,7 @@ export async function buildReport(req: ReportRequest): Promise<{ report: ReportD
     openingBalances: opening.balances,
     originalCostUsd: req.originalCostUsd,
     otherIncomeNgn: req.profile?.otherIncomeNgn || null,
+    reliefs: req.profile?.reliefs ?? null,
   });
 
   const privacyProof = privacyProofFromRun(run);

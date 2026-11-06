@@ -36,11 +36,17 @@ export function requestBody(account: string, saved: Saved) {
     };
   }
   const other = stripNgn(saved.otherIncomeNgn);
+  // Reliefs: only well-formed amounts are sent (an invalid field is flagged in the form and left out).
+  const reliefs = Object.fromEntries(
+    Object.entries(saved.reliefs ?? {})
+      .map(([k, v]) => [k, stripNgn(v ?? "")])
+      .filter(([, v]) => v !== "" && NGN_INPUT_RE.test(v)),
+  );
   return {
     account,
     ownAccounts: parseAccountList(saved.ownText).filter((a) => a !== account),
     answers: { groups },
-    profile: { otherIncomeNgn: NGN_INPUT_RE.test(other) ? other : "" },
+    profile: { otherIncomeNgn: NGN_INPUT_RE.test(other) ? other : "", ...(Object.keys(reliefs).length ? { reliefs } : {}) },
     // The cached demo result: stay on the committed classified run (no live AI).
     ...(loadSource(account) ? { classificationSource: "fixture" as const } : {}),
   };

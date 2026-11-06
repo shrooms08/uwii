@@ -140,6 +140,13 @@ export default function Landing() {
             </details>
           ))}
         </div>
+        <p className="mt-4 text-ui text-ink-2">
+          New to crypto tax?{" "}
+          <Link href="/guide" className="font-medium text-ink underline underline-offset-[3px]">
+            Read the plain-English guide
+          </Link>
+          <span aria-hidden="true"> →</span>
+        </p>
       </Section>
     </AppShell>
   );

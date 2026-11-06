@@ -5,6 +5,7 @@ import { LineDrawer } from "@/components/report/LineDrawer";
 import { LineSections } from "@/components/report/LineSections";
 import { NextSteps } from "@/components/report/NextSteps";
 import { PrivacyPanel, proofAllVerified, proofCounts } from "@/components/report/PrivacyPanel";
+import { ReliefsBreakdown, ReviewCard, TipsCard, reliefSavedText } from "@/components/report/TaxHelp";
 import { Button, ButtonLink, TextButton } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
@@ -15,6 +16,7 @@ import { useReport } from "@/lib/client/useReport";
 import { dec } from "@/lib/money";
 import { shortLabel } from "@/lib/report/explain";
 import { fmtNgn } from "@/lib/report/format";
+import { taxTips } from "@/lib/report/tips";
 import { plainWarnings } from "@/lib/report/warnings";
 import { LABELS, type LabelId } from "@/lib/tax/ng/labels";
 import type { ReportLine } from "@/lib/tax/ng/engine";
@@ -62,6 +64,7 @@ export default function ResultClient({ account }: { account: string }) {
   const closeProof = useCallback(() => setProofOpen(false), []);
 
   const warnings = useMemo(() => (report ? plainWarnings(report) : []), [report]);
+  const tips = useMemo(() => (report ? taxTips(report) : []), [report]);
 
   if (error && !report) {
     return (
@@ -89,6 +92,7 @@ export default function ResultClient({ account }: { account: string }) {
   const counts = proofCounts(proof);
   const proofSummary = proof.aiDecisions === 0 ? "rules only" : `${counts ? `${counts.passed}/${counts.total} checks` : "checks not recorded"} · ${proof.aiResponsesVerified}/${proof.aiResponses} signatures`;
   const q = (path: string) => `${path}?account=${encodeURIComponent(account)}`;
+  const rel = r.tax.reliefs ?? null;
   const firstLineFor = (recordId: string) => r.lines.find((l) => l.recordId === recordId && l.kind !== "gas_fee") ?? r.lines.find((l) => l.recordId === recordId) ?? null;
   const subline = r.tax.basis === "marginal_over_other_income" && r.tax.otherIncomeNgn ? (
     <>
@@ -154,6 +158,7 @@ export default function ResultClient({ account }: { account: string }) {
               <p className="mt-4 text-ui text-ink-2">
                 {subline}. {r.blockingQuestions > 0 ? `May change once ${plural(r.blockingQuestions, "question")} ${r.blockingQuestions === 1 ? "is" : "are"} answered.` : "May change once the draft reasons above are resolved."}
               </p>
+              {rel && <p className="mt-2 text-small text-ink-2">{reliefSavedText(rel)}</p>}
             </div>
           </section>
         ) : (
@@ -178,6 +183,7 @@ export default function ResultClient({ account }: { account: string }) {
                 <Money value={r.tax.taxAttributableToVaNgn} />
               </div>
               <p className="mt-4 text-ui text-onink">{subline}</p>
+              {rel && <p className="mt-2 text-small text-onink">{reliefSavedText(rel)}</p>}
             </div>
           </section>
         )}
@@ -195,7 +201,16 @@ export default function ResultClient({ account }: { account: string }) {
         </div>
       </div>
 
-      <div className="mt-4">
+      <div className="mt-4 flex flex-col gap-4">
+        {rel && <ReliefsBreakdown rel={rel} />}
+        <TipsCard
+          tips={tips}
+          onView={(id) => {
+            const l = firstLineFor(id);
+            if (l) setOpenLine(l);
+          }}
+        />
+        <ReviewCard />
         <NextSteps isDraft={isDraft} account={account} />
       </div>
 

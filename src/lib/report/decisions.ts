@@ -14,6 +14,7 @@ export const DECISION_LOG: { id: string; text: string }[] = [
   { id: "D12", text: "Technical non-taxable movements (round trips, dust, storage deposits) and post-AI consistency guards." },
   { id: "D13", text: "acquisition_swap for the received leg; loans received/repaid are non-taxable; repayment in a different asset is flagged." },
   { id: "D14", text: "User answers apply as method 'user' labels; answers and personal inputs stay in the browser." },
+  { id: "D15", text: "Reliefs and deductions (NTA 2025 s.30): rent relief 20% of rent capped at 500,000; pension, NHF, NHIS, life insurance and owner-occupied mortgage interest in full; deducted from the income base before the PIT bands." },
 ];
 
 const TECHNICAL_D12 = ["round_trip", "dust_no_value", "storage_deposit"];
