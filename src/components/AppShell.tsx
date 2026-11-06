@@ -51,6 +51,7 @@ export function AppShell({ step, account, children, mainClassName, landing }: { 
             APIs
           </span>
           <span className="flex flex-wrap gap-x-4 gap-y-1">
+            <span>Computation for review; not tax advice.</span>
             <Link href="/verify" className="text-ink underline underline-offset-[3px]">
               Verify a report
             </Link>

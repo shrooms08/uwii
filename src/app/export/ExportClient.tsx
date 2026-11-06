@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useId, useState } from "react";
 import Link from "next/link";
 import { AnchorCard } from "@/components/report/AnchorCard";
+import { NextSteps } from "@/components/report/NextSteps";
 import { PrivacyPanel, proofAllVerified, proofCounts } from "@/components/report/PrivacyPanel";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -267,6 +268,10 @@ export default function ExportClient({ account }: { account: string }) {
           </Button>
         </section>
         </div>
+      </div>
+
+      <div className="mt-4">
+        <NextSteps isDraft={isDraft} account={account} />
       </div>
 
       <p className="mt-10 max-w-[760px] border-t border-rule pt-[22px] text-small leading-normal text-ink-2">

@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { LineDrawer } from "@/components/report/LineDrawer";
+import { NextSteps } from "@/components/report/NextSteps";
 import { PrivacyPanel, proofAllVerified, proofCounts } from "@/components/report/PrivacyPanel";
 import { Button, ButtonLink, TextButton } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -223,6 +224,10 @@ export default function ResultClient({ account }: { account: string }) {
             note={dec(r.carryForwardLossNgn).gt(0) ? "net disposal loss, carried forward" : `no net disposal loss in ${r.year}`}
           />
         </div>
+      </div>
+
+      <div className="mt-4">
+        <NextSteps isDraft={isDraft} account={account} />
       </div>
 
       <Card aria-labelledby="lines-h" className="mt-4 overflow-hidden">

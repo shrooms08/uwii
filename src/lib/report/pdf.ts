@@ -6,6 +6,7 @@
  */
 import type { ReportData } from "../tax/ng/report";
 import type { ReportLine } from "../tax/ng/engine";
+import { NEXT_STEPS, NEXT_STEPS_DRAFT, NEXT_STEPS_TITLE } from "../../content/next-steps";
 import { DECISION_LOG, appliedDecisionIds } from "./decisions";
 import { fmtNgn, fmtPrice, fmtQty, fmtUsd } from "./format";
 import { privacyProofText } from "./privacy";
@@ -323,7 +324,15 @@ export async function buildWorksheetPdf(report: ReportData, personal: PersonalFi
     7.2,
   );
 
-  // ---- i. footer (and draft watermark) on every page ----
+  // ---- i. what to do next (last section) ----
+  section(NEXT_STEPS_TITLE, 28);
+  if (report.status === "draft") {
+    paragraph(NEXT_STEPS_DRAFT, 9);
+  } else {
+    NEXT_STEPS.forEach((s, i) => paragraph(`${i + 1}. ${s.title} ${s.body}`, 9));
+  }
+
+  // ---- j. footer (and draft watermark) on every page ----
   const pages = doc.getNumberOfPages();
   for (let i = 1; i <= pages; i++) {
     doc.setPage(i);
