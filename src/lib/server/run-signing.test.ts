@@ -105,3 +105,10 @@ test("a scan whose attestation failed never gives a final report", async () => {
   assert.equal(reportStatus({ ...base, attestation: { verified: false, aiNeeded: false } }).status, "final", "no AI needed: nothing to attest");
   assert.equal(reportStatus({ ...base, attestation: { verified: true, aiNeeded: true } }).status, "final");
 });
+
+test("RPC URLs in report data keep only the origin: no path, query or credentials (N2)", async () => {
+  const { urlOrigin } = await import("./run-signing");
+  assert.equal(urlOrigin("https://user:secret@archival.example.com/v1/abc123token?apikey=xyz"), "https://archival.example.com");
+  assert.equal(urlOrigin("https://archival-rpc.mainnet.near.org"), "https://archival-rpc.mainnet.near.org", "the default stays byte-identical");
+  assert.equal(urlOrigin("not a url"), "(unparseable URL)");
+});

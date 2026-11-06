@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { CheckIcon } from "@/components/ui/AnswerChip";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { ANCHOR_CAVEAT } from "@/content/anchor";
 import { serializeBody } from "@/lib/client/request";
 import { loadAnchor, storeAnchor, type StoredAnchor } from "@/lib/client/storage";
 
@@ -83,6 +84,7 @@ export function AnchorCard({ fingerprint, isFinal, body, onAnchor }: { fingerpri
         Writes only the fingerprint to the NEAR blockchain, with a timestamp. Proves this exact report existed today without revealing anything in it.{" "}
         <span className="whitespace-nowrap">NEAR testnet.</span>
       </p>
+      <p className="rounded-inset border border-border bg-muted px-3.5 py-2.5 text-label leading-normal text-ink-soft">{ANCHOR_CAVEAT}</p>
 
       {!isFinal ? (
         <div className="flex flex-col gap-2">

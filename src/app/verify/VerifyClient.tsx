@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
 import { readUwiiCsv } from "@/lib/report/csv-read";
+import { ANCHOR_CAVEAT } from "@/content/anchor";
 import type { StoredAnchor } from "@/lib/client/storage";
 
 type Result =
@@ -91,6 +92,7 @@ export default function VerifyClient({ initial }: { initial: string }) {
         <p className="mt-3 max-w-[680px] text-body leading-[1.55] text-ink-2">
           Check whether a Uwii report fingerprint was anchored on NEAR testnet, and when. Only the fingerprint was ever written on-chain; nothing in the report is revealed.
         </p>
+        <p className="mt-2 max-w-[680px] text-ui leading-normal text-ink-soft">{ANCHOR_CAVEAT}</p>
       </div>
 
       <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,460px),1fr))] items-start gap-4">

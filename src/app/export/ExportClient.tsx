@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useId, useState } from "react";
 import Link from "next/link";
+import { ClearDataButton } from "@/components/ClearDataButton";
 import { AnchorCard } from "@/components/report/AnchorCard";
 import { NextSteps } from "@/components/report/NextSteps";
 import { PrivacyPanel, proofAllVerified, proofCounts } from "@/components/report/PrivacyPanel";
@@ -272,6 +273,13 @@ export default function ExportClient({ account }: { account: string }) {
 
       <div className="mt-4">
         <NextSteps isDraft={isDraft} account={account} />
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-tile border border-border bg-surface px-5 py-4">
+        <p className="max-w-[620px] text-small leading-normal text-ink-2">
+          Your answers, personal details, reliefs and saved scan stay only in this browser. Done here, or on a shared computer? Remove them.
+        </p>
+        <ClearDataButton className="text-small font-medium" />
       </div>
 
       <p className="mt-10 max-w-[760px] border-t border-rule pt-[22px] text-small leading-normal text-ink-2">

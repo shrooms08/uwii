@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { cx } from "./ui/cx";
+import { ClearDataButton } from "./ClearDataButton";
 import { CachedLabel } from "./CachedLabel";
 import { DemoLabel } from "./DemoLabel";
 import { Wordmark } from "./ui/Mark";
@@ -63,6 +64,7 @@ export function AppShell({ step, account, children, mainClassName, landing }: { 
             <Link href="/verify" className="text-ink underline underline-offset-[3px]">
               Verify a report
             </Link>
+            <ClearDataButton />
             <span>Based on NRS Information Circular 2026/21</span>
           </span>
         </footer>
