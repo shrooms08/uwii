@@ -38,8 +38,16 @@ export default function GuidePage() {
                 <li key={it.title} className="flex flex-col gap-1.5 border-b border-line py-4 last:border-b-0">
                   <h3 className="text-ui font-semibold">{it.title}</h3>
                   <p className="text-small leading-normal text-pretty text-ink-soft">{it.body}</p>
-                  <span>
+                  <span className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                    {it.decision && <span className="inline-flex min-h-5 items-center rounded-full bg-amber-tint px-2 text-caption font-medium text-amber-ink">Uwii decision, not a quote</span>}
                     <Cite>{it.cite}</Cite>
+                    {it.decision && (
+                      <a href={it.decision.href} target="_blank" rel="noreferrer" className="text-label text-ink underline underline-offset-[3px]">
+                        {it.decision.id} in the decision log
+                        <span aria-hidden="true"> ↗</span>
+                        <span className="sr-only"> (opens in a new tab)</span>
+                      </a>
+                    )}
                   </span>
                 </li>
               ))}

@@ -10,11 +10,17 @@ import { ZERO_D, dec } from "../lib/money";
 import { fmtNgn } from "../lib/report/format";
 import { PIT_BANDS } from "../lib/tax/ng/pit";
 import { RELIEFS } from "../lib/tax/ng/reliefs";
+import { REPO_URL } from "./landing";
+
+/** A heading in docs/rules-ng-2026-21.md on GitHub. */
+const DECISION_LOG_URL = (anchor: string) => `${REPO_URL}/blob/main/docs/rules-ng-2026-21.md#${anchor}`;
 
 export interface GuideItem {
   title: string;
   body: string;
   cite: string;
+  /** A Uwii decision (not a quote from the Circular or the Act), linked to the decision log. */
+  decision?: { id: string; href: string };
 }
 
 export interface GuideSection {
@@ -96,11 +102,10 @@ export const guideSections: GuideSection[] = [
     id: "not-taxable",
     title: "What is not taxable",
     items: [
-      // TODO-REVIEW: "Holding crypto is not a taxable event, even when its price rises." The Circular lists taxable events in 7.1; holding is not one of them, but there is no paragraph saying so in these words.
       {
         title: "Holding",
-        body: "Holding crypto is not a taxable event, even when its price rises. Tax arises when you receive income or dispose of an asset.",
-        cite: "Circular 7.1",
+        body: "Holding crypto is not a taxable event, even when its price rises. Any rise in value is not taxed until you dispose of it.",
+        cite: "Circular 7.2.1",
       },
       {
         title: "Moving crypto between your own wallets",
@@ -158,15 +163,14 @@ export const guideSections: GuideSection[] = [
     ],
     examples: [
       {
-        title: "Illustration 2: bought and sold for naira",
+        title: "Illustration 2: 0.985 BTC bought and sold for naira",
         cite: "Circular 9.1.2; Illustration 2",
         steps: [
-          "You buy a virtual asset for ₦1,000,000 when the rate is ₦1,000 per dollar. Cost: $1,000.",
+          "You buy 0.985 BTC for ₦1,000,000 when the rate is ₦1,000 per dollar. Cost: $1,000.",
           "You sell it for ₦1,970,000 when the rate is ₦1,500 per dollar. Proceeds: ₦1,970,000 ÷ 1,500 = $1,313.33 (exactly $1,313.333…).",
           "Gain in dollars: $1,313.333… − $1,000 = $313.333… ($313.33 rounded).",
           "Converted at ₦1,500 per dollar: $313.333… × 1,500 = a taxable gain of ₦470,000.",
-          // TODO-REVIEW: "The naira amounts differ by ₦970,000; the gain is measured in dollars, so the part caused by the naira's fall against the dollar is not taxed as gain."
-          "The naira amounts differ by ₦970,000; the gain is measured in dollars, so the part caused by the naira's fall against the dollar is not taxed as gain.",
+          "Worked in naira only, this looks like a ₦970,000 gain. ₦500,000 of that is just the naira falling from ₦1,000 to ₦1,500 per dollar, which is excluded. Only the real dollar gain of $313.33, converted at the sale-date rate, is taxable: ₦470,000.",
         ],
       },
       {
@@ -191,11 +195,10 @@ export const guideSections: GuideSection[] = [
         body: "Your crypto income for the year plus your net gains (if positive) is the chargeable amount from crypto.",
         cite: "Circular 9.4",
       },
-      // TODO-REVIEW: "Crypto income and gains are taxed with the rest of your income under the personal income tax bands" (Circular 9.4 with NTA 2025 personal income tax bands; confirm the NTA section for the bands).
       {
         title: "Personal income tax bands",
         body: `It is taxed with the rest of your income under the personal income tax bands: ${bandLines()}.`,
-        cite: "NTA 2025 (personal income tax bands)",
+        cite: "Circular 6.1.1(1); NTA 2025 s.58 and Fourth Schedule",
       },
     ],
   },
@@ -211,11 +214,11 @@ export const guideSections: GuideSection[] = [
     id: "dates",
     title: "Key dates",
     items: [
-      // TODO-REVIEW: "The Circular applies to virtual-asset events from 1 January 2026; the first tax year is 2026."
       {
         title: "Tax year",
-        body: "1 January to 31 December. The Circular applies from the 2026 tax year.",
-        cite: "Circular 2026/21",
+        body: "1 January to 31 December. The Circular was published on 31 July 2026 and does not state an effective date. Uwii applies it to the 2026 year of assessment, the first year under the Nigeria Tax Act 2025.",
+        cite: "Uwii decision D16",
+        decision: { id: "D16", href: DECISION_LOG_URL("d16--effective-date-2026-year-of-assessment-decided") },
       },
       // TODO-REVIEW: "Coins you held before 2026 use the higher of what they cost you or their value at 31 December 2025 as their cost." Based on public statements by the Presidential Fiscal Policy and Tax Reforms Committee, pending a citable paragraph (decision D11).
       {
@@ -240,6 +243,11 @@ export const guideSections: GuideSection[] = [
         title: "Your State Internal Revenue Service",
         body: "With the Internal Revenue Service of the state you live in (FCT residents: FCT-IRS). The annual return for 2026 income is due by 31 March 2027.",
         cite: "Nigeria Tax Administration Act 2025",
+      },
+      {
+        title: "Declare your crypto in that return",
+        body: "Include your crypto income and gains in your annual income tax return.",
+        cite: "Circular 6.1.1(4)",
       },
       {
         title: "Even if you owe nothing",

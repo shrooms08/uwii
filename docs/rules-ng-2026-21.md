@@ -141,3 +141,8 @@ Deterministic rules remove those cases; the guards catch the same shape of error
   (`tax.reliefs.inputs`) are excluded from the fingerprint like `tax.otherIncomeNgn`; the allowed amounts, totals and
   savings are computed values and are covered. When no relief is entered, `tax.reliefs` is absent and the report
   (and its fingerprint) is unchanged.
+
+## D16 — Effective date: 2026 year of assessment (Decided)
+- The Circular was published on 31 July 2026 and does not state an effective date.
+- Uwii applies it to the 2026 year of assessment (1 January to 31 December 2026), the first year under the Nigeria
+  Tax Act 2025. This is a Uwii decision, not a quote from the Circular; the guide marks it as such.
