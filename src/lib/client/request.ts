@@ -6,6 +6,7 @@ import { parseAccountList } from "@/lib/near/account-id";
 import type { GroupAnswer } from "@/lib/tax/ng/questions";
 import { isPositiveQuantity, type SourceLegInput } from "@/lib/tax/ng/source-leg";
 import { NGN_INPUT_RE, loadSource, stripNgn, type Saved } from "./storage";
+import { loadRun } from "./runs";
 
 /** Source leg as it will be sent: separators stripped; null until the asset and a positive quantity are given. */
 export function legForRequest(leg: SourceLegInput | undefined): SourceLegInput | null {
@@ -52,8 +53,27 @@ export function requestBody(account: string, saved: Saved) {
   };
 }
 
-export async function postJson<T>(url: string, body: unknown, signal: AbortSignal): Promise<T> {
-  const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal });
+/**
+ * Request size limit. Vercel refuses request bodies over 4.5 MB before the app sees them, so the
+ * browser checks first and explains (the server answers 413 above the same limit).
+ */
+export const MAX_BODY_BYTES = 4_500_000;
+export const TOO_LARGE_BODY = "This account's scan is too large to send back for a report (over 4.5 MB). Uwii can't compute it in the hosted demo yet.";
+
+/** JSON body with the saved signed run attached (not for the cached demo, which uses the committed fixture). */
+export async function serializeBody(body: { account?: string; classificationSource?: string } & Record<string, unknown>): Promise<string> {
+  let full: Record<string, unknown> = body;
+  if (body.account && !body.classificationSource) {
+    const signed = await loadRun(body.account);
+    if (signed) full = { ...body, run: signed.run, runSig: signed.runSig };
+  }
+  const text = JSON.stringify(full);
+  if (new TextEncoder().encode(text).length > MAX_BODY_BYTES) throw new Error(TOO_LARGE_BODY);
+  return text;
+}
+
+export async function postJson<T>(url: string, body: { account?: string; classificationSource?: string } & Record<string, unknown>, signal: AbortSignal): Promise<T> {
+  const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: await serializeBody(body), signal });
   const json = (await res.json()) as T & { error?: string };
   if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
   return json;

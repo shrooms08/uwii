@@ -28,6 +28,8 @@ values in the repository. Values marked secret must be "Sensitive".
 | Name | Required | Secret | Purpose |
 | --- | --- | --- | --- |
 | `NEAR_AI_API_KEY` | for live scans | yes | NEAR AI Cloud key for the TEE-attested AI classification step. Without it, live scans cannot classify; the cached demo still works. |
+| `UWII_RUN_SECRET` | for live scans | yes | HMAC-SHA256 key (at least 32 characters; `openssl rand -hex 32`) that signs the classification run `/api/scan` returns to the browser. The browser sends the signed run back with every questions/report/anchor request, so any instance can build the report and no user can change another's run. Without it, live scans return 503; the cached demo still works. Changing it invalidates runs saved in browsers (users scan again). |
+| `UWII_ENABLE_DEV_PAGES` | no | no | `1` turns the `/dev/*` developer pages on in production. Leave unset: they call live services without the hosted-demo limits. |
 | `NEAR_NETWORK` | yes | no | Must be `testnet`. Anything else is refused. |
 | `NEAR_ANCHOR_CONTRACT_ID` | for anchoring and /verify | no | The anchor contract account, `uwii-anchor.testnet`. Needed by `/verify` (read-only) and `/api/anchor`. |
 | `NEAR_ANCHOR_ACCOUNT_ID` | for anchoring | no | The account that signs `anchor()` calls (the contract owner, `uwii-anchor.testnet`). |
@@ -51,10 +53,18 @@ Vercel sets `VERCEL` and `VERCEL_GIT_COMMIT_SHA` itself; do not set them.
   (per instance, not persisted; every cache can be rebuilt) and any write elsewhere throws. The committed
   fixtures (`data/fixtures`) and CBN NFEM rates (`data/fx`) are read-only and are bundled into every API
   function through `outputFileTracingIncludes` in `next.config.ts`.
-- **Live AI only through `/api/scan`.** `/api/report`, `/api/questions` and `/api/anchor` never classify
-  live; an account that has not been scanned gets a 409 ("Start a scan first").
+- **Live AI only through `/api/scan`, and runs live in the browser.** `/api/scan` returns the classified run
+  signed with `UWII_RUN_SECRET` (HMAC-SHA256) and writes no shared cache. The browser keeps `{ run, runSig }`
+  in IndexedDB and sends them with every `/api/questions`, `/api/report` and `/api/anchor` request; the
+  server verifies the signature and the account (400 otherwise). So any instance can serve any request,
+  and one user's scan can never change another's report. Without a signed run, the committed demo fixture
+  is used for `rybergh44.near`; any other account gets a 409 ("Start a scan first"). The opening position
+  (archival RPC) is computed alongside the scan and travels in the signed run when it is ready in time;
+  otherwise the report computes it (cached per instance). Request bodies are limited to 4.5 MB (Vercel's
+  limit), checked in the browser first.
+- **`/dev/*` is off.** The developer pages return 404 in production unless `UWII_ENABLE_DEV_PAGES=1`.
 - **Limits (best-effort, in memory, per instance):**
-  - scans: 5 per IP per hour; anchors: 3 per IP per hour (only new anchor transactions count);
+  - scans: 5 per IP per hour; anchors: 3 per IP per hour;
   - global per UTC day: `MAX_AI_CALLS_PER_DAY` AI requests (checked before any AI call from the
     deterministic rule pre-pass) and `MAX_ANCHORS_PER_DAY` new anchors;
   - when a limit is hit the API returns 429 and the scan page offers "Load the cached demo report",

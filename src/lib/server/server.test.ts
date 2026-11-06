@@ -52,7 +52,22 @@ const scanPost = async (body: unknown, ip = "203.0.113.50") => {
   return POST(new Request("http://localhost/api/scan", { method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": ip }, body: JSON.stringify(body) }));
 };
 
+test("scan: live scans are refused with 503 when UWII_RUN_SECRET is missing; the cached demo still works", async () => {
+  const saved = process.env.UWII_RUN_SECRET;
+  delete process.env.UWII_RUN_SECRET;
+  try {
+    const res = await scanPost({ account: "rybergh44.near" });
+    assert.equal(res.status, 503);
+    assert.equal(((await res.json()) as { code: string }).code, "scans_not_configured");
+    const cached = await scanPost({ account: "rybergh44.near", source: "cached" });
+    assert.equal(cached.status, 200);
+  } finally {
+    if (saved !== undefined) process.env.UWII_RUN_SECRET = saved;
+  }
+});
+
 test("scan: daily AI cap and per-IP limit return 429 with the busy message before any work", async () => {
+  process.env.UWII_RUN_SECRET ??= "test-secret-0123456789abcdef0123456789abcdef";
   delete (globalThis as { __uwiiLimits?: unknown }).__uwiiLimits;
   const state = limitState();
   state.aiCallsDaily.add(state.aiCallsDaily.cap);

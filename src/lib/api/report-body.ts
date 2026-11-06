@@ -7,6 +7,10 @@ import { isValidAccountId } from "@/lib/near/account-id";
 import { NGN_RE } from "@/lib/tax/ng/questions";
 import type { ReportRequest } from "@/lib/tax/ng/report";
 import type { ReliefInputs } from "@/lib/tax/ng/reliefs";
+import { access } from "node:fs/promises";
+import { checkSignedRun, runSecret } from "@/lib/server/run-signing";
+import { classifiedFixturePath } from "@/lib/tax/ng/cache";
+import type { ClassifiedRun } from "@/lib/tax/ng/types";
 
 const accountId = z.string().trim().toLowerCase().refine(isValidAccountId, "invalid NEAR account id");
 const ngn = z.string().trim().regex(NGN_RE, "NGN amount must be a decimal with up to 2 places");
@@ -25,6 +29,10 @@ export function reliefInputs(r: z.infer<typeof ReliefsBody> | undefined): Relief
 }
 
 const usd = z.string().trim().regex(/^\d{1,15}(\.\d{1,8})?$/, "USD amount must be a decimal");
+
+/** Signed run fields (shared with /api/questions); the HMAC is checked in resolveRun. */
+export const RunField = z.record(z.string(), z.unknown()).optional();
+export const RunSigField = z.string().max(64).optional();
 
 export const ReportBody = z
   .object({
@@ -58,6 +66,9 @@ export const ReportBody = z
     originalCostUsd: z.record(z.string().max(100), usd).optional(),
     /** "fixture": the cached demo result (committed classified fixture, no live AI). */
     classificationSource: z.literal("fixture").optional(),
+    /** The signed classification run from /api/scan, kept in the browser (verified server-side). */
+    run: RunField,
+    runSig: RunSigField,
   })
   .strict();
 
@@ -87,4 +98,41 @@ export function reportRequest(body: ReportBodyInput): ReportRequest {
     // Live AI classification only runs through the rate-limited /api/scan.
     noLiveClassification: true,
   };
+}
+
+export type RunResolution = { ok: true; run: ClassifiedRun | null; fixture: boolean } | { ok: false; response: Response };
+
+async function hasClassifiedFixture(account: string): Promise<boolean> {
+  const file = classifiedFixturePath(account, "2026-01-01", "2026-12-31");
+  if (!file) return false;
+  try {
+    await access(file);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Which classification a request uses: the cached demo (committed fixture) when asked for; else the
+ * signed run sent by the browser (HMAC verified, same account); else the committed fixture when one
+ * exists (the demo account); else 409 "not scanned". The shared server cache is never read here.
+ */
+export async function resolveRun(body: { account: string; run?: Record<string, unknown>; runSig?: string; classificationSource?: "fixture" }): Promise<RunResolution> {
+  if (body.classificationSource === "fixture") return { ok: true, run: null, fixture: true };
+  if (body.run !== undefined || body.runSig !== undefined) {
+    const c = checkSignedRun(body.account, body.run, body.runSig, runSecret());
+    if (!c.ok) return { ok: false, response: Response.json({ error: c.error, code: c.code }, { status: c.status, headers: noStore }) };
+    return { ok: true, run: c.run, fixture: false };
+  }
+  if (await hasClassifiedFixture(body.account)) return { ok: true, run: null, fixture: true };
+  return { ok: false, response: Response.json({ error: `${body.account} has not been scanned yet. Start a scan first.`, code: "not_scanned" }, { status: 409, headers: noStore }) };
+}
+
+/** The ReportRequest for a parsed body, with its classification resolved (see resolveRun). */
+export async function resolveReportRequest(body: ReportBodyInput): Promise<{ ok: true; req: ReportRequest } | { ok: false; response: Response }> {
+  const r = await resolveRun(body);
+  if (!r.ok) return r;
+  const req = reportRequest(body);
+  return { ok: true, req: r.run ? { ...req, run: r.run, classificationSource: undefined } : { ...req, classificationSource: "fixture" } };
 }

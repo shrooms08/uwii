@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { CheckIcon } from "@/components/ui/AnswerChip";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { serializeBody } from "@/lib/client/request";
 import { loadAnchor, storeAnchor, type StoredAnchor } from "@/lib/client/storage";
 
 const shortHash = (h: string) => (h.length > 12 ? `${h.slice(0, 4)}…${h.slice(-4)}` : h);
@@ -17,7 +18,7 @@ type State = { kind: "checking" } | { kind: "idle" } | { kind: "busy" } | { kind
  * "Anchor this report on NEAR" (design 07). Only the fingerprint goes on-chain; the server recomputes
  * the report from the same request body and refuses drafts.
  */
-export function AnchorCard({ fingerprint, isFinal, body, onAnchor }: { fingerprint: string; isFinal: boolean; body: unknown; onAnchor?: (a: StoredAnchor) => void }) {
+export function AnchorCard({ fingerprint, isFinal, body, onAnchor }: { fingerprint: string; isFinal: boolean; body: { account?: string; classificationSource?: string } & Record<string, unknown>; onAnchor?: (a: StoredAnchor) => void }) {
   const [state, setState] = useState<State>({ kind: "checking" });
 
   useEffect(() => {
@@ -49,7 +50,7 @@ export function AnchorCard({ fingerprint, isFinal, body, onAnchor }: { fingerpri
   async function anchor() {
     setState({ kind: "busy" });
     try {
-      const res = await fetch("/api/anchor", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+      const res = await fetch("/api/anchor", { method: "POST", headers: { "content-type": "application/json" }, body: await serializeBody(body) });
       const json = (await res.json()) as StoredAnchor & { alreadyAnchored?: boolean; error?: string };
       if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
       if (json.fingerprint !== fingerprint) throw new Error("The server computed a different fingerprint; reload the page and try again.");

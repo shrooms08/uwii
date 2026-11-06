@@ -1,5 +1,6 @@
 import type { NormalizedTx } from "../../history/types";
 import type { AssetCategory, LabelId } from "./labels";
+import type { OpeningInputs, OpeningPosition } from "./opening";
 
 export type ClassificationMethod = "rule" | "ai" | "user";
 
@@ -121,4 +122,17 @@ export interface ClassifiedRun {
   aiResponses: AiResponseRecord[];
   metrics: ClassificationMetrics;
   records: ClassifiedTx[];
+  /**
+   * Set on runs returned by /api/scan (signed, kept in the user's browser): what the report needs from
+   * the history, so any server instance can build the report without the history cache.
+   */
+  context?: RunContext;
+}
+
+export interface RunContext {
+  /** Origin (scheme and host only) of the archival RPC used for staking snapshots and the opening position. */
+  archivalRpc: string;
+  openingInputs: OpeningInputs;
+  /** Opening position, when it was ready before the scan finished. */
+  opening: OpeningPosition | null;
 }

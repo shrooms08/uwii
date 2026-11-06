@@ -4,6 +4,7 @@
  * invents or extrapolates one.
  */
 import type { ClassifyEvent } from "../tax/ng/classify";
+import type { ClassifiedRun } from "../tax/ng/types";
 
 export type ScanEvent =
   /** Replay of the committed classified fixture (no live calls): the cached demo result. */
@@ -25,6 +26,9 @@ export type ScanEvent =
       attestationVerified: boolean;
       aiResponses: number;
       aiResponsesVerified: number;
+      /** Live scans only: the classified run (signed by the server) for the browser to keep and send back. */
+      run?: ClassifiedRun;
+      runSig?: string;
     }
   | { type: "error"; stage: "input" | "history" | "classification"; message: string; code?: "busy" | "timeout" | "rate_limited" | "daily_cap" };
 

@@ -15,7 +15,8 @@ import { getClassification } from "./cache";
 import { runEngine, type EngineResult } from "./engine";
 import { fetchOpeningPosition, OPENING_YEAR, RESET_PRICE_TIME, type OpeningPosition } from "./opening";
 import { runQuestionFlow, type Answers, type ApplySummary } from "./questions";
-import type { ClassifiedTx } from "./types";
+import type { ClassifiedRun, ClassifiedTx } from "./types";
+import { urlOrigin } from "../../server/run-signing";
 import type { ReliefInputs } from "./reliefs";
 
 const TECHNICAL = new Set(["wrap_unwrap", "staking_lockup", "round_trip", "dust_no_value", "storage_deposit", "gas_refund", "loan_collateralised"]);
@@ -27,6 +28,8 @@ export interface ReportRequest {
   ownAccounts?: string[];
   answers?: Answers;
   profile?: { otherIncomeNgn?: string | null; reliefs?: ReliefInputs | null };
+  /** A classification run already verified by the caller (signed by /api/scan); replaces the shared cache. */
+  run?: ClassifiedRun;
   originalCostUsd?: Record<string, string>;
   /** "fixture": use only the committed classified fixture (the cached demo result). */
   classificationSource?: "fixture";
@@ -81,14 +84,31 @@ export async function buildReport(req: ReportRequest): Promise<{ report: ReportD
   }
   const log = req.onProgress ?? (() => {});
 
-  const { run, origin: classificationOrigin } = await getClassification(req.account, from, to, { ownAccounts: [], fixtureOnly: req.classificationSource === "fixture", noLive: req.noLiveClassification });
+  // A signed run from the browser (verified by the API layer) replaces the shared classification cache
+  // and, through its context, the history: any server instance can build the report from it.
+  let run: ClassifiedRun;
+  let classificationOrigin: string;
+  if (req.run) {
+    if (req.run.accountId !== req.account) throw new Error("The classification run belongs to a different account");
+    run = req.run;
+    classificationOrigin = "signed scan from the browser";
+  } else {
+    ({ run, origin: classificationOrigin } = await getClassification(req.account, from, to, { ownAccounts: [], fixtureOnly: req.classificationSource === "fixture", noLive: req.noLiveClassification }));
+  }
   const flow = runQuestionFlow(run, { ownAccounts: req.ownAccounts ?? [], answers: req.answers ?? { groups: {} } });
-  const { result: history } = await getHistory(req.account, from, to);
+  const ctx = req.run?.context;
+  const history = ctx ? null : (await getHistory(req.account, from, to)).result;
+  const historyFetchedAt = history ? history.fetchedAt : run.historyFetchedAt;
+  const archivalRpc = ctx ? ctx.archivalRpc : urlOrigin(history!.staking.archivalRpc);
 
   let opening = await readJsonIfExists<OpeningPosition>(openingFixturePath(req.account));
   let openingOrigin = "fixture";
+  if (!opening && ctx?.opening && ctx.opening.accountId === req.account) {
+    opening = ctx.opening;
+    openingOrigin = "computed during the scan";
+  }
   if (!opening) {
-    opening = await fetchOpeningPosition(history, log);
+    opening = await fetchOpeningPosition(ctx ? ctx.openingInputs : history!, log);
     openingOrigin = "archival RPC (cached)";
   }
 
@@ -114,7 +134,13 @@ export async function buildReport(req: ReportRequest): Promise<{ report: ReportD
     warnings.push({ code: "ai_signature_unverified", message: `${privacyProof.aiDecisions - privacyProof.aiDecisionsSignatureVerified} AI decision(s) without a verified response signature` });
   }
 
-  const status = reportStatus({ records: flow.records, warnings, questions: flow.questions });
+  const status = reportStatus({
+    records: flow.records,
+    warnings,
+    questions: flow.questions,
+    // The base run (before answers): records the rules could not label went to the AI step.
+    attestation: { verified: run.attestation.verified, aiNeeded: run.records.some((r) => r.method === "ai") },
+  });
 
   const report: ReportData = {
     ...engine,
@@ -146,13 +172,13 @@ export async function buildReport(req: ReportRequest): Promise<{ report: ReportD
         detail: `data/fx/cbn-nafem-usdngn.csv from ${fx.meta.sourceUrl}, ${fx.range.first}..${fx.range.last}`,
         retrievedAt: fx.meta.retrievedAt || null,
       },
-      { name: "NearBlocks", detail: "v3 API (Powered by NearBlocks.io APIs): receipts, FT transfers, staking and signed transactions", retrievedAt: history.fetchedAt },
+      { name: "NearBlocks", detail: "v3 API (Powered by NearBlocks.io APIs): receipts, FT transfers, staking and signed transactions", retrievedAt: historyFetchedAt },
       {
         name: "NEAR archival RPC",
-        detail: `${history.staking.archivalRpc}: pool snapshots (staking rewards) and opening position at block ${opening.block.height}`,
+        detail: `${archivalRpc}: pool snapshots (staking rewards) and opening position at block ${opening.block.height}`,
         retrievedAt: opening.fetchedAt,
       },
-      { name: "neardata (FastNEAR)", detail: "block headers for timestamp -> block lookup", retrievedAt: history.fetchedAt },
+      { name: "neardata (FastNEAR)", detail: "block headers for timestamp -> block lookup", retrievedAt: historyFetchedAt },
       { name: "Rhea / Ref Finance pools", detail: "primary trading pair for tokens without a CoinGecko listing (9.2(1))", retrievedAt: fixture?.generatedAt ?? null },
     ],
   };

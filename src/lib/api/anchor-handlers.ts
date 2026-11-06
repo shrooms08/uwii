@@ -7,7 +7,7 @@ import { FINGERPRINT_RE, anchorConfig, anchorFingerprint, nearAnchorClient, veri
 import { DailyCap, clientKey, limitState, tooManyRequests } from "@/lib/server/limits";
 import { NotScannedError } from "@/lib/tax/ng/cache";
 import { buildReport, type ReportData, type ReportRequest } from "@/lib/tax/ng/report";
-import { noStore, parseReportBody, reportRequest } from "./report-body";
+import { noStore, parseReportBody, resolveReportRequest } from "./report-body";
 
 export interface AnchorDeps {
   build: (req: ReportRequest) => Promise<{ report: ReportData }>;
@@ -38,9 +38,11 @@ const ANCHOR_BUSY = "The hosted demo has reached its anchoring limit. Try again 
 export async function handleAnchor(request: Request, deps: AnchorDeps = defaultDeps): Promise<Response> {
   const parsed = await parseReportBody(request);
   if (!parsed.ok) return parsed.response;
+  const resolved = await resolveReportRequest(parsed.body);
+  if (!resolved.ok) return resolved.response;
   let report: ReportData;
   try {
-    report = (await deps.build(reportRequest(parsed.body))).report;
+    report = (await deps.build(resolved.req)).report;
   } catch (e) {
     if (e instanceof NotScannedError) return fail(409, e.message, { code: "not_scanned" });
     return fail(500, `report failed: ${e instanceof Error ? e.message : String(e)}`);

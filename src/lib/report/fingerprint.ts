@@ -14,9 +14,10 @@
 
 export const FINGERPRINT_EXCLUDED_PATHS = ["fingerprint", "generatedAt", "origin", "personal", "tax.otherIncomeNgn", "tax.reliefs.inputs"] as const;
 
-const EXCLUDED = new Set<string>(FINGERPRINT_EXCLUDED_PATHS);
+const EXCLUDED: ReadonlySet<string> = new Set<string>(FINGERPRINT_EXCLUDED_PATHS);
+const NONE: ReadonlySet<string> = new Set<string>();
 
-function canonical(value: unknown, path: string): string | undefined {
+function canonical(value: unknown, path: string, excluded: ReadonlySet<string> = EXCLUDED): string | undefined {
   if (value === undefined || typeof value === "function" || typeof value === "symbol") return undefined;
   if (value === null) return "null";
   if (typeof value === "string" || typeof value === "boolean") return JSON.stringify(value);
@@ -25,16 +26,21 @@ function canonical(value: unknown, path: string): string | undefined {
     return JSON.stringify(value);
   }
   if (typeof value === "bigint") throw new Error(`BigInt at ${path || "(root)"}: serialise as a decimal string first`);
-  if (Array.isArray(value)) return `[${value.map((v, i) => canonical(v, `${path}[${i}]`) ?? "null").join(",")}]`;
+  if (Array.isArray(value)) return `[${value.map((v, i) => canonical(v, `${path}[${i}]`, excluded) ?? "null").join(",")}]`;
   const obj = value as Record<string, unknown>;
   const parts: string[] = [];
   for (const key of Object.keys(obj).sort()) {
     const childPath = path ? `${path}.${key}` : key;
-    if (EXCLUDED.has(childPath)) continue;
-    const c = canonical(obj[key], childPath);
+    if (excluded.has(childPath)) continue;
+    const c = canonical(obj[key], childPath, excluded);
     if (c !== undefined) parts.push(`${JSON.stringify(key)}:${c}`);
   }
   return `{${parts.join(",")}}`;
+}
+
+/** The same canonical JSON with nothing excluded (used to sign classification runs). */
+export function canonicalJson(value: unknown): string {
+  return canonical(value, "", NONE) ?? "null";
 }
 
 /** Canonical JSON of a report with the excluded paths removed. */

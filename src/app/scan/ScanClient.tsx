@@ -7,6 +7,7 @@ import { Button, ButtonLink } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
 import { cx } from "@/components/ui/cx";
 import { ProgressBar } from "@/components/ui/ProgressBar";
+import { saveRun } from "@/lib/client/runs";
 import { loadSaved, setSource } from "@/lib/client/storage";
 import { DEMO_ACCOUNT } from "@/lib/demo/illustrative-answers";
 import { parseAccountList } from "@/lib/near/account-id";
@@ -155,7 +156,7 @@ export default function ScanClient({ account, cached = false }: { account: strin
             (x: { error?: string; code?: string }) => x,
             () => ({}) as { error?: string; code?: string },
           );
-          const code = j.code === "rate_limited" || j.code === "daily_cap" ? j.code : undefined;
+          const code = j.code === "rate_limited" || j.code === "daily_cap" ? j.code : j.code === "scans_not_configured" ? "busy" : undefined;
           push({ type: "error", stage: "input", message: j.error ?? `HTTP ${res.status}`, code });
           return;
         }
@@ -169,7 +170,11 @@ export default function ScanClient({ account, cached = false }: { account: strin
           buffer = rest;
           for (const e of events) {
             if (e.type === "done" || e.type === "error") finished = true;
-            push(e);
+            if (e.type === "done" && e.run && e.runSig) {
+              // Keep the signed run in this browser before moving on; the page state never holds it.
+              await saveRun(account, { run: e.run, runSig: e.runSig });
+              push({ ...e, run: undefined, runSig: undefined });
+            } else push(e);
           }
         }
         if (!finished) push({ type: "error", stage: "classification", message: "The connection closed before the scan finished." });

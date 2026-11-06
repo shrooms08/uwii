@@ -3,14 +3,15 @@
  *
  * Draft if any of: an unresolved record remains (label unknown / needsQuestion); a
  * missing_acquisition_history warning (nil cost used, gains may be overstated); an acquisition_swap
- * with an incomplete source leg. No-verifiable-price exclusions (9.2(4)) and NFEM rate fallbacks (D8)
+ * with an incomplete source leg. A scan whose TEE attestation failed while the AI step was needed
+ * is always a draft, even after every question is answered. No-verifiable-price exclusions (9.2(4)) and NFEM rate fallbacks (D8)
  * are documented treatments and do not by themselves make a report a draft.
  */
 
 export type ReportStatus = "final" | "draft";
 
 export interface DraftReason {
-  code: "unresolved_records" | "missing_acquisition_history" | "incomplete_source_leg";
+  code: "unresolved_records" | "missing_acquisition_history" | "incomplete_source_leg" | "attestation_unverified";
   message: string;
   relatedIds: string[];
 }
@@ -21,6 +22,8 @@ export interface StatusInput {
   warnings: { code: string; recordId?: string }[];
   /** Question groups (Phase 4 grouping) with their record ids. */
   questions: { groupId: string; txs: { id: string }[] }[];
+  /** The scan's TEE attestation: when the AI step was needed but not verified, the report can never be final. */
+  attestation?: { verified: boolean; aiNeeded: boolean };
 }
 
 export interface StatusResult {
@@ -68,6 +71,13 @@ export function reportStatus(input: StatusInput): StatusResult {
         `${plural(incomplete.length, "swap")} via NEAR Intents ${incomplete.length === 1 ? "has" : "have"} no captured source leg; ` +
         "the cost uses the dollar value received (9.1.2 Step 1(b)) until the source transaction is available.",
       relatedIds: incomplete,
+    });
+  }
+  if (input.attestation?.aiNeeded && !input.attestation.verified) {
+    draftReasons.push({
+      code: "attestation_unverified",
+      message: "The private AI's hardware attestation could not be verified for this scan, so its results cannot be used for a final report. Scan the account again.",
+      relatedIds: [],
     });
   }
   return { status: draftReasons.length ? "draft" : "final", draftReasons, blockingQuestions };

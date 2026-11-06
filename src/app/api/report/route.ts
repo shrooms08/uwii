@@ -2,7 +2,7 @@
  * Stateless tax report endpoint. Own accounts, answers, profile and optional original costs arrive in
  * the request body (they live only in the user's browser) and are never stored or logged.
  */
-import { noStore, parseReportBody, reportRequest } from "@/lib/api/report-body";
+import { noStore, parseReportBody, resolveReportRequest } from "@/lib/api/report-body";
 import { NotScannedError } from "@/lib/tax/ng/cache";
 import { buildReport } from "@/lib/tax/ng/report";
 
@@ -12,8 +12,10 @@ export const maxDuration = 300;
 export async function POST(request: Request) {
   const parsed = await parseReportBody(request);
   if (!parsed.ok) return parsed.response;
+  const resolved = await resolveReportRequest(parsed.body);
+  if (!resolved.ok) return resolved.response;
   try {
-    const { report } = await buildReport(reportRequest(parsed.body));
+    const { report } = await buildReport(resolved.req);
     return Response.json(report, { headers: noStore });
   } catch (e) {
     if (e instanceof NotScannedError) return Response.json({ error: e.message, code: "not_scanned" }, { status: 409, headers: noStore });

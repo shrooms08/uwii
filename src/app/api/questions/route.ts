@@ -5,7 +5,7 @@
 import { z } from "zod";
 import { isValidAccountId } from "@/lib/history/fetch";
 import { NotScannedError, getClassification } from "@/lib/tax/ng/cache";
-import { ReliefsBody } from "@/lib/api/report-body";
+import { ReliefsBody, RunField, RunSigField, resolveRun } from "@/lib/api/report-body";
 import { NGN_RE, runQuestionFlow } from "@/lib/tax/ng/questions";
 
 /** Vercel Hobby (Fluid compute): 300 s default and maximum per invocation. */
@@ -48,6 +48,8 @@ const Body = z
     profile: z.object({ otherIncomeNgn: ngn.optional().or(z.literal("")), reliefs: ReliefsBody.optional() }).default({}),
     /** "fixture": the cached demo result (committed classified fixture, no live AI). */
     classificationSource: z.literal("fixture").optional(),
+    run: RunField,
+    runSig: RunSigField,
   })
   .strict();
 
@@ -63,9 +65,14 @@ export async function POST(request: Request) {
     return Response.json({ error: "body must be JSON" }, { status: 400, headers: noStore });
   }
 
+  // The signed run from the browser, or the committed fixture (cached demo); never the shared cache.
+  const resolved = await resolveRun(body);
+  if (!resolved.ok) return resolved.response;
   try {
-    // Base classification without own accounts (cache -> committed fixture); own accounts are applied by re-running rules.
-    const { run, origin } = await getClassification(body.account, body.from, body.to, { ownAccounts: [], fixtureOnly: body.classificationSource === "fixture", noLive: true });
+    // Base classification without own accounts; own accounts are applied by re-running rules.
+    const { run, origin } = resolved.run
+      ? { run: resolved.run, origin: "signed scan from the browser" }
+      : await getClassification(body.account, body.from, body.to, { ownAccounts: [], fixtureOnly: true });
     const flow = runQuestionFlow(run, { ownAccounts: body.ownAccounts, answers: body.answers });
     const records = flow.records.map((r) => ({
       id: r.id,
