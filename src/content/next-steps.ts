@@ -1,6 +1,6 @@
 /**
  * "What to do next" after a report, shared by the Result and Export pages and the last section of the
- * PDF worksheet. Plain text only (the PDF prints it with standard fonts).
+ * PDF worksheet. Plain text only.
  */
 
 export const NEXT_STEPS_TITLE = "What to do next";

@@ -4,6 +4,7 @@
  */
 import { dec, money2 } from "../money";
 import type { ReportData } from "../tax/ng/report";
+import { lineSections, pairingIdOf, sectionOfLine } from "./sections";
 
 export const LINE_COLUMNS = [
   "date",
@@ -21,6 +22,10 @@ export const LINE_COLUMNS = [
   "ngnValue",
   "method",
   "txHash",
+  /** Line section (income, disposals, gas, not_taxable, excluded); see src/lib/report/sections.ts. */
+  "section",
+  /** Shared by both legs of a swap. */
+  "pairingId",
 ] as const;
 
 const BOM = "﻿";
@@ -55,6 +60,8 @@ export function linesCsv(report: Pick<ReportData, "lines">): string {
         ngn2(l.ngnValue),
         l.method,
         l.txHash,
+        sectionOfLine(l, report.lines),
+        pairingIdOf(l, report.lines) ?? "",
       ]),
     );
   }
@@ -84,5 +91,14 @@ export function summaryCsv(report: ReportData): string {
     ["linesExcluded", String(t.linesExcluded), ""],
     ["warnings", String(report.warnings.length), ""],
   ];
+  for (const sec of lineSections(report)) {
+    rows.push([`section.${sec.id}.lines`, String(sec.lineCount), sec.title]);
+    if (sec.id === "income") rows.push(["section.income.subtotalNgn", ngn2(sec.subtotalNgn), "equals totalVaIncomeNgn"]);
+    if (sec.id === "disposals") rows.push(["section.disposals.netGainNgn", ngn2(sec.subtotalNgn), "disposals and swaps; plus gas net gain = netDisposalGainsNgn"]);
+    if (sec.id === "gas") {
+      rows.push(["section.gas.subtotalNgn", ngn2(sec.subtotalNgn), "equals gasFeesNgn; not deductible (D2)"]);
+      rows.push(["section.gas.netGainNgn", ngn2(sec.gainNgn), "gain/loss on the NEAR spent; part of netDisposalGainsNgn"]);
+    }
+  }
   return BOM + [row(["metric", "value", "note"]), ...rows.map((r) => row(r))].join("\r\n") + "\r\n";
 }

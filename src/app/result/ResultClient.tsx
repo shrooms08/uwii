@@ -2,38 +2,25 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { LineDrawer } from "@/components/report/LineDrawer";
+import { LineSections } from "@/components/report/LineSections";
 import { NextSteps } from "@/components/report/NextSteps";
 import { PrivacyPanel, proofAllVerified, proofCounts } from "@/components/report/PrivacyPanel";
 import { Button, ButtonLink, TextButton } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { Chip, LabelChip, MethodChip } from "@/components/ui/Chip";
+import { Chip } from "@/components/ui/Chip";
 import { cx } from "@/components/ui/cx";
+import { PercentMark } from "@/components/ui/Mark";
 import { Money } from "@/components/ui/Money";
 import { useReport } from "@/lib/client/useReport";
 import { dec } from "@/lib/money";
-import { lineAssetText, lineCategory, lineMethod, lineSign, fmtQtyShort, shortLabel, type LineCategory, type MethodFilter } from "@/lib/report/explain";
-import { fmtDate, fmtNgn, fmtUsd } from "@/lib/report/format";
+import { shortLabel } from "@/lib/report/explain";
+import { fmtNgn } from "@/lib/report/format";
 import { plainWarnings } from "@/lib/report/warnings";
 import { LABELS, type LabelId } from "@/lib/tax/ng/labels";
 import type { ReportLine } from "@/lib/tax/ng/engine";
 import type { ReportData } from "@/lib/tax/ng/report";
 
-const METHOD_TEXT: Record<MethodFilter, string> = { rule: "rule", ai: "private AI", user: "you", needs: "needs you" };
-const CATEGORY_ORDER: LineCategory[] = ["Income", "Purchase", "Disposal", "Swap", "Self transfer", "Gift", "Loan", "Gas", "Opening", "Unresolved", "Other"];
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
-
-function FilterChip({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      aria-pressed={on}
-      onClick={onClick}
-      className={cx("h-[30px] flex-none rounded-full border px-3 text-label whitespace-nowrap", on ? "border-ink bg-ink text-white" : "border-border-strong bg-surface text-ink hover:border-ink")}
-    >
-      {children}
-    </button>
-  );
-}
 
 function StatCard({ label, value, note, wide }: { label: string; value: string; note: string; wide?: boolean }) {
   return (
@@ -47,22 +34,9 @@ function StatCard({ label, value, note, wide }: { label: string; value: string; 
   );
 }
 
-/** Decorative seal for the final hero card (the uwii mark, drawn large and faint). */
-function Seal() {
-  const dots = Array.from({ length: 12 }, (_, i) => {
-    const a = (i * Math.PI) / 6;
-    return [170 + 145 * Math.cos(a), 170 + 145 * Math.sin(a)];
-  });
-  return (
-    <svg aria-hidden="true" viewBox="0 0 340 340" className="pointer-events-none absolute right-[-12%] bottom-[-22%] w-[clamp(220px,52%,340px)] opacity-[0.09]">
-      <g fill="#fff">
-        <circle cx="170" cy="170" r="145" />
-        {dots.map(([x, y]) => (
-          <circle key={`${x.toFixed(1)}-${y.toFixed(1)}`} cx={x} cy={y} r="25" />
-        ))}
-      </g>
-    </svg>
-  );
+/** Faint "%" mark on the final hero card (decorative). */
+function HeroMark() {
+  return <PercentMark size="100%" className="pointer-events-none absolute right-[-6%] bottom-[-14%] aspect-square h-auto w-[clamp(200px,44%,300px)] text-white opacity-[0.08]" />;
 }
 
 function incomeNote(r: ReportData): string {
@@ -81,8 +55,6 @@ function gainsNote(r: ReportData): string {
 
 export default function ResultClient({ account }: { account: string }) {
   const { report, flow, error, retry } = useReport(account);
-  const [fLabel, setFLabel] = useState<LineCategory | "All">("All");
-  const [fMethod, setFMethod] = useState<MethodFilter | "All">("All");
   const [openLine, setOpenLine] = useState<ReportLine | null>(null);
   const [proofOpen, setProofOpen] = useState(false);
   const [warnOpen, setWarnOpen] = useState(false);
@@ -90,8 +62,6 @@ export default function ResultClient({ account }: { account: string }) {
   const closeProof = useCallback(() => setProofOpen(false), []);
 
   const warnings = useMemo(() => (report ? plainWarnings(report) : []), [report]);
-  const categories = useMemo(() => (report ? CATEGORY_ORDER.filter((c) => report.lines.some((l) => lineCategory(l) === c)) : []), [report]);
-  const methods = useMemo(() => (report ? (["rule", "ai", "user", "needs"] as MethodFilter[]).filter((m) => report.lines.some((l) => lineMethod(l) === m)) : []), [report]);
 
   if (error && !report) {
     return (
@@ -118,7 +88,6 @@ export default function ResultClient({ account }: { account: string }) {
   const verified = proofAllVerified(proof);
   const counts = proofCounts(proof);
   const proofSummary = proof.aiDecisions === 0 ? "rules only" : `${counts ? `${counts.passed}/${counts.total} checks` : "checks not recorded"} · ${proof.aiResponsesVerified}/${proof.aiResponses} signatures`;
-  const shown = r.lines.filter((l) => (fLabel === "All" || lineCategory(l) === fLabel) && (fMethod === "All" || lineMethod(l) === fMethod));
   const q = (path: string) => `${path}?account=${encodeURIComponent(account)}`;
   const firstLineFor = (recordId: string) => r.lines.find((l) => l.recordId === recordId && l.kind !== "gas_fee") ?? r.lines.find((l) => l.recordId === recordId) ?? null;
   const subline = r.tax.basis === "marginal_over_other_income" && r.tax.otherIncomeNgn ? (
@@ -189,7 +158,7 @@ export default function ResultClient({ account }: { account: string }) {
           </section>
         ) : (
           <section aria-label="Tax result" className="relative flex min-h-[340px] flex-col justify-between gap-9 overflow-hidden rounded-hero bg-ink p-[clamp(24px,2.6cqi,36px)] text-white">
-            <Seal />
+            <HeroMark />
             <div className="relative flex flex-wrap items-start justify-between gap-3">
               <span className="max-w-[260px] text-ui leading-[1.4] text-onink">Tax attributable to your crypto, {r.year}</span>
               <span className="flex flex-wrap gap-1.5">
@@ -230,117 +199,7 @@ export default function ResultClient({ account }: { account: string }) {
         <NextSteps isDraft={isDraft} account={account} />
       </div>
 
-      <Card aria-labelledby="lines-h" className="mt-4 overflow-hidden">
-        <div className="flex flex-wrap items-center justify-between gap-3.5 px-[clamp(16px,2cqi,24px)] py-5">
-          <h2 id="lines-h" className="text-lg font-semibold tracking-[-0.01em]">
-            All lines{" "}
-            <span className="font-mono text-small font-normal text-ink-2">
-              {shown.length} of {r.lines.length}
-            </span>
-          </h2>
-          <div className="flex flex-wrap gap-x-5 gap-y-3">
-            <div role="group" aria-label="Filter by label" className="flex flex-wrap items-center gap-1">
-              <span className="mr-1 text-caption text-ink-2">Label</span>
-              {(["All", ...categories] as const).map((c) => (
-                <FilterChip key={c} on={fLabel === c} onClick={() => setFLabel(c)}>
-                  {c}
-                </FilterChip>
-              ))}
-            </div>
-            <div role="group" aria-label="Filter by method" className="flex flex-wrap items-center gap-1">
-              <span className="mr-1 text-caption text-ink-2">Method</span>
-              {(["All", ...methods] as const).map((m) => (
-                <FilterChip key={m} on={fMethod === m} onClick={() => setFMethod(m)}>
-                  {m === "All" ? "All" : METHOD_TEXT[m]}
-                </FilterChip>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="hidden overflow-x-auto @min-[760px]:block">
-          <table className="w-full min-w-[1100px] border-collapse text-left text-small" aria-labelledby="lines-h">
-            <thead>
-              <tr className="border-y border-line bg-panel text-caption text-ink-2">
-                <th scope="col" className="py-2.5 pr-3 pl-[clamp(16px,2cqi,24px)] font-normal">Date</th>
-                <th scope="col" className="px-3 font-normal">Label</th>
-                <th scope="col" className="px-3 font-normal">Asset</th>
-                <th scope="col" className="px-3 text-right font-normal">Quantity</th>
-                <th scope="col" className="px-3 text-right font-normal">USD</th>
-                <th scope="col" className="px-3 text-right font-normal">NFEM rate</th>
-                <th scope="col" className="px-3 text-right font-normal">NGN value</th>
-                <th scope="col" className="px-3 font-normal">Circular ref</th>
-                <th scope="col" className="pr-[clamp(16px,2cqi,24px)] pl-3 font-normal">Method</th>
-              </tr>
-            </thead>
-            <tbody>
-              {shown.map((l, i) => (
-                <tr key={`${l.recordId}-${l.kind}-${l.asset}-${l.timestamp}-${i}`} className={cx("relative border-b border-line hover:bg-muted", openLine === l && "bg-page")}>
-                  <td className="py-3 pr-3 pl-[clamp(16px,2cqi,24px)] font-mono text-label whitespace-nowrap text-ink-soft">
-                    <button type="button" onClick={() => setOpenLine(l)} className="text-left after:absolute after:inset-0 after:content-['']" aria-label={`${shortLabel(l.label)}, ${l.asset}, ${fmtDate(l.timestamp)}: open line detail`}>
-                      {fmtDate(l.timestamp)}
-                    </button>
-                  </td>
-                  <td className="px-3">
-                    <LabelChip>{shortLabel(l.label)}</LabelChip>
-                  </td>
-                  <td className="px-3 font-medium">{lineAssetText(l, r.lines)}</td>
-                  <td className="px-3 text-right font-mono text-label tabular-nums">
-                    {lineSign(l)}
-                    {fmtQtyShort(l.qty, false)}
-                  </td>
-                  <td className="px-3 text-right font-mono text-label tabular-nums">{l.usdValue ? `$${fmtUsd(l.usdValue)}` : l.priceStatus === "no_verifiable_price" ? "no price" : "–"}</td>
-                  <td className="px-3 text-right font-mono text-label text-ink-2 tabular-nums">
-                    {l.nafemRate ? fmtNgn(l.nafemRate) : "–"}
-                    {l.rateFallback && <span title="Prior published rate (no rate on this date)">*</span>}
-                  </td>
-                  <td className="px-3 text-right font-mono text-label font-medium tabular-nums">{l.ngnValue ? `₦${fmtNgn(l.ngnValue)}` : "–"}</td>
-                  <td className="max-w-[260px] px-3 font-mono text-caption leading-[1.35] text-ink-soft">{l.circularRef}</td>
-                  <td className="pr-[clamp(16px,2cqi,24px)] pl-3">
-                    <MethodChip method={lineMethod(l)} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <ul className="border-t border-line @min-[760px]:hidden">
-          {shown.map((l, i) => (
-            <li key={`${l.recordId}-${l.kind}-${l.asset}-${l.timestamp}-${i}`} className="border-b border-line">
-              <button
-                type="button"
-                onClick={() => setOpenLine(l)}
-                aria-label={`${shortLabel(l.label)}, ${l.asset}, ${fmtDate(l.timestamp)}: open line detail`}
-                className="flex w-full flex-col gap-2 px-4 py-3.5 text-left hover:bg-muted"
-              >
-                <span className="flex items-center justify-between gap-2">
-                  <LabelChip>{shortLabel(l.label)}</LabelChip>
-                  <span className="font-mono text-caption text-ink-2">{fmtDate(l.timestamp)}</span>
-                </span>
-                <span className="flex items-baseline justify-between gap-2">
-                  <span className="text-ui font-medium">
-                    {lineAssetText(l, r.lines)}{" "}
-                    <span className="font-mono text-label font-normal text-ink-2">
-                      {lineSign(l)}
-                      {fmtQtyShort(l.qty, false)}
-                    </span>
-                  </span>
-                  <span className="font-mono text-small font-medium">{l.ngnValue ? `₦${fmtNgn(l.ngnValue)}` : "–"}</span>
-                </span>
-                <span className="flex items-center justify-between gap-2">
-                  <span className="truncate font-mono text-[11px] text-ink-2">{l.circularRef}</span>
-                  <MethodChip method={lineMethod(l)} className="h-[22px] flex-none px-[9px] text-[11px]" />
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
-        <div className="flex flex-wrap justify-between gap-2 px-[clamp(16px,2cqi,24px)] py-3.5 text-label text-ink-2">
-          <span>Select any line to see how it was worked out.</span>
-          {r.lines.some((l) => l.rateFallback) && <span>* prior published NFEM rate (no rate on that date)</span>}
-        </div>
-      </Card>
+      <LineSections lines={r.lines} openLine={openLine} onOpen={setOpenLine} />
 
       <Card className="mt-4 overflow-hidden">
         <button

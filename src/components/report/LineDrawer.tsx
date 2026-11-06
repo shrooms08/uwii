@@ -8,6 +8,7 @@ import { cx } from "@/components/ui/cx";
 import { Money } from "@/components/ui/Money";
 import { useModal } from "@/components/ui/useModal";
 import { lineMethod, lineTitle, plainExplanation, shortLabel, swapCounterpart, treatment } from "@/lib/report/explain";
+import { pairingIdOf, splitRef } from "@/lib/report/sections";
 import { fmtDate, fmtNgn, fmtPrice, fmtQty, fmtUsd } from "@/lib/report/format";
 import type { ReportLine } from "@/lib/tax/ng/engine";
 import type { ReportData } from "@/lib/tax/ng/report";
@@ -45,6 +46,9 @@ export function LineDrawer({ line, report, onClose }: { line: ReportLine; report
   const ai = line.recordId ? report.privacyProof.aiEvidence?.find((e) => e.recordId === line.recordId) : undefined;
   const lineWarnings = line.recordId ? report.warnings.filter((w) => w.recordId === line.recordId) : [];
   const other = swapCounterpart(line, report.lines);
+  const pairingId = pairingIdOf(line, report.lines);
+  const swapLegs = pairingId ? report.lines.filter((l) => pairingIdOf(l, report.lines) === pairingId) : [];
+  const ref = splitRef(line.circularRef);
 
   let priceText: string | null;
   let sourceText: string | null;
@@ -113,10 +117,38 @@ export function LineDrawer({ line, report, onClose }: { line: ReportLine; report
         </div>
         <div className="flex flex-col gap-2 rounded-tile bg-muted p-[18px]">
           <span className="text-caption text-ink-2">NRS Circular 2026/21</span>
-          <span className="font-mono text-small font-medium">{line.circularRef}</span>
+          <span className="flex flex-wrap items-center gap-2">
+            <span className="font-mono text-small font-medium">{ref.ref}</span>
+            {ref.decision && ref.decision !== ref.ref && (
+              <span className="inline-flex h-5 items-center rounded-full border border-rule bg-surface px-2 font-mono text-caption text-ink-2">Decision {ref.decision}</span>
+            )}
+          </span>
+          {ref.note && <span className="text-label text-ink-2">{ref.decision ? `${ref.decision}: ` : ""}{ref.note}</span>}
           <p className="text-ui leading-normal text-pretty">{plainExplanation(line)}</p>
           {tech && <p className="text-label leading-normal text-ink-2">Rule: {tech}</p>}
         </div>
+
+        {swapLegs.length > 1 && (
+          <section aria-labelledby="line-legs" className="flex flex-col gap-2">
+            <h3 id="line-legs" className="text-small font-semibold">
+              Both legs of this swap
+            </h3>
+            <ul className="flex flex-col gap-1.5">
+              {swapLegs.map((l, i) => (
+                <li key={`${l.label}-${i}`} className={cx("flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 rounded-inset px-3.5 py-2.5", l === line ? "bg-chip" : "bg-muted")}>
+                  <span className="text-small">
+                    {l.label === "disposal_swap" ? "Gave up" : "Received"} <span className="font-mono">{fmtQty(l.qty)} {l.asset}</span>
+                  </span>
+                  <span className="font-mono text-caption text-ink-2">
+                    {l.label === "disposal_swap"
+                      ? `proceeds ${usd(l.proceedsUsd) ?? "–"} · cost ${usd(l.costUsd) ?? "–"} · gain ${usd(l.gainUsd) ?? "–"}`
+                      : `value ${usd(l.usdValue) ?? "–"} · cost base ${usd(l.costUsd) ?? "–"}`}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         <Facts rows={facts} />
 
