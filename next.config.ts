@@ -11,7 +11,42 @@ function buildSha(): string {
   }
 }
 
+/**
+ * Content Security Policy (production only: next dev needs eval for hot reload). Everything the browser
+ * loads is same-origin: next/font self-hosts the fonts, the PDF fonts are under /pdf-fonts, and NEAR AI,
+ * NearBlocks, CoinGecko and NEAR RPC are called only from the server. 'unsafe-inline' for scripts is
+ * needed by Next's inline bootstrap and RSC payload: a nonce would force every page to render
+ * dynamically, losing the static shells. No third-party origin is allowed anywhere.
+ */
+const CSP = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob:",
+  "font-src 'self'",
+  "connect-src 'self'",
+  "worker-src 'self' blob:",
+  "frame-src 'none'",
+  "frame-ancestors 'none'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+].join("; ");
+
+const SECURITY_HEADERS = [
+  ...(process.env.NODE_ENV === "production" ? [{ key: "Content-Security-Policy", value: CSP }] : []),
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()" },
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+];
+
 const nextConfig: NextConfig = {
+  poweredByHeader: false,
+  async headers() {
+    return [{ source: "/:path*", headers: SECURITY_HEADERS }];
+  },
   cacheComponents: true,
   partialPrefetching: true,
   env: { UWII_BUILD_SHA: buildSha() },
