@@ -2,6 +2,9 @@
 import type { NextRequest } from "next/server";
 import { handleVerify } from "@/lib/api/anchor-handlers";
 
+/** Read-only lookup (one view call, then at most one block and its chunks, 20 s per RPC call). Hobby allows up to 300 s. */
+export const maxDuration = 60;
+
 export function GET(request: NextRequest) {
   return handleVerify(request.nextUrl.searchParams.get("fingerprint"));
 }

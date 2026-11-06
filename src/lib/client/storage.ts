@@ -91,3 +91,37 @@ export function storeAnchor(anchor: StoredAnchor): void {
     // storage unavailable
   }
 }
+
+/**
+ * "Cached demo result" mode for an account: the committed classified fixture is used instead of a live
+ * scan (set when the hosted demo is busy). Cleared when a live scan completes.
+ */
+export interface CachedSource {
+  source: "fixture";
+  /** Attestation time recorded in the committed run. */
+  recordedAt: string;
+}
+
+const sourceKey = (account: string) => `uwii:source:${account}`;
+export const SOURCE_EVENT = "uwii:source-change";
+
+export function loadSource(account: string): CachedSource | null {
+  try {
+    if (typeof window === "undefined") return null;
+    const raw = window.localStorage.getItem(sourceKey(account));
+    const v = raw ? (JSON.parse(raw) as CachedSource) : null;
+    return v && v.source === "fixture" ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setSource(account: string, value: CachedSource | null): void {
+  try {
+    if (value) window.localStorage.setItem(sourceKey(account), JSON.stringify(value));
+    else window.localStorage.removeItem(sourceKey(account));
+  } catch {
+    // storage unavailable
+  }
+  window.dispatchEvent(new CustomEvent(SOURCE_EVENT, { detail: { account } }));
+}

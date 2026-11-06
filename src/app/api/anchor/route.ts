@@ -4,6 +4,7 @@
  */
 import { handleAnchor } from "@/lib/api/anchor-handlers";
 
+/** Vercel Hobby (Fluid compute): 300 s default and maximum per invocation. */
 export const maxDuration = 300;
 
 export function POST(request: Request) {

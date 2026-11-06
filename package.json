@@ -2,6 +2,9 @@
   "name": "uwii",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -10,7 +13,7 @@
     "check:attestation": "tsx --env-file-if-exists=.env.local scripts/check-attestation.ts",
     "fetch:history": "tsx scripts/fetch-history.ts",
     "classify": "tsx --env-file-if-exists=.env.local scripts/classify-history.ts",
-    "test": "tsx --test src/lib/tax/ng/*.test.ts src/lib/report/*.test.ts src/lib/scan/*.test.ts src/lib/near/*.test.ts",
+    "test": "tsx --test src/lib/tax/ng/*.test.ts src/lib/report/*.test.ts src/lib/scan/*.test.ts src/lib/near/*.test.ts src/lib/server/*.test.ts",
     "fetch:fx": "tsx scripts/fetch-cbn-nafem.ts",
     "report": "tsx --env-file-if-exists=.env.local scripts/report.ts",
     "deploy:anchor": "tsx --env-file-if-exists=.env.local scripts/deploy-anchor.ts"

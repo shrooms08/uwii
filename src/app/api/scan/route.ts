@@ -2,42 +2,56 @@
  * Live scan: runs the existing pipeline (history -> NRS rules -> TEE-attested AI classification with
  * per-response signature verification) and streams its real progress as Server-Sent Events.
  *
+ * Hosted-demo protection: per-IP scan limit, a global daily AI-call cap (checked before any AI call
+ * from the rule pre-pass), and a time budget below the platform limit with an honest message.
+ * { source: "cached" } replays the committed classified fixture instead (no live calls, no limits).
+ *
  * The classified run is written to the same cache /api/questions and /api/report read. Own accounts
- * arrive in the request body (they live only in the browser), are used only to count the questions
- * left, and are never stored or logged. Nothing in this route logs.
+ * arrive in the request body, are used only to count the questions left, and are never stored or
+ * logged. Nothing in this route logs.
  */
 import { z } from "zod";
 import { getHistory } from "@/lib/history/cache";
-import { writeJson } from "@/lib/history/paths";
+import { ON_VERCEL, writeJson } from "@/lib/history/paths";
 import { isValidAccountId } from "@/lib/near/account-id";
-import { FetchProgressTracker, sseEncode, type ScanEvent } from "@/lib/scan/events";
-import { classifiedCachePath } from "@/lib/tax/ng/cache";
-import { classifyHistory } from "@/lib/tax/ng/classify";
+import { cachedScanEvents } from "@/lib/scan/cached";
+import { FetchProgressTracker, OUT_OF_TIME_MESSAGE, TOO_LARGE_MESSAGE, sseEncode, type ScanEvent } from "@/lib/scan/events";
+import { BUSY_MESSAGE, DailyCap, clientKey, envInt, limitState, tooManyRequests } from "@/lib/server/limits";
+import { classifiedCachePath, getClassification } from "@/lib/tax/ng/cache";
+import { BATCH_SIZE, classifyHistory } from "@/lib/tax/ng/classify";
 import { runQuestionFlow } from "@/lib/tax/ng/questions";
+import { applyRules } from "@/lib/tax/ng/rules";
 
+/** Vercel Hobby (Fluid compute): 300 s default and maximum per invocation, streamed responses included. */
 export const maxDuration = 300;
 
 const FROM = "2026-01-01";
 const TO = "2026-12-31";
 const HEARTBEAT_MS = 15_000;
+/** Stop this long before maxDuration so the client gets an honest message instead of a cut stream. */
+const SAFETY_MARGIN_MS = 20_000;
+
 
 const accountId = z.string().trim().toLowerCase().refine(isValidAccountId, "invalid NEAR account id");
-const Body = z.object({ account: accountId, ownAccounts: z.array(accountId).max(50).default([]) }).strict();
+const Body = z
+  .object({
+    account: accountId,
+    ownAccounts: z.array(accountId).max(50).default([]),
+    source: z.enum(["live", "cached"]).default("live"),
+  })
+  .strict();
 
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
-export async function POST(request: Request) {
-  let body: z.infer<typeof Body>;
-  try {
-    const parsed = Body.safeParse(await request.json());
-    if (!parsed.success) return Response.json({ error: z.prettifyError(parsed.error) }, { status: 400, headers: { "cache-control": "no-store" } });
-    body = parsed.data;
-  } catch {
-    return Response.json({ error: "body must be JSON" }, { status: 400, headers: { "cache-control": "no-store" } });
-  }
-  const { account, ownAccounts } = body;
-  const encoder = new TextEncoder();
+/** Time budget for one scan: SCAN_TIME_BUDGET_MS, else maxDuration minus a margin on Vercel, else none. */
+function timeBudgetMs(): number | null {
+  const fromEnv = envInt("SCAN_TIME_BUDGET_MS", 0);
+  if (fromEnv > 0) return fromEnv;
+  return ON_VERCEL ? maxDuration * 1000 - SAFETY_MARGIN_MS : null;
+}
 
+function sseResponse(run: (send: (e: ScanEvent) => void, isOpen: () => boolean, close: () => void) => Promise<void>, request: Request): Response {
+  const encoder = new TextEncoder();
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       let open = true;
@@ -49,62 +63,27 @@ export async function POST(request: Request) {
           open = false; // client went away; the pipeline still finishes and caches its result
         }
       };
-      const send = (e: ScanEvent) => write(sseEncode(e));
+      const close = () => {
+        if (!open) return;
+        open = false;
+        try {
+          controller.close();
+        } catch {
+          // already closed
+        }
+      };
       const heartbeat = setInterval(() => write(": keep-alive\n\n"), HEARTBEAT_MS);
       request.signal.addEventListener("abort", () => {
         open = false;
       });
-
-      let stage: "history" | "classification" = "history";
       try {
-        send({ type: "start", account, from: FROM, to: TO });
-
-        // History: cache -> committed fixture -> live NearBlocks fetch (progress only fires when live).
-        const tracker = new FetchProgressTracker();
-        let announcedLive = false;
-        const history = await getHistory(account, FROM, TO, {
-          onProgress: (message) => {
-            if (!announcedLive) {
-              announcedLive = true;
-              send({ type: "history_live" });
-            }
-            const rows = tracker.push(message);
-            if (rows !== null) send({ type: "history_progress", rowsRead: rows });
-          },
-        });
-        send({ type: "history", count: history.result.records.length, origin: history.origin, fetchedAt: history.result.fetchedAt });
-
-        // Classification: base run without own accounts (the cache key /api/questions and /api/report use).
-        stage = "classification";
-        const run = await classifyHistory(history.result, { ownAccounts: [], onEvent: send });
-        await writeJson(classifiedCachePath(account, FROM, TO), run);
-
-        const flow = runQuestionFlow(run, { ownAccounts, answers: { groups: {} } });
-        send({
-          type: "done",
-          questions: flow.questions.length,
-          needsYou: flow.questions.reduce((n, q) => n + q.txs.length, 0),
-          total: run.records.length,
-          attestationVerified: run.attestation.verified,
-          aiResponses: run.metrics.aiResponses,
-          aiResponsesVerified: run.metrics.aiResponsesVerified,
-        });
-      } catch (e) {
-        send({ type: "error", stage, message: errMsg(e) });
+        await run((e) => write(sseEncode(e)), () => open, close);
       } finally {
         clearInterval(heartbeat);
-        if (open) {
-          open = false;
-          try {
-            controller.close();
-          } catch {
-            // already closed
-          }
-        }
+        close();
       }
     },
   });
-
   return new Response(stream, {
     headers: {
       "content-type": "text/event-stream; charset=utf-8",
@@ -113,4 +92,111 @@ export async function POST(request: Request) {
       "x-accel-buffering": "no",
     },
   });
+}
+
+export async function POST(request: Request) {
+  let body: z.infer<typeof Body>;
+  try {
+    const parsed = Body.safeParse(await request.json());
+    if (!parsed.success) return Response.json({ error: z.prettifyError(parsed.error) }, { status: 400, headers: { "cache-control": "no-store" } });
+    body = parsed.data;
+  } catch {
+    return Response.json({ error: "body must be JSON" }, { status: 400, headers: { "cache-control": "no-store" } });
+  }
+  const { account, ownAccounts } = body;
+
+  // ---- cached demo result: the committed classified fixture, replayed (no AI, no network) ----
+  if (body.source === "cached") {
+    let events: ScanEvent[];
+    try {
+      const { run } = await getClassification(account, FROM, TO, { ownAccounts: [], fixtureOnly: true });
+      const flow = runQuestionFlow(run, { ownAccounts, answers: { groups: {} } });
+      events = cachedScanEvents(run, { questions: flow.questions.length, needsYou: flow.questions.reduce((n, q) => n + q.txs.length, 0) });
+    } catch (e) {
+      return Response.json({ error: errMsg(e) }, { status: 404, headers: { "cache-control": "no-store" } });
+    }
+    return sseResponse(async (send) => {
+      for (const e of events) send(e);
+    }, request);
+  }
+
+  // ---- limits (best-effort, in memory) ----
+  const limits = limitState();
+  if (limits.aiCallsDaily.remaining() < 1) return tooManyRequests("daily_cap", DailyCap.secondsToReset());
+  const perIp = limits.scanPerIp.hit(clientKey(request));
+  if (!perIp.ok) return tooManyRequests("rate_limited", perIp.retryAfterSec);
+
+  const budget = timeBudgetMs();
+  return sseResponse(async (send, isOpen, close) => {
+    let stage: "history" | "classification" = "history";
+    let reserved = 0;
+    let aiResponses = 0;
+    let finished = false;
+    const deadline = budget
+      ? setTimeout(() => {
+          if (finished) return;
+          send({ type: "error", stage, code: "timeout", message: stage === "history" ? TOO_LARGE_MESSAGE : OUT_OF_TIME_MESSAGE });
+          close();
+        }, budget)
+      : null;
+    try {
+      send({ type: "start", account, from: FROM, to: TO });
+
+      // History: cache -> committed fixture -> live NearBlocks fetch (progress only fires when live).
+      const tracker = new FetchProgressTracker();
+      let announcedLive = false;
+      const history = await getHistory(account, FROM, TO, {
+        onProgress: (message) => {
+          if (!announcedLive) {
+            announcedLive = true;
+            send({ type: "history_live" });
+          }
+          const rows = tracker.push(message);
+          if (rows !== null) send({ type: "history_progress", rowsRead: rows });
+        },
+      });
+      if (!isOpen()) return;
+      send({ type: "history", count: history.result.records.length, origin: history.origin, fetchedAt: history.result.fetchedAt });
+
+      // Daily AI budget: the deterministic rule pre-pass tells how many records (and so AI batches) remain.
+      stage = "classification";
+      const matched = applyRules(history.result.records, { accountId: history.result.accountId, ownAccounts: [] });
+      const pending = history.result.records.length - matched.size;
+      const batches = Math.ceil(pending / BATCH_SIZE);
+      if (batches > limits.aiCallsDaily.remaining()) {
+        send({ type: "error", stage, code: "busy", message: BUSY_MESSAGE });
+        return;
+      }
+      reserved = batches;
+      limits.aiCallsDaily.add(reserved);
+
+      // Classification: base run without own accounts (the cache key /api/questions and /api/report use).
+      const run = await classifyHistory(history.result, {
+        ownAccounts: [],
+        onEvent: (e) => {
+          if (e.type === "ai_response") aiResponses++;
+          send(e);
+        },
+      });
+      await writeJson(classifiedCachePath(account, FROM, TO), run);
+
+      const flow = runQuestionFlow(run, { ownAccounts, answers: { groups: {} } });
+      send({
+        type: "done",
+        questions: flow.questions.length,
+        needsYou: flow.questions.reduce((n, q) => n + q.txs.length, 0),
+        total: run.records.length,
+        attestationVerified: run.attestation.verified,
+        aiResponses: run.metrics.aiResponses,
+        aiResponsesVerified: run.metrics.aiResponsesVerified,
+      });
+    } catch (e) {
+      send({ type: "error", stage, message: errMsg(e) });
+    } finally {
+      finished = true;
+      if (deadline) clearTimeout(deadline);
+      // Settle the reservation to the AI requests actually made (retries included).
+      if (reserved) limits.aiCallsDaily.add(aiResponses - reserved);
+    }
+  }, request);
 }

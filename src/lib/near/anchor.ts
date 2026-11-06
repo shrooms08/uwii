@@ -212,10 +212,17 @@ export async function verifyFingerprint(client: AnchorClient, cfg: AnchorConfig,
  * Anchor a final report's fingerprint. Returns the existing anchor when the fingerprint is already
  * on-chain (including when a concurrent request anchored it first).
  */
-export async function anchorFingerprint(client: AnchorClient, cfg: AnchorConfig, fingerprint: string): Promise<{ anchor: AnchorInfo; alreadyAnchored: boolean }> {
+export async function anchorFingerprint(
+  client: AnchorClient,
+  cfg: AnchorConfig,
+  fingerprint: string,
+  /** Runs only when a new transaction is about to be sent (limits); throw to stop it. */
+  beforeSend?: () => void,
+): Promise<{ anchor: AnchorInfo; alreadyAnchored: boolean }> {
   const args = anchorArgs(fingerprint);
   const existing = await verifyFingerprint(client, cfg, fingerprint);
   if (existing.anchored) return { anchor: existing.anchor, alreadyAnchored: true };
+  beforeSend?.();
   try {
     const { txHash, result } = await client.call("anchor", args);
     return { anchor: toInfo(cfg, result as ContractAnchor, txHash), alreadyAnchored: false };

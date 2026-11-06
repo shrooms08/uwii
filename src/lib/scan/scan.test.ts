@@ -121,3 +121,11 @@ test("a pipeline error marks the step in progress as failed", () => {
   assert.equal(s[0].detail, "40 rows");
   assert.match(s[0].text, /NearBlocks free tier/);
 });
+
+test("a hosted-demo limit (busy) marks no step as failed", () => {
+  const v = fold([
+    { type: "start", account: "a.near", from: "2026-01-01", to: "2026-12-31" },
+    { type: "error", stage: "input", code: "daily_cap", message: "The hosted demo is busy." },
+  ]);
+  assert.ok(scanSteps(v).every((s) => s.state !== "failed"));
+});

@@ -41,6 +41,8 @@ export const ReportBody = z
       .default({ groups: {} }),
     profile: z.object({ otherIncomeNgn: ngn.optional().or(z.literal("")) }).default({}),
     originalCostUsd: z.record(z.string().max(100), usd).optional(),
+    /** "fixture": the cached demo result (committed classified fixture, no live AI). */
+    classificationSource: z.literal("fixture").optional(),
   })
   .strict();
 
@@ -66,5 +68,8 @@ export function reportRequest(body: ReportBodyInput): ReportRequest {
     answers: body.answers,
     profile: { otherIncomeNgn: body.profile.otherIncomeNgn || null },
     originalCostUsd: body.originalCostUsd,
+    classificationSource: body.classificationSource,
+    // Live AI classification only runs through the rate-limited /api/scan.
+    noLiveClassification: true,
   };
 }

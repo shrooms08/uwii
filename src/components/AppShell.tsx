@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { cx } from "./ui/cx";
+import { CachedLabel } from "./CachedLabel";
 import { DemoLabel } from "./DemoLabel";
 import { Wordmark } from "./ui/Mark";
 import { StepBar, StepNav, type StepId } from "./ui/StepNav";
@@ -34,7 +35,12 @@ export function AppShell({ step, account, children, mainClassName, landing }: { 
           )}
         </header>
         {step && step !== "scan" && <StepBar current={step} />}
-        {account && <DemoLabel account={account} />}
+        {account && (
+          <div className="flex flex-wrap gap-2 empty:hidden">
+            <DemoLabel account={account} />
+            <CachedLabel account={account} />
+          </div>
+        )}
         <main className={cx("flex flex-1 flex-col", mainClassName)}>{children}</main>
         <footer className="mt-12 flex flex-wrap justify-between gap-3 border-t border-rule pt-[22px] pb-7 text-label text-ink-2">
           <span data-testid="attribution">

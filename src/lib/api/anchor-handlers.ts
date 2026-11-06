@@ -4,6 +4,8 @@
  * Nothing here logs.
  */
 import { FINGERPRINT_RE, anchorConfig, anchorFingerprint, nearAnchorClient, verifyFingerprint, type AnchorClient, type AnchorConfig, type AnchorInfo } from "@/lib/near/anchor";
+import { DailyCap, clientKey, limitState, tooManyRequests } from "@/lib/server/limits";
+import { NotScannedError } from "@/lib/tax/ng/cache";
 import { buildReport, type ReportData, type ReportRequest } from "@/lib/tax/ng/report";
 import { noStore, parseReportBody, reportRequest } from "./report-body";
 
@@ -21,6 +23,18 @@ export interface AnchorResponse extends AnchorInfo {
 
 const fail = (status: number, error: string, extra: Record<string, unknown> = {}) => Response.json({ error, ...extra }, { status, headers: noStore });
 
+/** A hosted-demo limit stopped a new anchor transaction. */
+class LimitHit extends Error {
+  constructor(
+    readonly code: "rate_limited" | "daily_cap",
+    readonly retryAfterSec: number,
+  ) {
+    super(code);
+  }
+}
+
+const ANCHOR_BUSY = "The hosted demo has reached its anchoring limit. Try again later; your report and fingerprint are unaffected.";
+
 export async function handleAnchor(request: Request, deps: AnchorDeps = defaultDeps): Promise<Response> {
   const parsed = await parseReportBody(request);
   if (!parsed.ok) return parsed.response;
@@ -28,6 +42,7 @@ export async function handleAnchor(request: Request, deps: AnchorDeps = defaultD
   try {
     report = (await deps.build(reportRequest(parsed.body))).report;
   } catch (e) {
+    if (e instanceof NotScannedError) return fail(409, e.message, { code: "not_scanned" });
     return fail(500, `report failed: ${e instanceof Error ? e.message : String(e)}`);
   }
   if (report.status !== "final") {
@@ -41,10 +56,18 @@ export async function handleAnchor(request: Request, deps: AnchorDeps = defaultD
   }
   if (!cfg || !cfg.accountId || !cfg.privateKey) return fail(503, "Anchoring is not configured on this server.");
   try {
-    const { anchor, alreadyAnchored } = await anchorFingerprint(deps.client(cfg), cfg, report.fingerprint);
+    const limits = limitState();
+    const key = clientKey(request);
+    const { anchor, alreadyAnchored } = await anchorFingerprint(deps.client(cfg), cfg, report.fingerprint, () => {
+      if (limits.anchorsDaily.remaining() < 1) throw new LimitHit("daily_cap", DailyCap.secondsToReset());
+      const r = limits.anchorPerIp.hit(key);
+      if (!r.ok) throw new LimitHit("rate_limited", r.retryAfterSec);
+      limits.anchorsDaily.add(1);
+    });
     const body: AnchorResponse = { ...anchor, alreadyAnchored };
     return Response.json(body, { headers: noStore });
   } catch (e) {
+    if (e instanceof LimitHit) return tooManyRequests(e.code, e.retryAfterSec, ANCHOR_BUSY);
     return fail(502, `anchoring failed: ${e instanceof Error ? e.message : String(e)}`);
   }
 }

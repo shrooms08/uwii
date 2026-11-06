@@ -20,6 +20,17 @@ export interface GetClassificationOptions extends ClassifyOptions {
   refresh?: boolean;
   /** Never use fixtures (history or classified). */
   live?: boolean;
+  /** Only the committed classified fixture (the cached demo result): no cache, no live classification. */
+  fixtureOnly?: boolean;
+  /** Never classify live here (API routes: live AI only runs through the rate-limited /api/scan). */
+  noLive?: boolean;
+}
+
+/** Thrown when an account has no cached or committed classification and live classification is not allowed. */
+export class NotScannedError extends Error {
+  constructor(accountId: string) {
+    super(`${accountId} has not been scanned yet. Start a scan first.`);
+  }
 }
 
 export type ClassificationOrigin = "cache" | "fixture" | "live";
@@ -44,6 +55,12 @@ export async function getClassification(
 ): Promise<{ run: ClassifiedRun; origin: ClassificationOrigin; file: string }> {
   const own = normOwn(options.ownAccounts);
   const file = classifiedCachePath(accountId, from, to);
+  if (options.fixtureOnly) {
+    const fx = classifiedFixturePath(accountId, from, to);
+    const fixture = fx ? await readRun(fx, own) : null;
+    if (!fixture || !fx) throw new Error(`No committed classified fixture for ${accountId}`);
+    return { run: fixture, origin: "fixture", file: fx };
+  }
   if (!options.refresh) {
     const cached = await readRun(file, own);
     if (cached) return { run: cached, origin: "cache", file };
@@ -53,6 +70,7 @@ export async function getClassification(
       if (fixture) return { run: fixture, origin: "fixture", file: fx };
     }
   }
+  if (options.noLive) throw new NotScannedError(accountId);
   const { result: history } = await getHistory(accountId, from, to, { live: options.live, onProgress: options.onProgress });
   const run = await classifyHistory(history, { ...options, ownAccounts: own });
   await writeJson(file, run);

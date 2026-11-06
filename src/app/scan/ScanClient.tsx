@@ -7,7 +7,8 @@ import { Button, ButtonLink } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
 import { cx } from "@/components/ui/cx";
 import { ProgressBar } from "@/components/ui/ProgressBar";
-import { loadSaved } from "@/lib/client/storage";
+import { loadSaved, setSource } from "@/lib/client/storage";
+import { DEMO_ACCOUNT } from "@/lib/demo/illustrative-answers";
 import { parseAccountList } from "@/lib/near/account-id";
 import { sseDecode, type ScanEvent } from "@/lib/scan/events";
 import { INITIAL_SCAN_VIEW, activeStepIndex, applyScanEvent, labelledCount, scanProgress, scanSteps, type ScanView, type StepState } from "@/lib/scan/view";
@@ -99,7 +100,10 @@ const SR_STATE: Record<StepState, string> = {
   skipped: "not needed",
 };
 
-export default function ScanClient({ account }: { account: string }) {
+const BUSY_CODES = new Set(["rate_limited", "daily_cap", "busy"]);
+const utcTime = (iso: string) => `${iso.slice(0, 10)} ${iso.slice(11, 16)} UTC`;
+
+export default function ScanClient({ account, cached = false }: { account: string; cached?: boolean }) {
   const router = useRouter();
   const [view, setView] = useState<ScanView>(INITIAL_SCAN_VIEW);
   const [run, setRun] = useState(0);
@@ -143,12 +147,16 @@ export default function ScanClient({ account }: { account: string }) {
         const res = await fetch("/api/scan", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ account, ownAccounts: parseAccountList(loadSaved(account).ownText).filter((a) => a !== account) }),
+          body: JSON.stringify({ account, ownAccounts: parseAccountList(loadSaved(account).ownText).filter((a) => a !== account), source: cached ? "cached" : "live" }),
           signal: controller.signal,
         });
         if (!res.ok || !res.body) {
-          const msg = await res.json().then((j: { error?: string }) => j.error ?? `HTTP ${res.status}`, () => `HTTP ${res.status}`);
-          push({ type: "error", stage: "input", message: msg });
+          const j = await res.json().then(
+            (x: { error?: string; code?: string }) => x,
+            () => ({}) as { error?: string; code?: string },
+          );
+          const code = j.code === "rate_limited" || j.code === "daily_cap" ? j.code : undefined;
+          push({ type: "error", stage: "input", message: j.error ?? `HTTP ${res.status}`, code });
           return;
         }
         const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
@@ -176,7 +184,7 @@ export default function ScanClient({ account }: { account: string }) {
       queue.current = [];
       pumping.current = false;
     };
-  }, [account, run, pump]);
+  }, [account, run, pump, cached]);
 
   const steps = scanSteps(view);
   const active = activeStepIndex(view);
@@ -189,6 +197,14 @@ export default function ScanClient({ account }: { account: string }) {
   const autoContinue = Boolean(done) && !failed && !attFailed && !stayed;
   const noAi = view.rules?.pending === 0;
   const verifiedPrivate = Boolean(done) && done!.attestationVerified && done!.aiResponses > 0 && done!.aiResponsesVerified === done!.aiResponses;
+  const busy = Boolean(view.error?.code && BUSY_CODES.has(view.error.code));
+  const replay = view.cached;
+
+  // Remember which classification the next pages should use: the replayed committed run, or the live scan.
+  useEffect(() => {
+    if (!done) return;
+    setSource(account, replay ? { source: "fixture", recordedAt: replay.recordedAt } : null);
+  }, [done, replay, account]);
 
   useEffect(() => {
     if (!autoContinue) return;
@@ -204,16 +220,22 @@ export default function ScanClient({ account }: { account: string }) {
   };
 
   let phase: string;
-  if (failed) phase = `Scan stopped: ${view.error!.message}`;
+  if (busy) phase = view.error!.message;
+  else if (failed) phase = view.error!.code === "timeout" ? view.error!.message : `Scan stopped: ${view.error!.message}`;
   else if (done && attFailed) phase = `Hardware attestation failed, so nothing was sent to the AI model. ${questions} ${questions === 1 ? "thing needs" : "things need"} you.`;
+  else if (done && replay) phase = `Cached demo result, attestation recorded ${utcTime(replay.recordedAt)}. ${questions} ${questions === 1 ? "thing needs" : "things need"} you.`;
   else if (done) phase = questions > 0 ? `Done. ${questions} ${questions === 1 ? "thing needs" : "things need"} you.` : "Done. Nothing needs you.";
   else if (active === 0 && view.live) phase = view.rowsRead !== null ? `Reading from NearBlocks free tier · ${view.rowsRead} rows so far` : "Reading from NearBlocks free tier, this can take a few minutes";
   else phase = PHASE_LABELS[Math.min(active, PHASE_LABELS.length - 1)];
 
   return (
     <div className="flex flex-col items-center pt-[clamp(20px,4cqi,56px)] text-center">
-      {failed || (done && attFailed) ? (
+      {busy ? (
+        <Chip tone="draft">Hosted demo busy</Chip>
+      ) : failed || (done && attFailed) ? (
         <Chip tone="error">{failed ? "Scan stopped" : "Not verified"}</Chip>
+      ) : replay ? (
+        <Chip tone="neutral">Cached demo result</Chip>
       ) : done ? (
         verifiedPrivate ? <Chip tone="verified">Verified private</Chip> : <Chip tone="neutral">{noAi ? "Labelled by rules only" : "Done, with checks to review"}</Chip>
       ) : (
@@ -236,7 +258,7 @@ export default function ScanClient({ account }: { account: string }) {
       </div>
 
       <ProgressBar value={scanProgress(view)} label="Scan progress" className="mt-[22px] w-[min(320px,84cqi)]" />
-      <p aria-live="polite" className={cx("mt-3.5 min-h-[22px] max-w-[580px] text-ui", failed || (done && attFailed) ? "text-red-ink" : "text-ink-2")}>
+      <p aria-live="polite" className={cx("mt-3.5 min-h-[22px] max-w-[580px] text-ui", busy ? "text-amber-ink" : failed || (done && attFailed) ? "text-red-ink" : "text-ink-2")}>
         {phase}
       </p>
 
@@ -268,10 +290,20 @@ export default function ScanClient({ account }: { account: string }) {
                 {questions > 0 ? `Answer ${questions} ${questions === 1 ? "question" : "questions"}` : "See result"}
               </ButtonLink>
             )}
-            {(failed || attFailed || stayed) && (
+            {busy && (
+              <ButtonLink href={`/scan?account=${DEMO_ACCOUNT}&cached=1`} arrow>
+                Load the cached demo report
+              </ButtonLink>
+            )}
+            {(failed || attFailed || stayed) && !replay && (
               <Button variant="secondary" onClick={restart}>
-                Scan again
+                {busy ? "Try again" : "Scan again"}
               </Button>
+            )}
+            {replay && (done || failed) && (
+              <ButtonLink href={`/scan?account=${encodeURIComponent(account)}`} variant="secondary">
+                Run a live scan instead
+              </ButtonLink>
             )}
             {autoContinue && (
               <Button variant="secondary" onClick={() => setStayed(true)}>
@@ -279,6 +311,12 @@ export default function ScanClient({ account }: { account: string }) {
               </Button>
             )}
           </div>
+          {replay && (
+            <p className="max-w-[580px] text-label leading-normal text-ink-2">
+              This is the committed demo run for {account}, replayed without contacting the AI. Every number above is what that run recorded, including its hardware
+              attestation at {utcTime(replay.recordedAt)}.
+            </p>
+          )}
           {autoContinue && (
             <p role="status" className="text-label text-ink-2">
               Continuing to {questions > 0 ? "your questions" : "your result"}…

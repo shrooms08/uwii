@@ -5,7 +5,7 @@
 import { parseAccountList } from "@/lib/near/account-id";
 import type { GroupAnswer } from "@/lib/tax/ng/questions";
 import { isPositiveQuantity, type SourceLegInput } from "@/lib/tax/ng/source-leg";
-import { NGN_INPUT_RE, stripNgn, type Saved } from "./storage";
+import { NGN_INPUT_RE, loadSource, stripNgn, type Saved } from "./storage";
 
 /** Source leg as it will be sent: separators stripped; null until the asset and a positive quantity are given. */
 export function legForRequest(leg: SourceLegInput | undefined): SourceLegInput | null {
@@ -41,6 +41,8 @@ export function requestBody(account: string, saved: Saved) {
     ownAccounts: parseAccountList(saved.ownText).filter((a) => a !== account),
     answers: { groups },
     profile: { otherIncomeNgn: NGN_INPUT_RE.test(other) ? other : "" },
+    // The cached demo result: stay on the committed classified run (no live AI).
+    ...(loadSource(account) ? { classificationSource: "fixture" as const } : {}),
   };
 }
 

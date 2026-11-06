@@ -6,6 +6,8 @@
 import type { ClassifyEvent } from "../tax/ng/classify";
 
 export type ScanEvent =
+  /** Replay of the committed classified fixture (no live calls): the cached demo result. */
+  | { type: "cached"; recordedAt: string; classifiedAt: string }
   | { type: "start"; account: string; from: string; to: string }
   /** History is not cached: it is being read live from the NearBlocks free tier (slow). */
   | { type: "history_live" }
@@ -24,9 +26,13 @@ export type ScanEvent =
       aiResponses: number;
       aiResponsesVerified: number;
     }
-  | { type: "error"; stage: "input" | "history" | "classification"; message: string };
+  | { type: "error"; stage: "input" | "history" | "classification"; message: string; code?: "busy" | "timeout" | "rate_limited" | "daily_cap" };
 
 export type ScanEventType = ScanEvent["type"];
+
+/** Shown when a scan cannot finish inside the hosted demo's function time limit. */
+export const TOO_LARGE_MESSAGE = "This account is too large for the hosted demo's time limit. Run Uwii locally from the README.";
+export const OUT_OF_TIME_MESSAGE = "The hosted demo's time limit was reached before the scan finished. Run Uwii locally from the README.";
 
 /** Server-Sent Events wire format: one `event:` line and one JSON `data:` line per event. */
 export function sseEncode(event: ScanEvent): string {

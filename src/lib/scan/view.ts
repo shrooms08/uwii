@@ -4,9 +4,13 @@
  */
 import { percent, type ScanEvent } from "./events";
 
+const LIMIT_CODES = new Set(["rate_limited", "daily_cap", "busy"]);
+
 export type StepState = "pending" | "active" | "done" | "warn" | "failed" | "skipped";
 
 export interface ScanView {
+  /** Set when this is the replay of a committed run (the cached demo result). */
+  cached: { recordedAt: string; classifiedAt: string } | null;
   started: boolean;
   live: boolean;
   rowsRead: number | null;
@@ -16,10 +20,11 @@ export interface ScanView {
   ai: { processed: number; accepted: number } | null;
   signatures: { received: number; verified: number };
   done: Extract<ScanEvent, { type: "done" }> | null;
-  error: { stage: string; message: string } | null;
+  error: { stage: string; message: string; code?: string } | null;
 }
 
 export const INITIAL_SCAN_VIEW: ScanView = {
+  cached: null,
   started: false,
   live: false,
   rowsRead: null,
@@ -34,6 +39,8 @@ export const INITIAL_SCAN_VIEW: ScanView = {
 
 export function applyScanEvent(v: ScanView, e: ScanEvent): ScanView {
   switch (e.type) {
+    case "cached":
+      return { ...v, cached: { recordedAt: e.recordedAt, classifiedAt: e.classifiedAt } };
     case "start":
       return { ...v, started: true };
     case "history_live":
@@ -62,7 +69,7 @@ export function applyScanEvent(v: ScanView, e: ScanEvent): ScanView {
     case "done":
       return { ...v, done: e };
     case "error":
-      return { ...v, error: { stage: e.stage, message: e.message } };
+      return { ...v, error: { stage: e.stage, message: e.message, code: e.code } };
   }
 }
 
@@ -155,7 +162,8 @@ export function scanSteps(v: ScanView): ScanStep[] {
     };
 
   const steps = [read, rules, attestation, ai, signatures];
-  if (v.error) {
+  // A hosted-demo limit stopped the scan before work started: nothing failed, so no step is marked failed.
+  if (v.error && !LIMIT_CODES.has(v.error.code ?? "")) {
     const i = steps.findIndex((s) => s.state === "active" || s.state === "pending");
     if (i >= 0) steps[i] = { ...steps[i], state: "failed" };
   }

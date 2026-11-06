@@ -27,6 +27,10 @@ export interface ReportRequest {
   answers?: Answers;
   profile?: { otherIncomeNgn?: string | null };
   originalCostUsd?: Record<string, string>;
+  /** "fixture": use only the committed classified fixture (the cached demo result). */
+  classificationSource?: "fixture";
+  /** Refuse to classify live (API routes). */
+  noLiveClassification?: boolean;
   onProgress?: (m: string) => void;
 }
 
@@ -76,7 +80,7 @@ export async function buildReport(req: ReportRequest): Promise<{ report: ReportD
   }
   const log = req.onProgress ?? (() => {});
 
-  const { run, origin: classificationOrigin } = await getClassification(req.account, from, to, { ownAccounts: [] });
+  const { run, origin: classificationOrigin } = await getClassification(req.account, from, to, { ownAccounts: [], fixtureOnly: req.classificationSource === "fixture", noLive: req.noLiveClassification });
   const flow = runQuestionFlow(run, { ownAccounts: req.ownAccounts ?? [], answers: req.answers ?? { groups: {} } });
   const { result: history } = await getHistory(req.account, from, to);
 

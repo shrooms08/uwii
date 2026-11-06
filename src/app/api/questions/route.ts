@@ -4,9 +4,10 @@
  */
 import { z } from "zod";
 import { isValidAccountId } from "@/lib/history/fetch";
-import { getClassification } from "@/lib/tax/ng/cache";
+import { NotScannedError, getClassification } from "@/lib/tax/ng/cache";
 import { NGN_RE, runQuestionFlow } from "@/lib/tax/ng/questions";
 
+/** Vercel Hobby (Fluid compute): 300 s default and maximum per invocation. */
 export const maxDuration = 300;
 
 const accountId = z.string().trim().toLowerCase().refine(isValidAccountId, "invalid NEAR account id");
@@ -44,6 +45,8 @@ const Body = z
       })
       .default({ groups: {} }),
     profile: z.object({ otherIncomeNgn: ngn.optional().or(z.literal("")) }).default({}),
+    /** "fixture": the cached demo result (committed classified fixture, no live AI). */
+    classificationSource: z.literal("fixture").optional(),
   })
   .strict();
 
@@ -61,7 +64,7 @@ export async function POST(request: Request) {
 
   try {
     // Base classification without own accounts (cache -> committed fixture); own accounts are applied by re-running rules.
-    const { run, origin } = await getClassification(body.account, body.from, body.to, { ownAccounts: [] });
+    const { run, origin } = await getClassification(body.account, body.from, body.to, { ownAccounts: [], fixtureOnly: body.classificationSource === "fixture", noLive: true });
     const flow = runQuestionFlow(run, { ownAccounts: body.ownAccounts, answers: body.answers });
     const records = flow.records.map((r) => ({
       id: r.id,
@@ -100,6 +103,7 @@ export async function POST(request: Request) {
       { headers: noStore },
     );
   } catch (e) {
+    if (e instanceof NotScannedError) return Response.json({ error: e.message, code: "not_scanned" }, { status: 409, headers: noStore });
     return Response.json({ error: `question flow failed: ${e instanceof Error ? e.message : String(e)}` }, { status: 500, headers: noStore });
   }
 }

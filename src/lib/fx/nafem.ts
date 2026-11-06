@@ -65,6 +65,8 @@ export async function writeNafemCsv(rows: NafemRow[], meta: { sourceUrl: string;
     "date,closing_rate",
     ...rows.map((r) => `${r.date},${r.closingRate}`),
   ];
+  const { assertWritable } = await import("../history/paths");
+  assertWritable(NAFEM_CSV);
   await mkdir(path.dirname(NAFEM_CSV), { recursive: true });
   await writeFile(NAFEM_CSV, lines.join("\n") + "\n");
   return NAFEM_CSV;

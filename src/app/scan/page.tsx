@@ -7,11 +7,13 @@ import ScanClient from "./ScanClient";
 export const metadata: Metadata = { title: "Scanning privately · Uwii" };
 
 async function Scan({ searchParams }: { searchParams: SearchParams }) {
-  const account = readAccount(await searchParams);
+  const sp = await searchParams;
+  const account = readAccount(sp);
   if (!account.ok) return <InvalidAccount reason={account.reason} />;
+  const cached = (Array.isArray(sp.cached) ? sp.cached[0] : sp.cached) === "1";
   return (
     <AppShell step="scan" account={account.id}>
-      <ScanClient key={account.id} account={account.id} />
+      <ScanClient key={`${account.id}-${cached ? "cached" : "live"}`} account={account.id} cached={cached} />
     </AppShell>
   );
 }
