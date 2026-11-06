@@ -30,10 +30,16 @@ export const LINE_COLUMNS = [
 
 const BOM = "﻿";
 
-/** RFC 4180: quote fields containing comma, quote, CR/LF or leading/trailing spaces; double inner quotes. */
+/**
+ * RFC 4180: quote fields containing comma, quote, CR/LF or leading/trailing spaces; double inner quotes.
+ * Formula injection (M1): a cell starting with = + - @ tab or CR is prefixed with a single quote so a
+ * spreadsheet shows it as text. Plain decimal numbers (e.g. a negative gain) stay numbers: they cannot
+ * be formulas.
+ */
 export function csvField(value: string | number | boolean | null | undefined): string {
   if (value === null || value === undefined) return "";
-  const s = String(value);
+  let s = String(value);
+  if (/^[=+\-@\t\r]/.test(s) && !/^-?\d+(\.\d+)?$/.test(s)) s = `'${s}`;
   return /[",\r\n]|^\s|\s$/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
