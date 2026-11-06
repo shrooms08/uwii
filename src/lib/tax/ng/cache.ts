@@ -73,7 +73,8 @@ export async function getClassification(
   if (options.noLive) throw new NotScannedError(accountId);
   const { result: history } = await getHistory(accountId, from, to, { live: options.live, onProgress: options.onProgress });
   const run = await classifyHistory(history, { ...options, ownAccounts: own });
-  await writeJson(file, run);
+  // The cache is keyed by account only: a run with declared own accounts must never replace the base run.
+  if (own.length === 0) await writeJson(file, run);
   return { run, origin: "live", file };
 }
 
