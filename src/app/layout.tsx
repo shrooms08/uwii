@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
 import "./globals.css";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL, pageMetadata } from "@/lib/site/metadata";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -20,8 +21,9 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: "Uwii · private crypto tax for NEAR",
-  description: "Uwii reads your NEAR transactions, classifies them inside verified secure hardware, and computes your 2026 Nigerian tax under NRS Circular 2026/21.",
+  metadataBase: new URL(SITE_URL),
+  applicationName: SITE_NAME,
+  ...pageMetadata("Uwii · private crypto tax for NEAR", SITE_DESCRIPTION, "/"),
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

@@ -54,6 +54,11 @@ const nextConfig: NextConfig = {
   // paths built with process.cwd(), so include them explicitly in every API function bundle.
   outputFileTracingIncludes: {
     "/api/**/*": ["./data/fixtures/**/*", "./data/fx/**/*"],
+    // Social card images: fonts, and the demo fixtures for the result card (if they ever re-render at runtime).
+    "/opengraph-image": ["./public/pdf-fonts/**/*"],
+    "/twitter-image": ["./public/pdf-fonts/**/*"],
+    "/result/opengraph-image": ["./public/pdf-fonts/**/*", "./data/fixtures/**/*", "./data/fx/**/*"],
+    "/result/twitter-image": ["./public/pdf-fonts/**/*", "./data/fixtures/**/*", "./data/fx/**/*"],
   },
 };
 

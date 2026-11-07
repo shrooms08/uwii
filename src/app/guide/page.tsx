@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/site/metadata";
 import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { guideMeta, guideSections } from "@/content/guide";
 
-export const metadata: Metadata = {
-  title: "Crypto tax in Nigeria, explained · Uwii",
-  description: "What is taxable, what is not, how gains are worked out, reliefs, key dates and where to file, with references to NRS Circular 2026/21 and the Nigeria Tax Act 2025.",
-};
+export const metadata: Metadata = pageMetadata("Crypto tax in Nigeria, explained · Uwii", "What is taxable, what is not, how gains are worked out, reliefs, key dates and where to file, with references to NRS Circular 2026/21 and the Nigeria Tax Act 2025.", "/guide");
 
 function Cite({ children }: { children: string }) {
   return <span className="inline-flex min-h-5 items-center rounded-full border border-rule px-2 font-mono text-caption leading-tight text-ink-2">{children}</span>;

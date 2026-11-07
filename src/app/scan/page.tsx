@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/site/metadata";
 import { Suspense } from "react";
 import { AppShell } from "@/components/AppShell";
 import { InvalidAccount, readAccount, type SearchParams } from "@/components/account-param";
 import ScanClient from "./ScanClient";
 
-export const metadata: Metadata = { title: "Scanning privately · Uwii" };
+export const metadata: Metadata = pageMetadata("Scanning privately · Uwii", "Uwii reads the account history, applies the NRS rules, and sends only what the rules cannot label to an attested AI model.", "/scan");
 
 async function Scan({ searchParams }: { searchParams: SearchParams }) {
   const sp = await searchParams;
