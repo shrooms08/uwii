@@ -24,10 +24,10 @@ export function FinishedReportButton({ recordedAt, compact }: { recordedAt: stri
         setSource(DEMO_ACCOUNT, { source: "fixture", recordedAt });
         router.push(`/result?account=${DEMO_ACCOUNT}`);
       }}
-      className={`inline-flex items-center justify-center gap-2 border border-white/14 bg-transparent font-medium text-ink backdrop-blur-sm transition-colors duration-200 hover:border-ink-2 hover:bg-white/[0.03] disabled:opacity-60 ${compact ? "h-9 rounded-control px-3.5 text-label" : "h-12 rounded-[10px] px-5 text-ui"}`}
+      className={`btn-sweep inline-flex items-center justify-center gap-2 border border-white/14 bg-transparent font-medium text-ink backdrop-blur-sm transition-colors duration-200 hover:border-ink-2 hover:bg-white/[0.03] disabled:opacity-60 ${compact ? "h-9 rounded-control px-3.5 text-label" : "h-12 rounded-[10px] px-5 text-ui"}`}
     >
       {opening ? "Opening…" : "See a finished report"}
-      {!compact && <span aria-hidden="true">→</span>}
+      {!compact && <span aria-hidden="true" className="arrow-nudge">→</span>}
     </button>
   );
 }

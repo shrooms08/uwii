@@ -274,8 +274,9 @@ write if any test fails.
   - Geist and Geist Mono (Vercel), for all text, figures and the glyph art;
   - IBM Plex Mono (the ₦ sign in the PDF and the social cards).
 - **Artwork.** The landing hero draws Marinus van Reymerswaele's *The Tax Collectors* (1540s, public
-  domain) in gold text characters. `npm run glyph-art` rebuilds the committed luminance grid
-  (`src/content/glyph-art.json`) from the Wikimedia Commons file. Source, licence and the visual
+  domain) in gold text characters, full-bleed, with an intro decode, brief glitches and a cursor light
+  (one static frame under reduced motion). `npm run glyph-art` rebuilds the committed, subject-masked
+  luminance grid (`src/content/glyph-art.json`) from the Wikimedia Commons file. Source, licence and the visual
   reference are recorded in [docs/CREDITS.md](docs/CREDITS.md).
   - Licence files are in `public/pdf-fonts/`. The web app loads the same families through `next/font`.
 

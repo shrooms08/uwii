@@ -7,6 +7,7 @@ import { Button, ButtonLink } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
 import { cx } from "@/components/ui/cx";
 import { ProgressBar } from "@/components/ui/ProgressBar";
+import { GlyphVessel } from "@/components/GlyphVessel";
 import { saveRun } from "@/lib/client/runs";
 import { loadSaved, setSource } from "@/lib/client/storage";
 import { DEMO_ACCOUNT } from "@/lib/demo/illustrative-answers";
@@ -28,48 +29,11 @@ const PHASE_LABELS = [
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-function wavePath(amp: number, phase: number): string {
-  let d = "";
-  for (let x = 0; x <= 720; x += 8) d += `${x ? "L" : "M"}${x} ${(amp * Math.sin((x / 240) * Math.PI * 2 + phase)).toFixed(2)}`;
-  return `${d}L720 220L0 220Z`;
-}
-const BACK = wavePath(5, 1.4);
-const FRONT = wavePath(6, 0);
-const BOWL = "M6 20 C6 98 66 148 140 148 C214 148 274 98 274 20 C230 34 186 40 140 40 C94 40 50 34 6 20 Z";
-
-/** The vessel fills with the share of transactions labelled (decorative; the number above is the data). */
-function Vessel({ fraction }: { fraction: number }) {
-  const level = 0.1 + 0.8 * Math.max(0, Math.min(1, fraction));
-  const y = 148 - level * 128;
-  return (
-    <svg viewBox="0 0 280 150" width="100%" aria-hidden="true" className="block overflow-visible">
-      <defs>
-        <clipPath id="uwii-bowl">
-          <path d={BOWL} />
-        </clipPath>
-      </defs>
-      <path d={BOWL} fill="var(--color-muted)" />
-      <g clipPath="url(#uwii-bowl)">
-        <g style={{ transform: `translateY(${y.toFixed(2)}px)`, transition: "transform 700ms ease-out" }}>
-          <g style={{ animation: "uwii-wave 5.5s linear infinite reverse" }}>
-            <path d={BACK} fill="#7a6240" />
-          </g>
-          <g transform="translate(0 7)">
-            <g style={{ animation: "uwii-wave 3.6s linear infinite" }}>
-              <path d={FRONT} fill="var(--color-gold)" />
-            </g>
-          </g>
-        </g>
-      </g>
-    </svg>
-  );
-}
-
 function StepIcon({ state }: { state: StepState }) {
   switch (state) {
     case "done":
       return (
-        <span className="grid size-6 place-items-center rounded-full bg-gold text-on-ink">
+        <span className="tick-pop grid size-6 place-items-center rounded-full bg-gold text-on-ink">
           <CheckIcon size={12} />
         </span>
       );
@@ -259,7 +223,7 @@ export default function ScanClient({ account, cached = false }: { account: strin
         <span className="text-[0.34em] tracking-normal text-ink-3">/ {view.total ?? "–"}</span>
       </div>
       <div className="-mt-[22px] w-[min(300px,78cqi)]">
-        <Vessel fraction={count !== null && view.total ? count / view.total : 0} />
+        <GlyphVessel fraction={count !== null && view.total ? count / view.total : 0} />
       </div>
 
       <ProgressBar value={scanProgress(view)} label="Scan progress" className="mt-[22px] w-[min(320px,84cqi)]" />

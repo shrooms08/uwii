@@ -310,15 +310,16 @@ export function LineSections({ lines, openLine, onOpen }: { lines: ReportLine[];
         </div>
       </Card>
       {sections.map((s) => (
-        <SectionCard
-          key={s.id}
-          section={s}
-          rows={s.rows.filter(matches)}
-          open={open[s.id]}
-          onToggle={() => setOpen((o) => ({ ...o, [s.id]: !o[s.id] }))}
-          openLine={openLine}
-          onOpen={onOpen}
-        />
+        <div key={s.id} data-reveal="">
+          <SectionCard
+            section={s}
+            rows={s.rows.filter(matches)}
+            open={open[s.id]}
+            onToggle={() => setOpen((o) => ({ ...o, [s.id]: !o[s.id] }))}
+            openLine={openLine}
+            onOpen={onOpen}
+          />
+        </div>
       ))}
       <p className="px-1 text-label text-ink-2">
         Select any row to see how it was worked out. A swap is one row; its detail shows both legs.

@@ -8,8 +8,8 @@ export type ButtonSize = "lg" | "md";
 const base =
   "inline-flex items-center justify-center gap-2.5 rounded-control font-medium whitespace-nowrap transition-colors disabled:opacity-50";
 const variants: Record<ButtonVariant, string> = {
-  primary: "bg-gold text-on-ink shadow-[0_8px_28px_-10px_rgb(230_187_121_/0.55)] hover:bg-gold-hover",
-  secondary: "bg-transparent text-ink border border-border-strong hover:border-ink-2",
+  primary: "btn-glow bg-gold text-on-ink shadow-[0_8px_28px_-10px_rgb(230_187_121_/0.55)] hover:bg-gold-hover",
+  secondary: "btn-sweep bg-transparent text-ink border border-border-strong hover:border-ink-2",
 };
 const sizes: Record<ButtonSize, string> = {
   lg: "h-[52px] px-7 text-body",
@@ -20,7 +20,11 @@ export function buttonClass(variant: ButtonVariant = "primary", size: ButtonSize
   return cx(base, variants[variant], sizes[size], className);
 }
 
-const Arrow = () => <span aria-hidden="true">→</span>;
+const Arrow = () => (
+  <span aria-hidden="true" className="arrow-nudge">
+    →
+  </span>
+);
 
 interface Common {
   variant?: ButtonVariant;

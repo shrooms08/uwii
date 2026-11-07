@@ -19,22 +19,27 @@ const GUTTER = "px-[clamp(20px,4cqi,64px)]";
 function Section({ id, head, children }: { id: string; head: { index: string; label: string; headline: string; muted: string; body: string }; children: ReactNode }) {
   return (
     <section id={id} aria-labelledby={`${id}-h`} className="mx-auto w-full max-w-[1280px] scroll-mt-28 pt-[clamp(80px,9cqi,126px)] text-left">
-      <Eyebrow index={head.index}>{head.label}</Eyebrow>
-      <TwoTone id={`${id}-h`} lead={head.headline} muted={head.muted} className="mt-5 max-w-[900px] text-[clamp(34px,4.2cqi,56px)]" />
-      {head.body && <p className="mt-4 max-w-[620px] text-[17px] leading-[1.6] text-pretty text-ink-2">{head.body}</p>}
+      <div data-reveal="">
+        <Eyebrow index={head.index}>{head.label}</Eyebrow>
+        <TwoTone id={`${id}-h`} lead={head.headline} muted={head.muted} className="mt-5 max-w-[900px] text-[clamp(34px,4.2cqi,56px)]" />
+        {head.body && <p className="mt-4 max-w-[620px] text-[17px] leading-[1.6] text-pretty text-ink-2">{head.body}</p>}
+      </div>
       <div className="mt-[clamp(28px,3.4cqi,48px)]">{children}</div>
     </section>
   );
 }
 
-/** A row of numbered items separated by hairlines (2 / 3 / 4 across as the width allows). */
+/** A row of numbered cards (2 / 3 / 4 across as the width allows); each reveals on scroll and lifts on hover. */
 function Row({ children, cols }: { children: ReactNode; cols: 3 | 4 }) {
   return (
-    <ol className={`grid gap-px overflow-hidden rounded-card border border-border bg-border ${cols === 4 ? "@min-[640px]:grid-cols-2 @min-[1040px]:grid-cols-4" : "@min-[760px]:grid-cols-3"}`}>
+    <ol className={`grid gap-3 ${cols === 4 ? "@min-[640px]:grid-cols-2 @min-[1040px]:grid-cols-4" : "@min-[760px]:grid-cols-3"}`}>
       {children}
     </ol>
   );
 }
+
+/** Card surface: hairline border, lifts 2px with a gold glow on hover. */
+const CARD = "card-lift rounded-card border border-border bg-surface/50";
 
 const linkClass = "self-start text-small font-medium text-gold underline-offset-[3px] hover:underline";
 
@@ -49,12 +54,18 @@ export default function Landing() {
   return (
     <AppShell landing recordedAt={demoRecordedAt} mainClassName="pb-[clamp(48px,6cqi,96px)]">
       {/* Hero: text first (it is the LCP); the glyph art is drawn after first paint. */}
-      <section aria-labelledby="hero-h" className={`relative -mx-[clamp(20px,4cqi,64px)] -mt-[88px] overflow-hidden ${GUTTER} pt-[88px]`}>
-        <GlyphArt className="pointer-events-none absolute inset-0 h-full w-full" />
+      <section aria-labelledby="hero-h" className={`relative -mx-[clamp(20px,4cqi,64px)] -mt-[88px] ${GUTTER} pt-[88px]`}>
+        {/* Full-bleed: the canvas spans the viewport width (the shell clips any overflow on x). */}
+        <GlyphArt className="pointer-events-none absolute inset-y-0 left-[calc(50%-50vw)] h-full w-screen" />
+        {/* Narrow screens: the art sits behind the headline, so a scrim keeps the text AA. */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-0 left-[calc(50%-50vw)] w-screen bg-[linear-gradient(to_bottom,rgb(11_12_14/0)_0px,rgb(11_12_14/0)_190px,rgb(11_12_14/0.6)_290px,rgb(11_12_14/0.82)_400px,rgb(11_12_14/0.82)_100%)] @min-[760px]:hidden"
+        />
         <p className="sr-only">
           Decorative background: Marinus van Reymerswaele&apos;s painting The Tax Collectors (1540s, public domain), drawn in gold text characters.
         </p>
-        <div className="relative mx-auto w-full max-w-[1280px] pt-[clamp(340px,92cqi,400px)] pb-[clamp(56px,7cqi,104px)] @min-[760px]:pt-[clamp(96px,11cqi,168px)]">
+        <div className="relative mx-auto w-full max-w-[1280px] pt-[230px] pb-[clamp(56px,7cqi,104px)] @min-[760px]:pt-[clamp(96px,11cqi,168px)]">
           <div className="flex max-w-[620px] flex-col items-start gap-6">
             <Eyebrow star>{hero.eyebrow}</Eyebrow>
             <h1 id="hero-h" className="font-serif text-[clamp(44px,4.7cqi,68px)] leading-[1.04] tracking-[-0.05em]">
@@ -78,7 +89,7 @@ export default function Landing() {
       </section>
 
       {/* Live numbers: each one measured (npm run stats; the committed demo run), never typed by hand. */}
-      <section aria-label="Live numbers" className="mx-auto w-full max-w-[1280px]">
+      <section aria-label="Live numbers" data-reveal="" className="relative mx-auto w-full max-w-[1280px]">
         <div className="flex flex-wrap items-center gap-x-10 gap-y-4 rounded-card border border-border bg-surface/60 px-6 py-5">
           <span className="flex items-center gap-2 font-mono text-eyebrow font-medium text-green-dot uppercase">
             <span aria-hidden="true" className="size-[7px] rounded-full bg-green-dot shadow-[0_0_10px_rgb(127_209_139_/0.8)]" />
@@ -86,7 +97,9 @@ export default function Landing() {
           </span>
           {statItems.map(([v, l]) => (
             <span key={l} className="flex items-baseline gap-2">
-              <span className="font-mono text-[22px] text-ink tabular-nums">{v}</span>
+              <span data-countup="" className="font-mono text-[22px] text-ink tabular-nums">
+                {v}
+              </span>
               <span className="text-label text-ink-2">{l}</span>
             </span>
           ))}
@@ -100,7 +113,7 @@ export default function Landing() {
       <Section id="how" head={sections.how}>
         <Row cols={3}>
           {howItWorks.steps.map((s) => (
-            <li key={s.number} className="flex flex-col gap-3 bg-page p-[clamp(20px,2.4cqi,32px)]">
+            <li key={s.number} data-reveal="" className={`${CARD} flex flex-col gap-3 p-[clamp(20px,2.4cqi,32px)]`}>
               <span aria-hidden="true" className="font-mono text-eyebrow font-medium text-gold">
                 {s.number}
               </span>
@@ -117,7 +130,7 @@ export default function Landing() {
       <Section id="trust" head={sections.trust}>
         <Row cols={4}>
           {trust.cards.map((c, i) => (
-            <li key={c.title} className="flex flex-col gap-3 bg-page p-[clamp(20px,2.2cqi,28px)]">
+            <li key={c.title} data-reveal="" className={`${CARD} flex flex-col gap-3 p-[clamp(20px,2.2cqi,28px)]`}>
               <span aria-hidden="true" className="flex items-center gap-2 font-mono text-eyebrow font-medium text-gold">
                 {String(i + 1).padStart(2, "0")}
                 <span className="grid size-5 place-items-center rounded-full bg-gold-tint text-gold">
@@ -148,7 +161,7 @@ export default function Landing() {
       <Section id="who" head={sections.who}>
         <Row cols={4}>
           {whoFor.items.map((w, i) => (
-            <li key={w.who} className="flex flex-col gap-2 bg-page p-[clamp(20px,2.2cqi,28px)]">
+            <li key={w.who} data-reveal="" className={`${CARD} flex flex-col gap-2 p-[clamp(20px,2.2cqi,28px)]`}>
               <span aria-hidden="true" className="font-mono text-eyebrow font-medium text-gold">
                 {String(i + 1).padStart(2, "0")}
               </span>
@@ -160,8 +173,8 @@ export default function Landing() {
       </Section>
 
       <Section id="scope" head={sections.scope}>
-        <div className="grid gap-px overflow-hidden rounded-card border border-border bg-border @min-[760px]:grid-cols-2">
-          <div className="bg-page p-[clamp(20px,2.4cqi,32px)]">
+        <div className="grid gap-3 @min-[760px]:grid-cols-2">
+          <div data-reveal="" className={`${CARD} p-[clamp(20px,2.4cqi,32px)]`}>
             <h3 className="font-mono text-eyebrow font-medium text-gold uppercase">{scope.can.title}</h3>
             <ul className="mt-3 flex flex-col">
               {scope.can.items.map((it) => (
@@ -174,7 +187,7 @@ export default function Landing() {
               ))}
             </ul>
           </div>
-          <div className="bg-page p-[clamp(20px,2.4cqi,32px)]">
+          <div data-reveal="" className={`${CARD} p-[clamp(20px,2.4cqi,32px)]`}>
             <h3 className="font-mono text-eyebrow font-medium text-ink-2 uppercase">{scope.cant.title}</h3>
             <ul className="mt-3 flex flex-col">
               {scope.cant.items.map((it) => (
@@ -191,11 +204,11 @@ export default function Landing() {
             </ul>
           </div>
         </div>
-        <p className="mt-4 rounded-tile border border-amber-line bg-amber-tint px-5 py-4 text-ui leading-normal text-amber-ink">{scope.note}</p>
+        <p data-reveal="" className="mt-4 rounded-tile border border-amber-line bg-amber-tint px-5 py-4 text-ui leading-normal text-amber-ink">{scope.note}</p>
       </Section>
 
       <Section id="faq" head={sections.faq}>
-        <div className="rounded-card border border-border px-[clamp(16px,2.4cqi,32px)]">
+        <div data-reveal="" className="rounded-card border border-border bg-surface/30 px-[clamp(16px,2.4cqi,32px)]">
           {faq.items.map((f) => (
             <details key={f.q} className="group border-b border-line last:border-b-0">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-5 text-body font-medium tracking-[-0.01em] [&::-webkit-details-marker]:hidden">

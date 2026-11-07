@@ -2,10 +2,12 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { FinishedReportButton } from "@/app/FinishedReportButton";
 import { REPO_URL } from "@/content/landing";
+import { DEMO_ACCOUNT } from "@/lib/demo/illustrative-answers";
 import { cx } from "./ui/cx";
 import { ClearDataButton } from "./ClearDataButton";
 import { CachedLabel } from "./CachedLabel";
 import { DemoLabel } from "./DemoLabel";
+import { MotionRoot } from "./Motion";
 import { NavStartButton } from "./NavStartButton";
 import { Wordmark } from "./ui/Mark";
 import { StepBar, StepNav, type StepId } from "./ui/StepNav";
@@ -69,10 +71,11 @@ export function AppShell({
   recordedAt?: string;
 }) {
   return (
-    <div className="uwii @container flex min-h-screen flex-1 flex-col">
+    <div className="uwii @container flex min-h-screen flex-1 flex-col overflow-x-clip">
+      <MotionRoot />
       <div className={cx("mx-auto flex w-full max-w-[1440px] flex-1 flex-col", landing ? "px-[clamp(20px,4cqi,64px)]" : "px-[clamp(16px,4cqi,64px)]")}>
         <header className="pointer-events-none sticky top-0 z-40 -mx-[clamp(4px,1cqi,16px)] pt-4 pb-3">
-          <div className="pointer-events-auto mx-auto flex h-[60px] w-full max-w-[1280px] items-center justify-between gap-3 rounded-card border border-white/8 bg-page/72 py-2.5 pr-2.5 pl-[18px] shadow-float backdrop-blur-md">
+          <div className="uwii-nav pointer-events-auto mx-auto flex h-[60px] w-full max-w-[1280px] items-center justify-between gap-3 rounded-card border border-white/8 bg-page/72 py-2.5 pr-2.5 pl-[18px] shadow-float backdrop-blur-md">
             <Wordmark />
             {landing && (
               <nav aria-label="Sections" className="hidden items-center gap-0.5 @min-[900px]:flex">
@@ -119,13 +122,28 @@ export function AppShell({
           </div>
         </header>
         {step && step !== "scan" && <StepBar current={step} />}
-        {account && (
-          <div className="flex flex-wrap gap-2 empty:hidden">
-            <DemoLabel account={account} />
-            <CachedLabel account={account} />
-          </div>
-        )}
-        <main className={cx("flex flex-1 flex-col", mainClassName)}>{children}</main>
+        {account &&
+          (account === DEMO_ACCOUNT ? (
+            // The demo labels depend on this browser's storage, so they appear after hydration. For the demo
+            // account (the only one they can show for) the row's height is reserved by an invisible chip with
+            // the longest label text, stacked under the real one: no layout shift when it appears.
+            <div className="grid">
+              <p aria-hidden="true" className="invisible inline-flex items-center gap-2 self-start rounded-[14px] border px-3 py-1 text-label font-medium [grid-area:1/1]">
+                <span className="size-[7px] rounded-full" />
+                Cached demo result · attestation recorded 2026-11-05 22:54 UTC
+              </p>
+              <div className="flex flex-wrap gap-2 self-start [grid-area:1/1]">
+                <DemoLabel account={account} />
+                <CachedLabel account={account} />
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2 empty:hidden">
+              <DemoLabel account={account} />
+              <CachedLabel account={account} />
+            </div>
+          ))}
+        <main className={cx("flex min-h-[calc(100svh-88px)] flex-1 flex-col", mainClassName)}>{children}</main>
         <footer className="mx-auto mt-16 w-full max-w-[1280px] border-t border-white/8 pt-12 pb-10">
           <div className="grid gap-10 @min-[760px]:grid-cols-[1.4fr_1fr_1fr_1fr]">
             <div className="flex max-w-[340px] flex-col gap-4">

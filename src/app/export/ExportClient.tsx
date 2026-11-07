@@ -175,7 +175,14 @@ export default function ExportClient({ account }: { account: string }) {
             </div>
             <p className="-mt-2 text-label leading-normal text-ink-2">
               SHA-256 of the report&apos;s canonical data (your personal details are not included). The same value is printed in the PDF and the summary CSV.{" "}
-              {recomputed && (recomputed === r.fingerprint ? <span className="text-gold-ink">Recomputed in your browser: matches.</span> : <span className="text-red-ink">Recomputed in your browser: does NOT match.</span>)}
+              {/* Space reserved (invisible) until the browser has recomputed the fingerprint: no layout shift. */}
+              {!recomputed ? (
+                <span className="invisible">Recomputed in your browser: matches.</span>
+              ) : recomputed === r.fingerprint ? (
+                <span className="text-gold-ink">Recomputed in your browser: matches.</span>
+              ) : (
+                <span className="text-red-ink">Recomputed in your browser: does NOT match.</span>
+              )}
             </p>
             {isDraft && (
               <div role="status" className="rounded-inset border border-amber-line bg-amber-tint px-4 py-3 text-small leading-normal text-amber-ink">

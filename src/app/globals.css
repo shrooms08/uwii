@@ -177,15 +177,6 @@
   }
 }
 
-@keyframes uwii-wave {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-240px);
-  }
-}
-
 @keyframes uwii-spin {
   to {
     transform: rotate(360deg);
@@ -198,5 +189,138 @@
   .uwii *::after {
     animation: none !important;
     transition: none !important;
+  }
+}
+
+/* ---------- Motion (driven by src/components/Motion.tsx; transform/opacity only, no layout shift) ---------- */
+:root {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* Scroll reveals: hidden only once the motion script runs (html.motion); never above the fold at load. */
+.motion [data-reveal] {
+  transition:
+    opacity 0.6s var(--ease-out) var(--reveal-delay, 0ms),
+    transform 0.6s var(--ease-out) var(--reveal-delay, 0ms);
+}
+.motion [data-reveal]:not([data-shown]) {
+  opacity: 0;
+  transform: translateY(14px);
+}
+
+/* Nav: more opaque with a stronger blur once the page has scrolled. */
+.uwii-nav {
+  transition:
+    background-color 0.3s var(--ease-out),
+    border-color 0.3s var(--ease-out),
+    box-shadow 0.3s var(--ease-out),
+    backdrop-filter 0.3s var(--ease-out);
+}
+[data-scrolled] .uwii-nav {
+  background-color: rgb(11 12 14 / 0.9);
+  border-color: rgb(255 255 255 / 0.1);
+  backdrop-filter: blur(18px) saturate(1.2);
+  box-shadow: 0 18px 40px -22px rgb(0 0 0 / 0.9);
+}
+
+/* Primary gold buttons: the glow intensifies on hover and keyboard focus. */
+.btn-glow {
+  transition:
+    background-color 0.2s var(--ease-out),
+    box-shadow 0.3s var(--ease-out);
+}
+.btn-glow:hover,
+.btn-glow:focus-visible {
+  box-shadow:
+    0 0 0 1px rgb(239 203 148 / 0.55),
+    0 12px 44px -6px rgb(230 187 121 / 0.8),
+    0 0 26px rgb(230 187 121 / 0.32);
+}
+
+/* Trailing arrows nudge forward on hover and focus. */
+.arrow-nudge {
+  display: inline-block;
+  transition: transform 0.25s var(--ease-out);
+}
+:is(a, button):is(:hover, :focus-visible) .arrow-nudge {
+  transform: translateX(3px);
+}
+
+/* Outlined buttons: a gold light sweeps along the border on hover and focus. */
+.btn-sweep {
+  position: relative;
+  isolation: isolate;
+}
+.btn-sweep::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(110deg, transparent 25%, var(--color-gold) 50%, transparent 75%) 100% 0 / 260% 100% no-repeat;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.25s var(--ease-out),
+    background-position 0.7s var(--ease-out);
+}
+.btn-sweep:hover::after,
+.btn-sweep:focus-visible::after {
+  opacity: 1;
+  background-position: 0 0;
+}
+
+/* Cards: a 2px lift with a soft gold border glow. */
+.card-lift {
+  transition:
+    translate 0.25s var(--ease-out),
+    box-shadow 0.25s var(--ease-out),
+    border-color 0.25s var(--ease-out);
+}
+.motion .card-lift[data-reveal] {
+  transition:
+    opacity 0.6s var(--ease-out) var(--reveal-delay, 0ms),
+    transform 0.6s var(--ease-out) var(--reveal-delay, 0ms),
+    translate 0.25s var(--ease-out),
+    box-shadow 0.25s var(--ease-out),
+    border-color 0.25s var(--ease-out);
+}
+.card-lift:hover {
+  translate: 0 -2px;
+  border-color: var(--color-gold-line);
+  box-shadow:
+    0 0 0 1px rgb(230 187 121 / 0.12),
+    0 16px 36px -20px rgb(230 187 121 / 0.45);
+}
+
+/* Scan checklist: ticks pop in as each step completes. */
+@keyframes uwii-tick {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1);
+  }
+}
+.tick-pop {
+  animation: uwii-tick 0.45s var(--ease-out) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-lift:hover {
+    translate: none;
+  }
+  :is(a, button):is(:hover, :focus-visible) .arrow-nudge {
+    transform: none;
   }
 }

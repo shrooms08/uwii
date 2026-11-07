@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
 import { cx } from "./cx";
 
-/** Gold mono section label: "01 / HOW IT WORKS" (or "✳ PRIVATE AI · …" with the star). */
+/** Gold mono section label: "01 / HOW IT WORKS" (or "✳ PRIVATE AI · …" with the star). Scramble-decodes once when visible (data-decode). */
 export function Eyebrow({ index, star, children, className, as: Tag = "p" }: { index?: string; star?: boolean; children: ReactNode; className?: string; as?: "p" | "span" }) {
   return (
-    <Tag className={cx("flex items-center gap-2 font-mono text-eyebrow font-medium text-gold uppercase", className)}>
+    <Tag data-decode="" className={cx("flex items-center gap-2 font-mono text-eyebrow font-medium text-gold uppercase", className)}>
       {star && (
         <span aria-hidden="true" className="text-[13px] leading-none">
           ✳

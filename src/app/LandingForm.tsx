@@ -64,10 +64,10 @@ export function LandingForm() {
         <button
           type="submit"
           disabled={starting}
-          className="flex h-[50px] flex-[1_0_auto] items-center justify-center gap-2.5 rounded-control bg-gold px-6 text-ui font-medium text-on-ink shadow-[0_0_0_1px_rgb(230_187_121_/0.35),0_10px_34px_-8px_rgb(230_187_121_/0.6)] transition-[background-color,box-shadow] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-gold-hover hover:shadow-[0_0_0_1px_rgb(239_203_148_/0.5),0_12px_40px_-6px_rgb(230_187_121_/0.75)] disabled:opacity-60"
+          className="btn-glow flex h-[50px] flex-[1_0_auto] items-center justify-center gap-2.5 rounded-control bg-gold px-6 text-ui font-medium text-on-ink shadow-[0_0_0_1px_rgb(230_187_121_/0.35),0_10px_34px_-8px_rgb(230_187_121_/0.6)] hover:bg-gold-hover disabled:opacity-60"
         >
           {starting ? "Starting…" : "Start private scan"}
-          <span aria-hidden="true">→</span>
+          <span aria-hidden="true" className="arrow-nudge">→</span>
         </button>
       </div>
       {error && (

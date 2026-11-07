@@ -31,7 +31,7 @@ const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? o
 
 function StatCard({ label, value, note, wide }: { label: string; value: string; note: string; wide?: boolean }) {
   return (
-    <Card className={cx("flex gap-2.5 p-5", wide ? "col-span-full flex-wrap items-end justify-between" : "flex-col")}>
+    <Card className={cx("card-lift flex gap-2.5 p-5", wide ? "col-span-full flex-wrap items-end justify-between" : "flex-col")}>
       <div className="flex flex-col gap-2.5">
         <span className="text-small text-ink-2">{label}</span>
         <Money value={value} className={cx("leading-none tracking-[-0.01em]", wide ? "text-[clamp(36px,3.4cqi,52px)]" : "text-[clamp(28px,2.6cqi,40px)]")} />
@@ -171,7 +171,7 @@ export default function ResultClient({ account }: { account: string }) {
             </div>
             <div>
               <span className="mb-2.5 inline-block font-mono text-caption tracking-[0.08em] text-ink-2 uppercase">Provisional</span>
-              <div className="text-[clamp(52px,5.8cqi,92px)] leading-[0.9] tracking-[-0.03em] text-ink-2">
+              <div data-countup="scramble" className="text-[clamp(52px,5.8cqi,92px)] leading-[0.9] tracking-[-0.03em] text-ink-2">
                 <Money value={r.tax.taxAttributableToVaNgn} koboClassName="opacity-80" />
               </div>
               <p className="mt-4 text-ui text-ink-2">
@@ -198,7 +198,7 @@ export default function ResultClient({ account }: { account: string }) {
               </span>
             </div>
             <div className="relative">
-              <div className="text-[clamp(52px,5.8cqi,92px)] leading-[0.9] tracking-[-0.03em]">
+              <div data-countup="scramble" className="text-[clamp(52px,5.8cqi,92px)] leading-[0.9] tracking-[-0.03em]">
                 <Money value={r.tax.taxAttributableToVaNgn} />
               </div>
               <p className="mt-4 text-ui text-ink-2">{subline}</p>
@@ -221,21 +221,31 @@ export default function ResultClient({ account }: { account: string }) {
       </div>
 
       <div className="mt-4 flex flex-col gap-4">
-        {rel && <ReliefsBreakdown rel={rel} />}
-        <TipsCard
-          tips={tips}
-          onView={(id) => {
-            const l = firstLineFor(id);
-            if (l) setOpenLine(l);
-          }}
-        />
-        <ReviewCard />
-        <NextSteps isDraft={isDraft} account={account} />
+        {rel && (
+          <div data-reveal="">
+            <ReliefsBreakdown rel={rel} />
+          </div>
+        )}
+        <div data-reveal="" className="empty:hidden">
+          <TipsCard
+            tips={tips}
+            onView={(id) => {
+              const l = firstLineFor(id);
+              if (l) setOpenLine(l);
+            }}
+          />
+        </div>
+        <div data-reveal="" className="empty:hidden">
+          <ReviewCard />
+        </div>
+        <div data-reveal="">
+          <NextSteps isDraft={isDraft} account={account} />
+        </div>
       </div>
 
       <LineSections lines={r.lines} openLine={openLine} onOpen={setOpenLine} />
 
-      <Card className="mt-4 overflow-hidden">
+      <Card data-reveal="" className="mt-4 overflow-hidden">
         <button
           type="button"
           aria-expanded={warnOpen}
