@@ -1,11 +1,11 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useMemo, useState } from "react";
 import { useFinishedDemo } from "@/components/CachedLabel";
-import { LineDrawer } from "@/components/report/LineDrawer";
 import { LineSections } from "@/components/report/LineSections";
 import { NextSteps } from "@/components/report/NextSteps";
-import { PrivacyPanel, proofAllVerified, proofCounts } from "@/components/report/PrivacyPanel";
+import { proofAllVerified, proofCounts } from "@/lib/report/privacy-summary";
 import { ReliefsBreakdown, ReviewCard, TipsCard, reliefSavedText } from "@/components/report/TaxHelp";
 import { Button, ButtonLink, TextButton } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -22,6 +22,10 @@ import { plainWarnings } from "@/lib/report/warnings";
 import { LABELS, type LabelId } from "@/lib/tax/ng/labels";
 import type { ReportLine } from "@/lib/tax/ng/engine";
 import type { ReportData } from "@/lib/tax/ng/report";
+
+// Opened on demand: kept out of the first load.
+const LineDrawer = dynamic(() => import("@/components/report/LineDrawer").then((m) => m.LineDrawer), { ssr: false });
+const PrivacyPanel = dynamic(() => import("@/components/report/PrivacyPanel").then((m) => m.PrivacyPanel), { ssr: false });
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
@@ -81,7 +85,8 @@ export default function ResultClient({ account }: { account: string }) {
   }
   if (!report || !flow) {
     return (
-      <p role="status" className="py-24 text-center text-ui text-ink-2">
+      // Fills the viewport so the footer does not jump when the report arrives (no layout shift).
+      <p role="status" className="flex min-h-[100svh] items-start justify-center pt-24 text-center text-ui text-ink-2">
         Computing your 2026 tax…
       </p>
     );
@@ -167,7 +172,7 @@ export default function ResultClient({ account }: { account: string }) {
             <div>
               <span className="mb-2.5 inline-block font-mono text-caption tracking-[0.08em] text-ink-2 uppercase">Provisional</span>
               <div className="text-[clamp(68px,7.6cqi,116px)] leading-[0.9] tracking-[-0.03em] text-[#5E5A53]">
-                <Money value={r.tax.taxAttributableToVaNgn} />
+                <Money value={r.tax.taxAttributableToVaNgn} koboClassName="opacity-80" />
               </div>
               <p className="mt-4 text-ui text-ink-2">
                 {subline}. {r.blockingQuestions > 0 ? `May change once ${plural(r.blockingQuestions, "question")} ${r.blockingQuestions === 1 ? "is" : "are"} answered.` : "May change once the draft reasons above are resolved."}

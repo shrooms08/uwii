@@ -1,11 +1,12 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useId, useState } from "react";
 import Link from "next/link";
 import { ClearDataButton } from "@/components/ClearDataButton";
 import { AnchorCard } from "@/components/report/AnchorCard";
 import { NextSteps } from "@/components/report/NextSteps";
-import { PrivacyPanel, proofAllVerified, proofCounts } from "@/components/report/PrivacyPanel";
+import { proofAllVerified, proofCounts } from "@/lib/report/privacy-summary";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
@@ -18,6 +19,9 @@ import { linesCsv, summaryCsv } from "@/lib/report/csv";
 import { reportFingerprint } from "@/lib/report/fingerprint";
 import { fmtNgn } from "@/lib/report/format";
 import { plainWarnings } from "@/lib/report/warnings";
+
+// Opened on demand: kept out of the first load.
+const PrivacyPanel = dynamic(() => import("@/components/report/PrivacyPanel").then((m) => m.PrivacyPanel), { ssr: false });
 
 /** The 36 states and the Federal Capital Territory. */
 const STATES = [
@@ -103,7 +107,8 @@ export default function ExportClient({ account }: { account: string }) {
   }
   if (!report || !flow) {
     return (
-      <p role="status" className="py-24 text-center text-ui text-ink-2">
+      // Fills the viewport so the footer does not jump when the worksheet arrives (no layout shift).
+      <p role="status" className="flex min-h-[100svh] items-start justify-center pt-24 text-center text-ui text-ink-2">
         Preparing your worksheet…
       </p>
     );

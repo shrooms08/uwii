@@ -13,25 +13,8 @@ export const shortAddr = (a: string) => (a.length > 12 ? `${a.slice(0, 6)}…${a
 const utc = (iso: string) => `${iso.slice(0, 10)} ${iso.slice(11, 19)} UTC`;
 
 /** Every recorded check passed and every AI response/decision has a verified signature. */
-export function proofAllVerified(p: PrivacyProof): boolean {
-  return (
-    p.aiDecisions > 0 &&
-    p.gatewayAndModelReportsVerified === true &&
-    p.checksPassed !== null &&
-    p.checksPassed === p.checksTotal &&
-    p.aiResponses > 0 &&
-    p.aiResponsesVerified === p.aiResponses &&
-    p.aiDecisionsSignatureVerified === p.aiDecisions &&
-    (p.checks ?? []).every((c) => c.ok)
-  );
-}
-
-/** Passed / total over every recorded check (preflight + signatures), or the stored preflight counts. */
-export function proofCounts(p: PrivacyProof): { passed: number; total: number } | null {
-  if (p.checksRecorded && p.checks.length) return { passed: p.checks.filter((c) => c.ok).length, total: p.checks.length };
-  if (p.checksPassed !== null && p.checksTotal !== null) return { passed: p.checksPassed, total: p.checksTotal };
-  return null;
-}
+export { proofAllVerified, proofCounts } from "@/lib/report/privacy-summary";
+import { proofAllVerified, proofCounts } from "@/lib/report/privacy-summary";
 
 const GROUPS: { id: ProofCheck["group"]; title: string }[] = [
   { id: "report", title: "Attestation report" },
