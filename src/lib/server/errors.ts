@@ -5,8 +5,9 @@
  * validation) keep their specific messages and are not handled here.
  */
 import { randomBytes } from "node:crypto";
+import { GENERIC_ERROR } from "../../content/errors";
 
-export const GENERIC_ERROR = "Something went wrong on our side. Try again; if it keeps happening, quote error";
+export { GENERIC_ERROR };
 
 /** Logs the internal detail under a fresh id and returns the public message. */
 export function publicError(context: string, e: unknown): { id: string; message: string } {
