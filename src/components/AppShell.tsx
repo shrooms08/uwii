@@ -23,6 +23,11 @@ function AccountPill({ account }: { account: string }) {
   );
 }
 
+/** Page gutter: 16-64px (about 58px on a 1440px screen). */
+const GUTTER = "px-[clamp(16px,4vw,64px)]";
+/** Landing: wide layout (1600px); app screens keep 1440px. */
+const WIDTH = (landing?: boolean) => (landing ? "max-w-[1600px]" : "max-w-[1440px]");
+
 const navLink = "rounded-[8px] px-3 py-2 text-label text-ink-2 transition-colors duration-200 hover:bg-white/[0.04] hover:text-ink";
 
 const footLink = "text-small text-ink-2 transition-colors duration-200 hover:text-ink";
@@ -73,54 +78,55 @@ export function AppShell({
   return (
     <div className="uwii @container flex min-h-screen flex-1 flex-col overflow-x-clip">
       <MotionRoot />
-      <div className={cx("mx-auto flex w-full max-w-[1440px] flex-1 flex-col", landing ? "px-[clamp(20px,4cqi,64px)]" : "px-[clamp(16px,4cqi,64px)]")}>
-        <header className="pointer-events-none sticky top-0 z-40 -mx-[clamp(4px,1cqi,16px)] pt-4 pb-3">
-          <div className="uwii-nav pointer-events-auto mx-auto flex h-[60px] w-full max-w-[1280px] items-center justify-between gap-3 rounded-card border border-white/8 bg-page/72 py-2.5 pr-2.5 pl-[18px] shadow-float backdrop-blur-md">
-            <Wordmark />
-            {landing && (
-              <nav aria-label="Sections" className="hidden items-center gap-0.5 @min-[900px]:flex">
-                <Link href="/#how" className={navLink}>
-                  How it works
+      {/* Sticky header, full width: transparent at the very top, glass with a hairline once scrolled (html[data-scrolled]). */}
+      <header className="uwii-header sticky top-0 z-50 w-full border-b border-transparent">
+        <div className={cx("mx-auto flex h-[71px] w-full items-center justify-between gap-3", WIDTH(landing), GUTTER)}>
+          <Wordmark />
+          {landing && (
+            <nav aria-label="Sections" className="hidden items-center gap-0.5 @min-[900px]:flex">
+              <Link href="/#how" className={navLink}>
+                How it works
+              </Link>
+              <Link href="/#trust" className={navLink}>
+                Trust
+              </Link>
+              <Link href="/guide" className={navLink}>
+                Guide
+              </Link>
+              <Link href="/verify" className={navLink}>
+                Verify
+              </Link>
+            </nav>
+          )}
+          {step && account && <StepNav current={step} account={account} />}
+          <span className="flex min-w-0 items-center gap-2">
+            {landing ? (
+              <>
+                {recordedAt && (
+                  <span className="hidden @min-[760px]:contents">
+                    <FinishedReportButton recordedAt={recordedAt} compact />
+                  </span>
+                )}
+                <NavStartButton />
+              </>
+            ) : (
+              <>
+                <Link href="/guide" className={cx(navLink, account && "hidden @min-[760px]:inline")}>
+                  Tax guide
                 </Link>
-                <Link href="/#trust" className={navLink}>
-                  Trust
-                </Link>
-                <Link href="/guide" className={navLink}>
-                  Guide
-                </Link>
-                <Link href="/verify" className={navLink}>
-                  Verify
-                </Link>
-              </nav>
+                {account ? (
+                  <AccountPill account={account} />
+                ) : (
+                  <span className="inline-flex h-9 items-center rounded-control border border-border px-3 font-mono text-[11px] font-medium tracking-[0.12em] whitespace-nowrap text-ink-2 uppercase">
+                    Tax year 2026
+                  </span>
+                )}
+              </>
             )}
-            {step && account && <StepNav current={step} account={account} />}
-            <span className="flex min-w-0 items-center gap-2">
-              {landing ? (
-                <>
-                  {recordedAt && (
-                    <span className="hidden @min-[760px]:contents">
-                      <FinishedReportButton recordedAt={recordedAt} compact />
-                    </span>
-                  )}
-                  <NavStartButton />
-                </>
-              ) : (
-                <>
-                  <Link href="/guide" className={cx(navLink, account && "hidden @min-[760px]:inline")}>
-                    Tax guide
-                  </Link>
-                  {account ? (
-                    <AccountPill account={account} />
-                  ) : (
-                    <span className="inline-flex h-9 items-center rounded-control border border-border px-3 font-mono text-[11px] font-medium tracking-[0.12em] whitespace-nowrap text-ink-2 uppercase">
-                      Tax year 2026
-                    </span>
-                  )}
-                </>
-              )}
-            </span>
-          </div>
-        </header>
+          </span>
+        </div>
+      </header>
+      <div className={cx("mx-auto flex w-full flex-1 flex-col", WIDTH(landing), GUTTER)}>
         {step && step !== "scan" && <StepBar current={step} />}
         {account &&
           (account === DEMO_ACCOUNT ? (
@@ -143,8 +149,8 @@ export function AppShell({
               <CachedLabel account={account} />
             </div>
           ))}
-        <main className={cx("flex min-h-[calc(100svh-88px)] flex-1 flex-col", mainClassName)}>{children}</main>
-        <footer className="mx-auto mt-16 w-full max-w-[1280px] border-t border-white/8 pt-12 pb-10">
+        <main className={cx("flex min-h-[calc(100svh-72px)] flex-1 flex-col", mainClassName)}>{children}</main>
+        <footer className="mt-16 w-full border-t border-white/8 pt-12 pb-10">
           <div className="grid gap-10 @min-[760px]:grid-cols-[1.4fr_1fr_1fr_1fr]">
             <div className="flex max-w-[340px] flex-col gap-4">
               <Wordmark />

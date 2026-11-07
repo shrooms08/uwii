@@ -4,15 +4,15 @@
 // downloaded to a temp folder (never committed) and reduced to a small luminance grid; only that grid
 // (src/content/glyph-art.json) is committed and shipped; the browser never loads the painting.
 //
-// Pipeline (so the figures read as a bright silhouette on empty black, not a dim rectangle):
-//  1. Crop tight to the subjects: both faces, the hands, the ledger and the coins.
-//  2. Luminance, normalised to the 2nd-99th percentile.
-//  3. Subject mask: a score of luminance plus local contrast (local standard deviation), soft-thresholded,
-//     inside a region of interest made of soft blobs over the subjects whose edges are broken up by
-//     low-frequency noise (organic, never a rectangle); the mask is then feathered. Background cells are 0.
-//  4. Edge emphasis: Sobel edge strength added back, so faces, fingers and coin rims read from a distance.
-//  5. Clarity (local contrast), levels and gamma: mids lifted, highlights pushed to full gold; quantised to
-//     15 levels (0 = empty); faint edge cells dropped.
+// Pipeline: the whole painting in full tone (not a silhouette), so the composition reads as glyphs:
+//  1. The full painting, resized to the grid (cells ~0.62 wide per unit of height, like a mono glyph);
+//     luminance normalised to the 1st-99.5th percentile.
+//  2. Clarity: local contrast boosted so eyes, mouths, fingers, hat edges and coin rims separate.
+//  3. Dodge and burn: a very soft weighting map (wide blobs over the faces, hats, hands, ledger and coins)
+//     keeps the figures at full tone and holds the wood background to about 45%. No hard mask, so no holes.
+//  4. Edge emphasis: Sobel edge strength added back (more on the subjects).
+//  5. Contrast curve (gentle S), highlights normalised to full gold; 15 brightness levels, with only
+//     near-black cells left blank (level 0).
 // Uses sharp, which is already installed as part of Next.js (no new dependency).
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -28,27 +28,28 @@ export const SOURCE = {
   license: "Public domain (PD-Art: a faithful reproduction of a two-dimensional public-domain work)",
 };
 
-/** Source pixels kept (the source is 1000x1232): both faces, the hands, the ledger and the coins. */
-const CROP = { left: 120, top: 450, width: 880, height: 740 };
+/** The whole painting is used (the source is 1000x1232). */
+const CROP = { left: 0, top: 0, width: 1000, height: 1232 };
 /** Grid width; rows follow the crop's aspect for cells ~0.62 wide per unit of height (a mono glyph). */
-const COLS = 200;
+const COLS = 260;
 const CELL_ASPECT = 0.62;
 const ROWS = Math.round(COLS * (CROP.height / CROP.width) * CELL_ASPECT);
 const LEVELS = 16;
 /** Working resolution: SS samples per cell in each direction, averaged down at the end. */
 const SS = 3;
 
-/** Regions of interest in crop coordinates (0-1): centre, radii and weight. */
+/** Subjects in painting coordinates (0-1): centre, radii and weight, for the soft dodge-and-burn map. */
 const BLOBS: { x: number; y: number; rx: number; ry: number; w: number }[] = [
-  { x: 0.2, y: 0.2, rx: 0.17, ry: 0.23, w: 1 }, // left collector's face
-  { x: 0.2, y: 0.03, rx: 0.25, ry: 0.1, w: 0.5 }, // his headdress, lower edge
-  { x: 0.72, y: 0.19, rx: 0.12, ry: 0.22, w: 1 }, // right collector's face
-  { x: 0.68, y: 0.14, rx: 0.2, ry: 0.27, w: 0.45 }, // his leaf headdress
-  { x: 0.23, y: 0.69, rx: 0.13, ry: 0.1, w: 1 }, // writing hand
-  { x: 0.37, y: 0.68, rx: 0.07, ry: 0.07, w: 1 }, // his other hand
-  { x: 0.65, y: 0.6, rx: 0.11, ry: 0.21, w: 1 }, // right collector's hands
-  { x: 0.3, y: 0.85, rx: 0.34, ry: 0.16, w: 1 }, // the ledger
-  { x: 0.82, y: 0.86, rx: 0.15, ry: 0.14, w: 1 }, // the coins
+  { x: 0.3, y: 0.485, rx: 0.15, ry: 0.14, w: 1 }, // left collector's face
+  { x: 0.28, y: 0.36, rx: 0.26, ry: 0.13, w: 0.85 }, // his feathered hat
+  { x: 0.754, y: 0.48, rx: 0.11, ry: 0.13, w: 1 }, // right collector's face
+  { x: 0.78, y: 0.46, rx: 0.22, ry: 0.16, w: 0.85 }, // his leaf headdress
+  { x: 0.86, y: 0.66, rx: 0.14, ry: 0.12, w: 0.7 }, // his red sleeve
+  { x: 0.322, y: 0.78, rx: 0.12, ry: 0.065, w: 1 }, // writing hand
+  { x: 0.446, y: 0.773, rx: 0.065, ry: 0.045, w: 1 }, // his other hand
+  { x: 0.692, y: 0.725, rx: 0.1, ry: 0.13, w: 1 }, // right collector's hands
+  { x: 0.384, y: 0.876, rx: 0.31, ry: 0.1, w: 1 }, // the ledger
+  { x: 0.842, y: 0.882, rx: 0.14, ry: 0.09, w: 1 }, // the coins
 ];
 
 async function source(): Promise<Buffer> {
@@ -163,45 +164,35 @@ async function main() {
   const meta = await sharp(img).metadata();
   if (meta.width !== 1000 || meta.height !== 1232) throw new Error(`Unexpected source size ${meta.width}x${meta.height}; review CROP`);
 
-  // 1-2. Crop, resize to the working grid (cells are taller than wide), luminance, normalise.
+  // 1. The whole painting at the working resolution (SS samples per cell each way), luminance, normalised.
   const W = COLS * SS;
   const H = ROWS * SS;
   const raw = await sharp(img).extract(CROP).resize(W, H, { fit: "fill", kernel: "lanczos3" }).grayscale().raw().toBuffer();
   const L0 = plane(W, H);
   for (let i = 0; i < raw.length; i++) L0.d[i] = raw[i] / 255;
-  const L = stretch(L0, 0.02, 0.99);
+  const L = stretch(L0, 0.01, 0.995);
 
-  // 3. Subject mask: luminance + local contrast, inside the organic region of interest.
-  const mean = blur(L, Math.round(W / 60));
-  const dev = plane(W, H);
-  for (let i = 0; i < dev.d.length; i++) dev.d[i] = (L.d[i] - mean.d[i]) ** 2;
-  const std = stretch({ w: W, h: H, d: blur(dev, Math.round(W / 60)).d.map(Math.sqrt) }, 0.02, 0.98);
+  // 2. Clarity (local contrast).
+  const local = blur(L, Math.max(2, Math.round(W / 90)));
+  // 3. Dodge and burn: soft weighting, noise-broken so it never reads as shapes; widely blurred.
   const noise = valueNoise(W, H, Math.round(W / 14), 1540);
-  const fine = valueNoise(W, H, Math.round(W / 40), 2026);
-  const roi = plane(W, H);
+  const weight0 = plane(W, H);
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
       const u = x / (W - 1);
       const v = y / (H - 1);
       const i = y * W + x;
-      // Noise breaks the blob edges up so the silhouette is organic.
-      const wobble = 0.55 * (noise.d[i] - 0.5) + 0.25 * (fine.d[i] - 0.5);
+      const wobble = 0.3 * (noise.d[i] - 0.5);
       let m = 0;
       for (const b of BLOBS) {
         const dx = (u - b.x) / b.rx;
         const dy = (v - b.y) / b.ry;
-        const r = Math.sqrt(dx * dx + dy * dy) + wobble;
-        m = Math.max(m, b.w * (1 - smooth(0.55, 1.05, r)));
+        m = Math.max(m, b.w * (1 - smooth(0.7, 1.8, Math.sqrt(dx * dx + dy * dy) + wobble)));
       }
-      roi.d[i] = m;
+      weight0.d[i] = m;
     }
   }
-  const mask0 = plane(W, H);
-  for (let i = 0; i < mask0.d.length; i++) {
-    const score = 0.7 * L.d[i] + 0.55 * std.d[i];
-    mask0.d[i] = smooth(0.14, 0.48, score) * roi.d[i];
-  }
-  const mask = blur(mask0, Math.max(1, Math.round(SS * 0.8)), 2);
+  const weight = blur(weight0, Math.round(W / 40), 3);
 
   // 4. Edge emphasis (Sobel on a lightly blurred luminance).
   const Ls = blur(L, 1, 1);
@@ -216,39 +207,31 @@ async function main() {
   }
   const En = stretch(E, 0.05, 0.97);
 
-  // 5. Levels and gamma on the masked image, then average down to the grid.
-  const local = blur(L, Math.max(2, Math.round(W / 90)));
+  // 5. Tone: clarity, edges and weighting, then a gentle S-curve.
   const val = plane(W, H);
   for (let i = 0; i < val.d.length; i++) {
-    // Clarity: local contrast boosted so features (eyes, mouths, fingers, coin rims) separate.
-    const clarity = L.d[i] + 0.9 * (L.d[i] - local.d[i]);
-    const v = Math.min(1, Math.max(0, 0.9 * clarity + 0.45 * En.d[i] * smooth(0.1, 0.5, L.d[i] + 0.3)));
-    val.d[i] = Math.pow(v, 0.8) * mask.d[i];
+    const clarity = L.d[i] + 0.6 * (L.d[i] - local.d[i]);
+    const w = weight.d[i];
+    let v = Math.min(1, Math.max(0, clarity + (0.15 + 0.25 * w) * En.d[i] * smooth(0.05, 0.4, L.d[i])));
+    v *= 0.45 + 0.55 * w;
+    v = v < 0.5 ? 2 * v * v * 0.9 + 0.1 * v : 1 - 2 * (1 - v) * (1 - v) * 0.9 - 0.1 * (1 - v);
+    val.d[i] = Math.pow(Math.max(0, v), 0.85);
   }
   const grid = new Float32Array(COLS * ROWS);
-  const gmask = new Float32Array(COLS * ROWS);
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
       let s = 0;
-      let m = 0;
-      for (let dy = 0; dy < SS; dy++) {
-        for (let dx = 0; dx < SS; dx++) {
-          const i = (r * SS + dy) * W + c * SS + dx;
-          s += val.d[i];
-          m += mask.d[i];
-        }
-      }
+      for (let dy = 0; dy < SS; dy++) for (let dx = 0; dx < SS; dx++) s += val.d[(r * SS + dy) * W + c * SS + dx];
       grid[r * COLS + c] = s / (SS * SS);
-      gmask[r * COLS + c] = m / (SS * SS);
     }
   }
-  // Highlights to full gold: the 99.5th percentile of the subject maps to 1.
-  const top = percentile(grid.filter((_, i) => gmask[i] > 0.2), 0.995) || 1;
+  // Highlights to full gold: the 99.6th percentile maps to 1. Only near-black cells are left blank.
+  const top = percentile(grid, 0.996) || 1;
   const packed = Buffer.alloc(Math.ceil((COLS * ROWS) / 2));
   let filled = 0;
   for (let i = 0; i < grid.length; i++) {
     const v = Math.min(1, grid[i] / top);
-    const q = gmask[i] < 0.12 || v < 0.1 ? 0 : Math.max(1, Math.min(LEVELS - 1, Math.round(v * (LEVELS - 1))));
+    const q = v < 0.06 ? 0 : Math.max(1, Math.min(LEVELS - 1, Math.round(v * (LEVELS - 1))));
     if (q) filled++;
     packed[i >> 1] |= i % 2 === 0 ? q << 4 : q;
   }
@@ -259,7 +242,7 @@ async function main() {
     cols: COLS,
     rows: ROWS,
     levels: LEVELS,
-    note: "Level 0 = empty (background); 1-15 = brightness. Subject masked by luminance + local contrast inside soft organic regions; Sobel edges added.",
+    note: "The whole painting in full tone. Level 0 = near-black (blank); 1-15 = brightness. Clarity, soft dodge-and-burn on the subjects, Sobel edges, S-curve.",
     data: packed.toString("base64"),
   };
   const file = path.join(process.cwd(), "src", "content", "glyph-art.json");

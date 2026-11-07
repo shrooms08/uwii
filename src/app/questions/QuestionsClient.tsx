@@ -220,7 +220,7 @@ export default function QuestionsClient({ account }: { account: string }) {
           ))}
         </div>
 
-        <aside className={cx("flex max-w-full flex-[1_1_340px] flex-col gap-4 self-start", !reliefsOpen && "sticky top-6")}>
+        <aside className={cx("flex max-w-full flex-[1_1_340px] flex-col gap-4 self-start", !reliefsOpen && "sticky top-[88px]")}>
           <Card aria-label="Summary" className="flex flex-col gap-5 p-6">
             <div className="flex flex-col gap-2.5">
               <div className="flex items-baseline justify-between">

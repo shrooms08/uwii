@@ -275,7 +275,7 @@ write if any test fails.
   - IBM Plex Mono (the ₦ sign in the PDF and the social cards).
 - **Artwork.** The landing hero draws Marinus van Reymerswaele's *The Tax Collectors* (1540s, public
   domain) in gold text characters, full-bleed, with an intro decode, brief glitches and a cursor light
-  (one static frame under reduced motion). `npm run glyph-art` rebuilds the committed, subject-masked
+  (one static frame under reduced motion). `npm run glyph-art` rebuilds the committed, full-tone
   luminance grid (`src/content/glyph-art.json`) from the Wikimedia Commons file. Source, licence and the visual
   reference are recorded in [docs/CREDITS.md](docs/CREDITS.md).
   - Licence files are in `public/pdf-fonts/`. The web app loads the same families through `next/font`.

@@ -14,11 +14,12 @@ import { FinishedReportButton } from "./FinishedReportButton";
 import { LandingForm } from "./LandingForm";
 import { LandingProofButton } from "./LandingProofButton";
 
-const GUTTER = "px-[clamp(20px,4cqi,64px)]";
+/** Same gutter as the shell (src/components/AppShell.tsx): 16-64px, about 58px at 1440px. */
+const GUTTER = "px-[clamp(16px,4vw,64px)]";
 
 function Section({ id, head, children }: { id: string; head: { index: string; label: string; headline: string; muted: string; body: string }; children: ReactNode }) {
   return (
-    <section id={id} aria-labelledby={`${id}-h`} className="mx-auto w-full max-w-[1280px] scroll-mt-28 pt-[clamp(80px,9cqi,126px)] text-left">
+    <section id={id} aria-labelledby={`${id}-h`} className="w-full scroll-mt-[72px] pt-[clamp(80px,9cqi,126px)] text-left">
       <div data-reveal="">
         <Eyebrow index={head.index}>{head.label}</Eyebrow>
         <TwoTone id={`${id}-h`} lead={head.headline} muted={head.muted} className="mt-5 max-w-[900px] text-[clamp(34px,4.2cqi,56px)]" />
@@ -54,18 +55,24 @@ export default function Landing() {
   return (
     <AppShell landing recordedAt={demoRecordedAt} mainClassName="pb-[clamp(48px,6cqi,96px)]">
       {/* Hero: text first (it is the LCP); the glyph art is drawn after first paint. */}
-      <section aria-labelledby="hero-h" className={`relative -mx-[clamp(20px,4cqi,64px)] -mt-[88px] ${GUTTER} pt-[88px]`}>
+      <section aria-labelledby="hero-h" className={`relative -mx-[clamp(16px,4vw,64px)] -mt-[72px] ${GUTTER} pt-[72px]`}>
         {/* Full-bleed: the canvas spans the viewport width (the shell clips any overflow on x). */}
         <GlyphArt className="pointer-events-none absolute inset-y-0 left-[calc(50%-50vw)] h-full w-screen" />
+        {/* Wide screens: the art spans edge to edge; a left-to-right fade (0.85 to clear by half the width) keeps the text AA,
+            a top fade keeps the transparent header legible, and a bottom fade eases the art into the page. */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-0 left-[calc(50%-50vw)] hidden w-screen bg-[linear-gradient(180deg,rgb(11_12_14/0.85)_0px,rgb(11_12_14/0)_140px,rgb(11_12_14/0)_calc(100%_-_160px),rgb(11_12_14)_100%),linear-gradient(90deg,rgb(11_12_14/0.85)_0%,rgb(11_12_14/0.6)_25%,rgb(11_12_14/0)_50%)] @min-[760px]:block"
+        />
         {/* Narrow screens: the art sits behind the headline, so a scrim keeps the text AA. */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 left-[calc(50%-50vw)] w-screen bg-[linear-gradient(to_bottom,rgb(11_12_14/0)_0px,rgb(11_12_14/0)_190px,rgb(11_12_14/0.6)_290px,rgb(11_12_14/0.82)_400px,rgb(11_12_14/0.82)_100%)] @min-[760px]:hidden"
+          className="pointer-events-none absolute inset-y-0 left-[calc(50%-50vw)] w-screen bg-[linear-gradient(to_bottom,rgb(11_12_14/0.6)_0px,rgb(11_12_14/0)_64px,rgb(11_12_14/0)_190px,rgb(11_12_14/0.6)_290px,rgb(11_12_14/0.82)_400px,rgb(11_12_14/0.82)_100%)] @min-[760px]:hidden"
         />
         <p className="sr-only">
           Decorative background: Marinus van Reymerswaele&apos;s painting The Tax Collectors (1540s, public domain), drawn in gold text characters.
         </p>
-        <div className="relative mx-auto w-full max-w-[1280px] pt-[230px] pb-[clamp(56px,7cqi,104px)] @min-[760px]:pt-[clamp(96px,11cqi,168px)]">
+        <div className="relative w-full pt-[230px] pb-[clamp(56px,7cqi,104px)] @min-[760px]:pt-[clamp(96px,11cqi,168px)]">
           <div className="flex max-w-[620px] flex-col items-start gap-6">
             <Eyebrow star>{hero.eyebrow}</Eyebrow>
             <h1 id="hero-h" className="font-serif text-[clamp(44px,4.7cqi,68px)] leading-[1.04] tracking-[-0.05em]">
@@ -89,7 +96,7 @@ export default function Landing() {
       </section>
 
       {/* Live numbers: each one measured (npm run stats; the committed demo run), never typed by hand. */}
-      <section aria-label="Live numbers" data-reveal="" className="relative mx-auto w-full max-w-[1280px]">
+      <section aria-label="Live numbers" data-reveal="" className="relative w-full">
         <div className="flex flex-wrap items-center gap-x-10 gap-y-4 rounded-card border border-border bg-surface/60 px-6 py-5">
           <span className="flex items-center gap-2 font-mono text-eyebrow font-medium text-green-dot uppercase">
             <span aria-hidden="true" className="size-[7px] rounded-full bg-green-dot shadow-[0_0_10px_rgb(127_209_139_/0.8)]" />

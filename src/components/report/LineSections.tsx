@@ -120,7 +120,7 @@ function SectionCard({ section, rows, open, onToggle, openLine, onOpen }: { sect
   const pad = "px-[clamp(16px,2cqi,24px)]";
   return (
     <Card aria-labelledby={hid} className="overflow-clip">
-      <div className={cx("sticky top-0 z-10 flex flex-col gap-1.5 border-b border-line bg-surface py-4", pad)}>
+      <div className={cx("sticky top-[72px] z-10 flex flex-col gap-1.5 border-b border-line bg-surface py-4", pad)}>
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
           <h3 id={hid} className="flex items-center gap-2.5 text-[17px] font-semibold tracking-[-0.01em]">
             <button type="button" aria-expanded={open} aria-controls={bodyId} onClick={onToggle} className="flex items-center gap-2.5 text-left">

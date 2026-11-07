@@ -110,6 +110,8 @@ export function run(canvas: HTMLCanvasElement, grid: Grid, reduced: boolean): ()
   let artYd = 0;
   let artAlpha = 1;
   let atlas: HTMLCanvasElement | null = null;
+  /** Faint, sparse glyph field over the whole canvas (drawn under the art every frame). */
+  let texture: HTMLCanvasElement | null = null;
   let nctx: CanvasRenderingContext2D | null = null;
   let ready = false;
   const noiseRng = rng(2026);
@@ -140,7 +142,7 @@ export function run(canvas: HTMLCanvasElement, grid: Grid, reduced: boolean): ()
 
   /**
    * Start-up and re-layout as a sequence of small steps (each well under 16 ms on a 4x-throttled phone),
-   * run in idle slices by runSteps(): grid decode, geometry, the atlas one tint at a time (the ambient
+   * run in idle slices (about 4 ms each) by slice(): grid decode, geometry, the atlas one tint at a time (the ambient
    * field starts drawing after the first), the cells a few rows at a time, then the art and decode layers
    * in batches. The intro decode starts when the last step is done.
    */
@@ -164,9 +166,9 @@ export function run(canvas: HTMLCanvasElement, grid: Grid, reduced: boolean): ()
 
   function* layoutSteps(): Generator<void> {
     const src = levels!;
-    const rect = canvas.getBoundingClientRect();
-    W = Math.max(1, Math.round(rect.width));
-    H = Math.max(1, Math.round(rect.height));
+    // Size from the ResizeObserver entry (no forced layout inside the idle task).
+    W = Math.max(1, size.w);
+    H = Math.max(1, size.h);
     mobile = W < 760;
     small = mobile || lowEnd;
     dpr = Math.min(window.devicePixelRatio || 1, lowEnd ? 1.5 : 2);
@@ -174,31 +176,59 @@ export function run(canvas: HTMLCanvasElement, grid: Grid, reduced: boolean): ()
     canvas.height = Math.round(H * dpr);
     yield;
 
-    // Art: anchored right, bleeding off the right edge. Desktop: up to ~74% of the width and the hero
-    // height; narrow screens: wider than the screen, behind the headline area, at reduced opacity.
-    const step = small ? 2 : 1;
-    cols = Math.floor(grid.cols / step);
-    rows = Math.floor(grid.rows / step);
+    // Painting placement (CSS px; the grid spans the whole 1000x1232 painting).
+    //  - Wide screens: scaled so the faces-to-coins band (painting y 450-1190) fits the hero height, but no
+    //    larger than keeps the left face (its left edge near painting x 200) at or right of 48% of the width,
+    //    so both faces sit in the right ~half; anchored right with a 2% bleed; vertically centred on the band.
+    //    The painting's left edge fades out, and a faint glyph field carries the texture to the left edge.
+    //  - Narrow screens: 1.4x the width, faces near the top, behind the headline at reduced opacity.
+    const PW = 1000;
+    const PH = 1232;
+    let s: number;
+    let px0: number;
+    let py0: number;
     if (mobile) {
-      cellW = (W * 1.18) / cols;
+      s = (1.4 * W) / PW;
+      px0 = W - 0.93 * PW * s;
+      py0 = 64 - 430 * s;
     } else {
-      const byWidth = (W * 0.74) / cols;
-      const byHeight = ((H - 40) * CELL_ASPECT) / rows;
-      cellW = Math.min(byWidth, byHeight);
+      s = Math.min(H / 740, (0.52 * W) / 780);
+      px0 = W - 0.98 * PW * s;
+      const winH = H / s;
+      const top = winH >= PH ? (PH - winH) / 2 : Math.max(0, Math.min(PH - winH, 820 - winH / 2));
+      py0 = -top * s;
     }
-    cellH = cellW / CELL_ASPECT;
+    // Cells: integer steps of the source grid, aiming at ~3.8px cells (4.2px on phones, 5.4px on low-end),
+    // with a cap on the visible cell count so the cost stays in budget at any size.
+    const srcCell = (PW / grid.cols) * s;
+    let step = Math.max(1, Math.round((mobile ? 4.2 : small ? 5.4 : 3.8) / srcCell));
+    const cap = small ? 14000 : 60000;
+    let c0 = 0;
+    let r0v = 0;
+    for (;;) {
+      cellW = srcCell * step;
+      cellH = cellW / CELL_ASPECT;
+      const totalC = Math.floor(grid.cols / step);
+      const totalR = Math.floor(grid.rows / step);
+      c0 = Math.max(0, Math.floor(-px0 / cellW));
+      r0v = Math.max(0, Math.floor(-py0 / cellH));
+      cols = Math.max(0, Math.min(totalC, Math.ceil((W - px0) / cellW)) - c0);
+      rows = Math.max(0, Math.min(totalR, Math.ceil((H - py0) / cellH)) - r0v);
+      if (cols * rows <= cap) break;
+      step++;
+    }
     const artW = cols * cellW;
     const artH = rows * cellH;
-    const artX = W - artW * (mobile ? 0.9 : 0.92);
-    const artY = mobile ? 64 : Math.max(48, (H - artH) / 2 + 12);
+    const artX = px0 + c0 * cellW;
+    const artY = py0 + r0v * cellH;
     artXd = artX * dpr;
     artYd = artY * dpr;
-    artAlpha = mobile ? 0.92 : 1;
+    artAlpha = mobile ? 0.9 : 1;
     sw = Math.ceil(cellW * dpr);
     sh = Math.ceil(cellH * dpr);
 
-    // Sprite atlas: CHARS across, TINTS down, one tint per step. The ambient field only needs tint 0,
-    // so it starts drawing as soon as that row exists.
+    // Sprite atlas: CHARS across, TINTS down, one tint per step. The ambient field and the background
+    // texture only need tint 0, so they start drawing as soon as that row exists.
     atlas = document.createElement("canvas");
     atlas.width = sw * N_CHARS;
     atlas.height = sh * TINTS.length;
@@ -206,53 +236,66 @@ export function run(canvas: HTMLCanvasElement, grid: Grid, reduced: boolean): ()
     a.font = `600 ${Math.max(5, cellH * dpr * 0.98)}px ${family}`;
     a.textAlign = "center";
     a.textBaseline = "middle";
+    const r0 = rng(1540);
     for (let t = 0; t < TINTS.length; t++) {
-      const [r, g, b] = TINTS[t];
-      a.fillStyle = `rgb(${r},${g},${b})`;
+      const [cr, cg, cb] = TINTS[t];
+      a.fillStyle = `rgb(${cr},${cg},${cb})`;
       CHARS.forEach((c, k) => a.fillText(c, k * sw + sw / 2, t * sh + sh / 2));
       yield;
       if (t === 0) {
         // Ambient field: sparse clusters anywhere in the hero (also behind the nav).
         const count = small ? 14 : 34;
         clusters = Array.from({ length: count }, () => spawn(random() * 6000));
+        // Background texture: a faint, sparse glyph field across the whole canvas (edge to edge).
+        texture = document.createElement("canvas");
+        texture.width = canvas.width;
+        texture.height = canvas.height;
+        const tctx = texture.getContext("2d")!;
+        const tc = Math.ceil(W / cellW);
+        const tr = Math.ceil(H / cellH);
+        let k = 0;
+        for (let y = 0; y < tr; y++) {
+          for (let x = 0; x < tc; x++) {
+            if (r0() > (small ? 0.05 : 0.07)) continue;
+            sprite(tctx, Math.floor(r0() * 4), 0, Math.round(x * cellW * dpr), Math.round(y * cellH * dpr), 0.05 + 0.08 * r0());
+            if ((++k & 127) === 0) yield;
+          }
+        }
         fieldReady = true;
         yield;
       }
     }
 
-    // Cells.
+    // Cells of the visible window: brightness to glyph density, tint and opacity. Only near-black cells
+    // are blank (no holes inside the figures).
     const n = cols * rows;
     lv = new Float32Array(n);
     ch = new Uint8Array(n);
     tint = new Uint8Array(n);
     alpha = new Float32Array(n);
     const list: number[] = [];
-    const r0 = rng(1540);
+    const per = step * step * (grid.levels - 1);
     for (let r = 0; r < rows; r++) {
+      const gr = (r0v + r) * step;
+      const vp = gr / grid.rows;
+      // Soft fade where the painting's top or bottom edge is on screen.
+      const fadeY = smooth(0, 0.03, vp) * (1 - smooth(0.96, 1, vp));
       for (let c = 0; c < cols; c++) {
-        let s = 0;
-        let m = 0;
-        for (let dy = 0; dy < step; dy++) {
-          for (let dx = 0; dx < step; dx++) {
-            const q = src[(r * step + dy) * grid.cols + (c * step + dx)];
-            if (q) {
-              s += q;
-              m++;
-            }
-          }
-        }
+        const gc = (c0 + c) * step;
+        let sum = 0;
+        for (let dy = 0; dy < step; dy++) for (let dx = 0; dx < step; dx++) sum += src[(gr + dy) * grid.cols + gc + dx];
+        const v = sum / per;
+        if (v < 0.06) continue;
         const i = r * cols + c;
-        // A cell is empty unless at least half of its source cells are subject.
-        if (m * 2 < step * step) continue;
-        const v = s / m / (grid.levels - 1);
+        // The painting's left edge fades out on wide screens (no hard edge behind the text).
+        const fadeX = mobile ? 1 : smooth(0, 0.16, gc / grid.cols);
         lv[i] = v;
         ch[i] = v > 0.55 && r0() < 0.03 ? N_RAMP + Math.floor(r0() * ACCENTS.length) : rampFor(v);
         tint[i] = v > 0.88 ? 3 : v > 0.72 ? 2 : v > 0.55 ? 1 : 0;
-        // Larger, averaged cells on small screens read darker, so their curve is gentler.
-        alpha[i] = artAlpha * (small ? 0.16 + 0.84 * Math.pow(v, 0.95) : 0.1 + 0.9 * Math.pow(v, 1.3));
+        alpha[i] = artAlpha * fadeX * fadeY * (small ? 0.1 + 0.9 * Math.pow(v, 1.05) : 0.06 + 0.94 * Math.pow(v, 1.25));
         list.push(i);
       }
-      if ((r & 7) === 7) yield;
+      if ((r & 3) === 3) yield;
     }
     filled = Uint32Array.from(list);
     yield;
@@ -306,14 +349,14 @@ export function run(canvas: HTMLCanvasElement, grid: Grid, reduced: boolean): ()
     jobHandle = 0;
     if (disposed || !job) return;
     const t0 = performance.now();
-    // ~8 ms of steps per slice; each step is small, so no task comes near 50 ms.
+    // ~4 ms of steps per slice; each step is small, so a slice stays well under 16 ms on a 4x-throttled phone.
     do {
       if (job.next().done) {
         job = null;
         onReady();
         return;
       }
-    } while (performance.now() - t0 < 8);
+    } while (performance.now() - t0 < 4);
     schedule();
   }
   function schedule() {
@@ -391,7 +434,8 @@ export function run(canvas: HTMLCanvasElement, grid: Grid, reduced: boolean): ()
     // 3-6 bands of 1-4 rows, placed on rows that have art (so every band shows), shifted 24-90 px.
     const nb = 3 + Math.floor(random() * 4);
     const bands = Array.from({ length: nb }, () => {
-      const h = 1 + Math.floor(random() * 4);
+      // Dense grids (wide screens) get thinner bands, so a glitch frame stays cheap.
+      const h = 1 + Math.floor(random() * (cols > 250 ? 3 : 4));
       const at = Math.floor((filled[Math.floor(random() * filled.length)] ?? 0) / cols);
       const r0 = Math.max(0, Math.min(rows - h, at - Math.floor(h / 2)));
       return { r0, r1: r0 + h, dx: (random() < 0.5 ? -1 : 1) * (24 + random() * 66) };
@@ -536,7 +580,7 @@ export function run(canvas: HTMLCanvasElement, grid: Grid, reduced: boolean): ()
         for (let r = b.r0; r < b.r1; r++) {
           for (let c = 0; c < cols; c++) {
             const i = r * cols + c;
-            if (!lv[i]) continue;
+            if (!lv[i] || alpha[i] < 0.08) continue;
             const scramble = hash(i, jitter) < 0.55;
             const k = scramble ? Math.floor(hash(jitter, i) * N_CHARS) : ch[i];
             const t = scramble ? Math.min(TINTS.length - 1, tint[i] + 2) : tint[i];
@@ -574,8 +618,12 @@ export function run(canvas: HTMLCanvasElement, grid: Grid, reduced: boolean): ()
     ctx!.setTransform(1, 0, 0, 1, 0, 0);
     ctx!.globalAlpha = 1;
     ctx!.clearRect(0, 0, canvas.width, canvas.height);
+    if (fieldReady && texture) {
+      ctx!.globalAlpha = 1;
+      ctx!.drawImage(texture, 0, 0);
+    }
     if (!ready) {
-      // Still starting up: the ambient field draws as soon as its atlas row exists.
+      // Still starting up: the texture and the ambient field draw as soon as their atlas row exists.
       if (fieldReady) drawAmbient(now, dt);
       return;
     }
@@ -625,10 +673,16 @@ export function run(canvas: HTMLCanvasElement, grid: Grid, reduced: boolean): ()
     ptr.speed *= Math.pow(0.9, dt / 16.7);
   }
 
-  /** True when the canvas size differs from the current layout (the observer also fires once on start). */
-  const resized = () => {
-    const r = canvas.getBoundingClientRect();
-    return Math.round(r.width) !== W || Math.round(r.height) !== H;
+  /** Canvas size (CSS px) from the ResizeObserver; its first callback (after the browser's own layout) starts the build. */
+  const size = { w: 0, h: 0 };
+  const onResize = (entries: ResizeObserverEntry[]) => {
+    const r = entries[entries.length - 1].contentRect;
+    const w = Math.round(r.width);
+    const h = Math.round(r.height);
+    if (!w || !h || (w === size.w && h === size.h)) return;
+    size.w = w;
+    size.h = h;
+    relayout();
   };
 
   // ---------- run ----------
@@ -636,10 +690,7 @@ export function run(canvas: HTMLCanvasElement, grid: Grid, reduced: boolean): ()
     // One static frame once the layers are built (again after a resize).
     decoding = false;
     onReady = () => frame(performance.now(), 0);
-    relayout();
-    const ro = new ResizeObserver(() => {
-      if (resized()) relayout();
-    });
+    const ro = new ResizeObserver(onResize);
     ro.observe(canvas);
     return () => {
       disposed = true;
@@ -647,8 +698,6 @@ export function run(canvas: HTMLCanvasElement, grid: Grid, reduced: boolean): ()
       ro.disconnect();
     };
   }
-  relayout();
-
   let last = performance.now();
   let acc = 0;
   const loop = (now: number) => {
@@ -718,9 +767,7 @@ export function run(canvas: HTMLCanvasElement, grid: Grid, reduced: boolean): ()
     if (onScreen) play();
     else pause();
   });
-  const ro = new ResizeObserver(() => {
-    if (resized()) relayout();
-  });
+  const ro = new ResizeObserver(onResize);
   io.observe(canvas);
   ro.observe(canvas);
   window.addEventListener("pointermove", onMove, { passive: true });

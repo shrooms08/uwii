@@ -26,7 +26,7 @@ export default function GuidePage() {
         </nav>
 
         {guideSections.map((s) => (
-          <section key={s.id} id={s.id} aria-labelledby={`${s.id}-h`} className="mt-[clamp(40px,5cqi,64px)] scroll-mt-6">
+          <section key={s.id} id={s.id} aria-labelledby={`${s.id}-h`} className="mt-[clamp(40px,5cqi,64px)] scroll-mt-[88px]">
             <h2 id={`${s.id}-h`} className="font-serif text-[clamp(32px,3.4cqi,44px)] leading-none font-normal tracking-[-0.045em]">
               {s.title}
             </h2>

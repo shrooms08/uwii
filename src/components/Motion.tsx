@@ -9,7 +9,7 @@ import { useEffect } from "react";
  * - [data-decode]: the text scrambles and resolves left to right once when visible (mono labels).
  * - [data-countup]: the numbers count up once when visible; data-countup="scramble" first scrambles the
  *   digits briefly (the result figure).
- * - The nav gets data-scrolled on <html> after the first scroll (more opaque, stronger blur).
+ * - The header gets data-scrolled on <html> once the page has scrolled past 8px (glass and a hairline).
  *
  * No layout shift: reveals use opacity and transform only; decode and count-up rewrite characters in
  * place with the same number of characters in fixed-width (mono or tabular) text, and always end on the
@@ -131,7 +131,7 @@ function countUp(el: Element, scramble: boolean) {
 export function MotionRoot() {
   useEffect(() => {
     const root = document.documentElement;
-    const onScroll = () => root.toggleAttribute("data-scrolled", window.scrollY > 24);
+    const onScroll = () => root.toggleAttribute("data-scrolled", window.scrollY > 8);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -145,7 +145,6 @@ export function MotionRoot() {
     let pending = 0;
     const init = () => {
       const seen = new WeakSet<Element>();
-      const vh = () => window.innerHeight || document.documentElement.clientHeight;
       const rio = new IntersectionObserver(
         (entries) => {
           const hits = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top || a.boundingClientRect.left - b.boundingClientRect.left);
@@ -174,11 +173,11 @@ export function MotionRoot() {
       revealIO = rio;
       onceIO = oio;
       const scan = (initial: boolean) => {
+        const fresh: Element[] = [];
         document.querySelectorAll("[data-reveal]").forEach((el) => {
           if (seen.has(el)) return;
           seen.add(el);
-          // Already on screen when motion starts: never hidden (no flash, no delay to the first view).
-          if (initial && el.getBoundingClientRect().top < vh()) el.setAttribute("data-shown", "");
+          if (initial) fresh.push(el);
           else rio.observe(el);
         });
         document.querySelectorAll("[data-decode],[data-countup]").forEach((el) => {
@@ -186,10 +185,22 @@ export function MotionRoot() {
           seen.add(el);
           oio.observe(el);
         });
+        if (!initial) return;
+        // Elements already on screen when motion starts are never hidden (no flash, no delay to the first
+        // view). An observer works this out off the main task (no forced layout); hidden states apply only
+        // after that, so content is never held back.
+        const first = new IntersectionObserver((entries) => {
+          for (const e of entries) {
+            if (e.isIntersecting || e.boundingClientRect.top < (e.rootBounds?.height ?? window.innerHeight)) e.target.setAttribute("data-shown", "");
+            else rio.observe(e.target);
+          }
+          first.disconnect();
+          root.classList.add("motion");
+        });
+        fresh.forEach((el) => first.observe(el));
+        if (!fresh.length) root.classList.add("motion");
       };
       scan(true);
-      // Hidden states apply only once JS is running (content is never hidden without it).
-      root.classList.add("motion");
       // Pages that render after data arrives (Result, Export): pick up new elements.
       mo = new MutationObserver(() => {
         if (pending) return;

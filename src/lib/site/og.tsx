@@ -59,7 +59,9 @@ function glyphLayers(step: number) {
   const bytes = Buffer.from(g.data, "base64");
   const lum = (i: number) => (i % 2 === 0 ? bytes[i >> 1] >> 4 : bytes[i >> 1] & 15) / (g.levels - 1);
   const cols = Math.floor(g.cols / step);
-  const rows = Math.floor(g.rows / step);
+  // The grid is the whole (portrait) painting: the card shows the band from the hats to the coins.
+  const rStart = Math.floor((0.37 * g.rows) / step);
+  const rows = Math.floor((0.97 * g.rows) / step) - rStart;
   const smooth = (e0: number, e1: number, x: number) => {
     const t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0)));
     return t * t * (3 - 2 * t);
@@ -68,13 +70,13 @@ function glyphLayers(step: number) {
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       let v = 0;
-      for (let dy = 0; dy < step; dy++) for (let dx = 0; dx < step; dx++) v += lum((r * step + dy) * g.cols + c * step + dx);
+      for (let dy = 0; dy < step; dy++) for (let dx = 0; dx < step; dx++) v += lum(((rStart + r) * step + dy) * g.cols + c * step + dx);
       v /= step * step;
       if (v < 0.06) continue;
       const ex = c / (cols - 1);
       const ey = r / (rows - 1);
       const edge = smooth(0, 0.3, ex) * smooth(0, 0.06, 1 - ex) * smooth(0, 0.08, ey) * smooth(0, 0.14, 1 - ey);
-      const a = (0.24 + 0.76 * Math.pow(v, 0.95)) * edge;
+      const a = (0.1 + 0.9 * Math.pow(v, 1.2)) * edge;
       if (a < 0.12) continue;
       const band = BANDS.reduce((best, b, i) => (Math.abs(b - a) < Math.abs(BANDS[best] - a) ? i : best), 0);
       layers[band][r][c] = RAMP[Math.min(RAMP.length - 1, Math.max(1, Math.round(Math.pow(v, 0.8) * (RAMP.length - 1))))];

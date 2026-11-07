@@ -13,11 +13,11 @@
   Commons is labelled "After Marinus van Reymerswaele" (a 1600–1649 copy), so we did not use it.
 - **How it is used:**
   - `scripts/glyph-art.ts` downloads the file to a temp folder at build time (it is never committed).
-  - It crops tight to both faces, the hands, the ledger and the coins, separates them from the
-    background (luminance plus local contrast inside soft, noise-edged regions, so the background is
-    empty), adds edge emphasis and local contrast, and reduces the result to a 200 × 104 grid with 15
-    brightness levels (0 = empty).
-  - It commits only that grid (`src/content/glyph-art.json`, about 14 KB).
+  - It maps the whole painting, in full tone, to a 260 × 199 grid with 15 brightness levels (only
+    near-black cells are blank). It boosts local contrast, gently darkens the wood background around the
+    figures (a soft weighting, no mask), adds edge emphasis and applies an S-curve, so the faces, hats,
+    hands, ledger and coins read clearly.
+  - It commits only that grid (`src/content/glyph-art.json`, about 35 KB).
   - The browser draws the grid as gold text characters, with an intro decode, brief glitches and a
     cursor light (`src/components/GlyphArt.tsx`, `src/components/glyph-art-run.ts`); the social
     cards draw a static frame of it (`src/lib/site/og.tsx`).
