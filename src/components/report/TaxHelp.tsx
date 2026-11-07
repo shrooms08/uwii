@@ -80,7 +80,7 @@ export function TipsCard({ tips, onView }: { tips: TaxTip[]; onView: (recordId: 
               </span>
             </div>
             {t.amountNgn !== null && (
-              <div className="flex flex-col items-end gap-0.5">
+              <div className="flex flex-col items-start gap-0.5 @min-[640px]:items-end">
                 <span className="font-mono text-ui font-semibold tabular-nums">{naira(t.amountNgn)}</span>
                 {t.amountLabel && <span className="text-caption text-ink-2">{t.amountLabel}</span>}
               </div>

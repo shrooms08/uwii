@@ -81,7 +81,7 @@ export function AnchorCard({ fingerprint, isFinal, body, onAnchor }: { fingerpri
         Anchor this report on NEAR
       </h2>
       <p className="text-ui leading-[1.55] text-pretty text-ink-2">
-        Writes only the fingerprint to the NEAR blockchain, with a timestamp. Proves this exact report existed today without revealing anything in it.{" "}
+        Writes only the fingerprint to the NEAR blockchain, with a timestamp; nothing in the report is revealed.{" "}
         <span className="whitespace-nowrap">NEAR testnet.</span>
       </p>
       <p className="rounded-inset border border-border bg-muted px-3.5 py-2.5 text-label leading-normal text-ink-soft">{ANCHOR_CAVEAT}</p>
@@ -137,10 +137,12 @@ export function AnchorCard({ fingerprint, isFinal, body, onAnchor }: { fingerpri
                 href={state.anchor.explorerUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex h-10 items-center gap-2 rounded-full border border-lime-line bg-surface px-4 font-mono text-label hover:border-ink"
+                className="inline-flex h-10 max-w-full min-w-0 items-center gap-2 rounded-full border border-lime-line bg-surface px-4 font-mono text-label hover:border-ink"
                 title={state.anchor.txHash}
               >
-                nearvalidate.org/txns/{shortHash(state.anchor.txHash)} ↗<span className="sr-only"> (opens in a new tab)</span>
+                <span className="truncate">nearvalidate.org/txns/{shortHash(state.anchor.txHash)}</span>
+                <span aria-hidden="true" className="flex-none">↗</span>
+                <span className="sr-only"> (opens in a new tab)</span>
               </a>
             ) : (
               <a href={state.anchor.blockUrl} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center rounded-full border border-lime-line bg-surface px-4 font-mono text-label hover:border-ink">

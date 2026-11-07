@@ -39,7 +39,7 @@ export function CachedLabel({ account }: { account: string }) {
   const finished = useFinishedDemo(account);
   if (!recordedAt) return null;
   return (
-    <p className="inline-flex items-center gap-2 self-start rounded-full border border-amber-line bg-amber-tint px-3 py-1 text-label font-medium text-amber-ink">
+    <p className="inline-flex items-center gap-2 self-start rounded-[14px] border border-amber-line bg-amber-tint px-3 py-1 text-label font-medium text-amber-ink">
       <span aria-hidden="true" className="size-[7px] rounded-full bg-amber-dot" />
       {finished ? "Cached demo result · questions answered for illustration" : `Cached demo result · attestation recorded ${recordedAt.slice(0, 10)} ${recordedAt.slice(11, 16)} UTC`}
     </p>

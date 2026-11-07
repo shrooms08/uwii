@@ -25,7 +25,7 @@ export function DemoLabel({ account }: { account: string }) {
   );
   if (!on) return null;
   return (
-    <p className="inline-flex items-center gap-2 self-start rounded-full border border-amber-line bg-amber-tint px-3 py-1 text-label font-medium text-amber-ink">
+    <p className="inline-flex items-center gap-2 self-start rounded-[14px] border border-amber-line bg-amber-tint px-3 py-1 text-label font-medium text-amber-ink">
       <span aria-hidden="true" className="size-[7px] rounded-full bg-amber-dot" />
       {DEMO_LABEL}
     </p>

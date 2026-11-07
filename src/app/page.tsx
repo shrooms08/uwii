@@ -37,7 +37,7 @@ export default function Landing() {
       <LandingForm />
       <div className="mt-5 flex flex-col items-center gap-2">
         <FinishedReportButton recordedAt={demoRecordedAt} />
-        <p className="text-label text-ink-2">Cached demo result · questions answered for illustration · no AI call</p>
+        <p className="max-w-[340px] text-label text-balance text-ink-2 @min-[640px]:max-w-none">Cached demo result · questions answered for illustration · no AI call</p>
       </div>
 
       <Section id="how-h" title={howItWorks.title}>
