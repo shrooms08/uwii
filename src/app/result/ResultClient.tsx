@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { useFinishedDemo } from "@/components/CachedLabel";
 import { LineDrawer } from "@/components/report/LineDrawer";
 import { LineSections } from "@/components/report/LineSections";
 import { NextSteps } from "@/components/report/NextSteps";
@@ -60,6 +61,7 @@ export default function ResultClient({ account }: { account: string }) {
   const [openLine, setOpenLine] = useState<ReportLine | null>(null);
   const [proofOpen, setProofOpen] = useState(false);
   const [warnOpen, setWarnOpen] = useState(false);
+  const finishedDemo = useFinishedDemo(account);
   const closeLine = useCallback(() => setOpenLine(null), []);
   const closeProof = useCallback(() => setProofOpen(false), []);
 
@@ -121,6 +123,18 @@ export default function ResultClient({ account }: { account: string }) {
           </ButtonLink>
         </div>
       </div>
+
+      {finishedDemo && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-tile border border-border bg-surface py-3.5 pr-3.5 pl-[18px]">
+          <p className="max-w-[760px] flex-[1_1_320px] text-small leading-normal text-ink-soft">
+            <span className="font-medium text-ink">This is a finished example.</span> It uses the committed classification of {account} and illustrative answers;
+            nothing was sent to an AI to show it. Run the real scan to see the attested AI step live.
+          </p>
+          <ButtonLink href={`/scan?account=${encodeURIComponent(account)}`} size="md" arrow className="h-10">
+            Run it live yourself
+          </ButtonLink>
+        </div>
+      )}
 
       {isDraft && (
         <div role="status" className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-3 rounded-tile border border-amber-line bg-amber-tint py-3.5 pr-3.5 pl-[18px]">

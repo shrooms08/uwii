@@ -11,3 +11,5 @@ const run = fixture as unknown as ClassifiedRun;
 export const demoPrivacyProof: PrivacyProof = privacyProofFromRun(run);
 /** Transactions the deterministic rules labelled in that run. */
 export const demoRuleCount: number = run.records.length - demoPrivacyProof.aiDecisions;
+/** When the committed run's attestation was recorded (the same value the cached scan replay shows). */
+export const demoRecordedAt: string = run.attestation.attestedAt ?? run.classifiedAt;

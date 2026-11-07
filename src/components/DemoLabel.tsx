@@ -1,14 +1,16 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { DEMO_EVENT, isDemoPresetOn } from "@/lib/client/storage";
+import { DEMO_EVENT, SOURCE_EVENT, isDemoPresetOn, loadSource } from "@/lib/client/storage";
 import { DEMO_ACCOUNT, DEMO_LABEL } from "@/lib/demo/illustrative-answers";
 
 function subscribe(onChange: () => void) {
   window.addEventListener(DEMO_EVENT, onChange);
+  window.addEventListener(SOURCE_EVENT, onChange);
   window.addEventListener("storage", onChange);
   return () => {
     window.removeEventListener(DEMO_EVENT, onChange);
+    window.removeEventListener(SOURCE_EVENT, onChange);
     window.removeEventListener("storage", onChange);
   };
 }
@@ -17,7 +19,8 @@ function subscribe(onChange: () => void) {
 export function DemoLabel({ account }: { account: string }) {
   const on = useSyncExternalStore(
     subscribe,
-    () => account === DEMO_ACCOUNT && isDemoPresetOn(account),
+    // With the cached demo result too, CachedLabel shows one combined label instead.
+    () => account === DEMO_ACCOUNT && isDemoPresetOn(account) && !loadSource(account),
     () => false,
   );
   if (!on) return null;

@@ -4,7 +4,8 @@ import { AppShell } from "@/components/AppShell";
 import { CheckIcon } from "@/components/ui/AnswerChip";
 import { Chip } from "@/components/ui/Chip";
 import { DEMO_ACCOUNT_ID, faq, hero, howItWorks, scope, trust, whoFor } from "@/content/landing";
-import { demoPrivacyProof, demoRuleCount } from "@/lib/demo/demo-proof";
+import { demoPrivacyProof, demoRecordedAt, demoRuleCount } from "@/lib/demo/demo-proof";
+import { FinishedReportButton } from "./FinishedReportButton";
 import { LandingForm } from "./LandingForm";
 import { LandingProofButton } from "./LandingProofButton";
 
@@ -34,6 +35,10 @@ export default function Landing() {
       </h1>
       <p className="mt-5 max-w-[660px] text-[clamp(17px,1.4cqi,20px)] leading-[1.55] text-pretty text-ink-2">{hero.subline}</p>
       <LandingForm />
+      <div className="mt-5 flex flex-col items-center gap-2">
+        <FinishedReportButton recordedAt={demoRecordedAt} />
+        <p className="text-label text-ink-2">Cached demo result · questions answered for illustration · no AI call</p>
+      </div>
 
       <Section id="how-h" title={howItWorks.title}>
         <ol className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,280px),1fr))] gap-3">
