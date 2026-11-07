@@ -91,7 +91,7 @@ export function LineDrawer({ line, report, onClose }: { line: ReportLine; report
 
   return (
     <div className="fixed inset-0 z-40 flex justify-end">
-      <div aria-hidden="true" onClick={onClose} className="absolute inset-0 bg-ink/32" />
+      <div aria-hidden="true" onClick={onClose} className="absolute inset-0 bg-page/75" />
       <div
         ref={panel}
         role="dialog"
@@ -107,7 +107,7 @@ export function LineDrawer({ line, report, onClose }: { line: ReportLine; report
           </button>
         </div>
         <div className="flex flex-col gap-3.5">
-          <h2 id="line-h" className="font-serif text-[34px] leading-[1.05] font-normal tracking-[-0.01em] text-balance">
+          <h2 id="line-h" className="font-serif text-[34px] leading-[1.05] font-normal tracking-[-0.035em] text-balance">
             {lineTitle(line, report.lines)}
           </h2>
           <div className="flex flex-wrap gap-1.5">
@@ -207,10 +207,10 @@ export function LineDrawer({ line, report, onClose }: { line: ReportLine; report
           <div
             className={cx(
               "flex items-center gap-3 rounded-inset border px-4 py-3.5 text-small font-medium",
-              ai.signatureVerified ? "border-lime-line bg-lime-tint text-lime-ink" : "border-red-line bg-red-tint text-red-ink",
+              ai.signatureVerified ? "border-gold-line bg-gold-tint text-gold-ink" : "border-red-line bg-red-tint text-red-ink",
             )}
           >
-            <span className={cx("grid size-6 flex-none place-items-center rounded-full", ai.signatureVerified ? "bg-lime text-ink" : "bg-white text-red-ink")}>
+            <span className={cx("grid size-6 flex-none place-items-center rounded-full", ai.signatureVerified ? "bg-gold text-on-ink" : "bg-on-ink text-red-ink")}>
               {ai.signatureVerified ? <CheckIcon size={12} /> : <span aria-hidden="true">!</span>}
             </span>
             <span className="flex-1">

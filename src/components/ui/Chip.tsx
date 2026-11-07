@@ -4,13 +4,13 @@ import { cx } from "./cx";
 export type StatusTone = "verified" | "final" | "draft" | "needs" | "neutral" | "error" | "onInk";
 
 const tones: Record<StatusTone, { chip: string; dot: string }> = {
-  verified: { chip: "bg-lime-tint border border-lime-line text-lime-ink", dot: "bg-lime-dot" },
-  final: { chip: "bg-lime-tint border border-lime-line text-lime-ink", dot: "bg-lime-dot" },
+  verified: { chip: "bg-gold-tint border border-gold-line text-gold-ink", dot: "bg-gold-dot" },
+  final: { chip: "bg-gold-tint border border-gold-line text-gold-ink", dot: "bg-gold-dot" },
   draft: { chip: "bg-amber-tint border border-amber-line text-amber-ink", dot: "bg-amber-dot" },
-  needs: { chip: "bg-ink text-white border border-ink", dot: "bg-white" },
+  needs: { chip: "bg-ink text-on-ink border border-ink", dot: "bg-on-ink" },
   neutral: { chip: "bg-surface border border-border text-ink", dot: "bg-ink" },
   error: { chip: "bg-red-tint border border-red-line text-red-ink", dot: "bg-red-dot" },
-  onInk: { chip: "bg-white/8 border border-white/16 text-white", dot: "bg-lime" },
+  onInk: { chip: "bg-gold-tint border border-gold-line text-gold-ink", dot: "bg-gold" },
 };
 
 /** Status chip: dot + text (colour is never the only signal). */
@@ -40,9 +40,9 @@ export type Method = "rule" | "ai" | "user" | "needs";
 
 const methods: Record<Method, { text: string; cls: string }> = {
   rule: { text: "rule", cls: "border-border bg-chip text-ink-soft" },
-  ai: { text: "private AI", cls: "border-lime-line bg-lime-tint text-lime-ink" },
+  ai: { text: "private AI", cls: "border-gold-line bg-gold-tint text-gold-ink" },
   user: { text: "you", cls: "border-ink bg-surface text-ink" },
-  needs: { text: "needs you", cls: "border-ink bg-ink text-white" },
+  needs: { text: "needs you", cls: "border-ink bg-ink text-on-ink" },
 };
 
 /** Who labelled a line: rule / private AI / you / needs you. */

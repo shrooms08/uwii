@@ -13,7 +13,7 @@ export default function ErrorPage({ error, reset }: { error: Error & { digest?: 
         chip="Error"
         title="Something went wrong"
         actions={
-          <button type="button" onClick={reset} className="inline-flex h-12 items-center rounded-full bg-ink px-6 text-ui font-medium text-white hover:bg-ink-hover">
+          <button type="button" onClick={reset} className="inline-flex h-12 items-center rounded-full bg-ink px-6 text-ui font-medium text-on-ink hover:bg-ink-hover">
             Try again
           </button>
         }

@@ -27,15 +27,15 @@ export function StepNav({ current, account }: { current: StepId; account: string
         {STEPS.map((s, i) => {
           if (i === at) {
             return (
-              <span key={s.id} aria-current="step" className={cx(item, "bg-ink text-white")}>
-                <span className="grid size-5 place-items-center rounded-full bg-white font-mono text-[11px] font-medium text-ink">{i + 1}</span>
+              <span key={s.id} aria-current="step" className={cx(item, "bg-ink text-on-ink")}>
+                <span className="grid size-5 place-items-center rounded-full bg-on-ink font-mono text-[11px] font-medium text-ink">{i + 1}</span>
                 {s.label}
               </span>
             );
           }
           const done = i < at;
           const badge = done ? (
-            <span className="grid size-5 place-items-center rounded-full bg-lime text-ink">
+            <span className="grid size-5 place-items-center rounded-full bg-gold text-on-ink">
               <CheckIcon size={11} />
             </span>
           ) : (
@@ -70,7 +70,7 @@ export function StepBar({ current }: { current: StepId }) {
     <div className="flex flex-col gap-2 pt-1 pb-2 @min-[760px]:hidden">
       <div aria-hidden="true" className="flex gap-1">
         {STEPS.map((s, i) => (
-          <span key={s.id} className={cx("h-1 flex-1 rounded-[9px]", i < at ? "bg-lime" : i === at ? "bg-ink" : "bg-border-strong")} />
+          <span key={s.id} className={cx("h-1 flex-1 rounded-[9px]", i < at ? "bg-gold" : i === at ? "bg-ink" : "bg-border-strong")} />
         ))}
       </div>
       <span className="text-label text-ink-2">

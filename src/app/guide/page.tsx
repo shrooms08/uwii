@@ -14,7 +14,7 @@ export default function GuidePage() {
   return (
     <AppShell>
       <article className="mx-auto w-full max-w-[880px] pt-[clamp(20px,3cqi,40px)] pb-[clamp(32px,4cqi,64px)]">
-        <h1 className="font-serif text-[clamp(44px,5cqi,72px)] leading-none font-normal tracking-[-0.02em] text-balance">{guideMeta.title}</h1>
+        <h1 className="font-serif text-[clamp(44px,5cqi,72px)] leading-none font-normal tracking-[-0.045em] text-balance">{guideMeta.title}</h1>
         <p className="mt-4 max-w-[700px] text-body leading-[1.55] text-pretty text-ink-2">{guideMeta.intro}</p>
 
         <nav aria-label="On this page" className="mt-6 flex flex-wrap gap-2">
@@ -27,7 +27,7 @@ export default function GuidePage() {
 
         {guideSections.map((s) => (
           <section key={s.id} id={s.id} aria-labelledby={`${s.id}-h`} className="mt-[clamp(40px,5cqi,64px)] scroll-mt-6">
-            <h2 id={`${s.id}-h`} className="font-serif text-[clamp(32px,3.4cqi,44px)] leading-none font-normal tracking-[-0.02em]">
+            <h2 id={`${s.id}-h`} className="font-serif text-[clamp(32px,3.4cqi,44px)] leading-none font-normal tracking-[-0.045em]">
               {s.title}
             </h2>
             {s.intro && <p className="mt-3 text-ui leading-normal text-pretty text-ink-2">{s.intro}</p>}

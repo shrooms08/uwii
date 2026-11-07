@@ -88,7 +88,7 @@ export default function VerifyClient({ initial }: { initial: string }) {
   return (
     <div className="flex flex-col gap-4 pb-6">
       <div className="pt-[clamp(20px,3cqi,40px)] pb-[clamp(8px,1.4cqi,16px)]">
-        <h1 className="font-serif text-[clamp(44px,5cqi,72px)] leading-none font-normal tracking-[-0.02em]">Verify a report</h1>
+        <h1 className="font-serif text-[clamp(44px,5cqi,72px)] leading-none font-normal tracking-[-0.045em]">Verify a report</h1>
         <p className="mt-3 max-w-[680px] text-body leading-[1.55] text-ink-2">
           Check whether a Uwii report fingerprint was anchored on NEAR testnet, and when. Only the fingerprint was ever written on-chain; nothing in the report is revealed.
         </p>
@@ -138,9 +138,9 @@ export default function VerifyClient({ initial }: { initial: string }) {
 
         <div aria-live="polite">
           {result?.kind === "anchored" && (
-            <Card className="flex flex-col gap-4 border-lime-line p-[clamp(20px,2.4cqi,32px)]">
-              <span className="flex items-center gap-2.5 text-lg font-semibold text-lime-ink">
-                <span className="grid size-7 flex-none place-items-center rounded-full bg-lime text-ink">
+            <Card className="flex flex-col gap-4 border-gold-line p-[clamp(20px,2.4cqi,32px)]">
+              <span className="flex items-center gap-2.5 text-lg font-semibold text-gold-ink">
+                <span className="grid size-7 flex-none place-items-center rounded-full bg-gold text-on-ink">
                   <CheckIcon size={13} />
                 </span>
                 Anchored on NEAR testnet

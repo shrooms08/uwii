@@ -5,9 +5,9 @@
  * Personal fields (name, TIN, state, own accounts) are only printed; they never leave the browser
  * and are excluded from the fingerprint.
  *
- * Fonts (SIL OFL 1.1, see public/pdf-fonts): Geist for text, Geist Mono for numbers and hashes,
- * Instrument Serif for the title and headline figures. None of the three has the naira sign, so "₦"
- * is drawn from IBM Plex Mono wherever it appears.
+ * Fonts (SIL OFL 1.1, see public/pdf-fonts): Geist for text, the title and headline figures; Geist Mono
+ * for numbers and hashes. Neither has the naira sign, so "₦" is drawn from IBM Plex Mono wherever it
+ * appears. The header carries the gold brand accent (the % mark, a rule, the Final chip).
  */
 import type { jsPDF as JsPdf } from "jspdf";
 import type { CellHookData, UserOptions } from "jspdf-autotable";
@@ -55,7 +55,6 @@ const FONT_FILES = {
   geistBold: "Geist-SemiBold.ttf",
   mono: "GeistMono-Regular.ttf",
   monoBold: "GeistMono-Medium.ttf",
-  serif: "InstrumentSerif-Regular.ttf",
   naira: "IBMPlexMono-Regular.ttf",
 } as const;
 
@@ -81,15 +80,17 @@ const C = {
   panel: [250, 249, 247] as Rgb,
   line: [232, 228, 222] as Rgb,
   white: [255, 255, 255] as Rgb,
-  lime: [197, 240, 106] as Rgb,
-  limeTint: [234, 248, 207] as Rgb,
-  limeInk: [36, 82, 11] as Rgb,
+  // Brand gold (#E6BB79) for fills behind ink text; a deeper gold for marks and rules on white; and
+  // a gold-brown for text on white (6.6:1).
+  gold: [230, 187, 121] as Rgb,
+  goldDeep: [201, 151, 72] as Rgb,
+  goldInk: [118, 82, 26] as Rgb,
   amberTint: [251, 239, 213] as Rgb,
   amberLine: [243, 221, 174] as Rgb,
   amberInk: [110, 67, 0] as Rgb,
 };
 
-type Family = "Geist" | "GeistMono" | "Serif";
+type Family = "Geist" | "GeistMono" | "Display";
 interface FontSpec {
   family: Family;
   bold?: boolean;
@@ -268,7 +269,8 @@ export async function buildWorksheetPdf(
   reg(FONT_FILES.geistBold, fontData.geistBold, "Geist", "bold");
   reg(FONT_FILES.mono, fontData.mono, "GeistMono", "normal");
   reg(FONT_FILES.monoBold, fontData.monoBold, "GeistMono", "bold");
-  reg(FONT_FILES.serif, fontData.serif, "Serif", "normal");
+  // Display role (title, wordmark, headline figures): Geist Regular.
+  reg(FONT_FILES.geist, fontData.geist, "Display", "normal");
   reg(FONT_FILES.naira, fontData.naira, "PlexMono", "normal");
 
   const W = doc.internal.pageSize.getWidth();
@@ -287,9 +289,9 @@ export async function buildWorksheetPdf(
     keywords: `fingerprint:${report.fingerprint}`,
   });
 
-  // ---------- rich text: Geist / Geist Mono / Instrument Serif, with "₦" from Plex Mono ----------
+  // ---------- rich text: Geist / Geist Mono, with "₦" from Plex Mono ----------
   const setFont = (f: FontSpec) => {
-    doc.setFont(f.family, f.family === "Serif" ? "normal" : f.bold ? "bold" : "normal");
+    doc.setFont(f.family, f.family === "Display" ? "normal" : f.bold ? "bold" : "normal");
     doc.setFontSize(f.size);
   };
   const segments = (s: string) => s.split(/(₦)/).filter((x) => x !== "");
@@ -367,7 +369,7 @@ export async function buildWorksheetPdf(
   const heading = (title: string, minSpace = 34) => {
     if (y + minSpace > bottomY) newPage();
     else y += 5;
-    draw(title, M.left, y + 4.6, { family: "Serif", size: 17 });
+    draw(title, M.left, y + 4.6, { family: "Display", size: 17 });
     y += 9;
   };
 
@@ -427,8 +429,8 @@ export async function buildWorksheetPdf(
   // ================= page 1 =================
   const isDraft = report.status === "draft";
   // brand row
-  drawMark(doc, M.left, y, 8.4, C.ink);
-  draw("uwii", M.left + 10.6, y + 7.1, { family: "Serif", size: 23 });
+  drawMark(doc, M.left, y, 8.4, C.goldDeep);
+  draw("uwii", M.left + 10.6, y + 7.1, { family: "Display", size: 23 });
   const chip = isDraft ? "Draft, not for filing" : "Final";
   const chipF: FontSpec = { family: "Geist", bold: true, size: 8 };
   const chipW = measure(chip, chipF) + 8;
@@ -439,7 +441,7 @@ export async function buildWorksheetPdf(
     doc.setLineWidth(0.3);
     doc.roundedRect(chipX, y + 1.2, chipW, 6.6, 3.3, 3.3, "FD");
   } else {
-    doc.setFillColor(...C.lime);
+    doc.setFillColor(...C.gold);
     doc.roundedRect(chipX, y + 1.2, chipW, 6.6, 3.3, 3.3, "F");
   }
   draw(chip, chipX + chipW / 2, y + 5.65, chipF, isDraft ? C.amberInk : C.ink, "center");
@@ -448,10 +450,13 @@ export async function buildWorksheetPdf(
   doc.setDrawColor(...C.line);
   doc.setLineWidth(0.25);
   doc.line(M.left, y, W - M.right, y);
+  doc.setDrawColor(...C.goldDeep);
+  doc.setLineWidth(0.7);
+  doc.line(M.left, y, M.left + 42, y);
   y += 4;
 
   // title
-  draw("Virtual asset tax computation", M.left, y + 8.4, { family: "Serif", size: 27 });
+  draw("Virtual asset tax computation", M.left, y + 8.4, { family: "Display", size: 27 });
   y += 11.5;
   draw(`Year of assessment ${report.year} · NRS Information Circular No. 2026/21 · Individuals`, M.left, y + 3.4, { family: "Geist", size: 8.6 }, C.ink2);
   y += 7;
@@ -497,9 +502,9 @@ export async function buildWorksheetPdf(
   );
   if (anchorLines.length) {
     const ay = y + 19.4;
-    doc.setFillColor(...C.lime);
+    doc.setFillColor(...C.goldDeep);
     doc.circle(M.left + 6.2, ay - 1.05, 1.2, "F");
-    anchorLines.forEach((ln, i) => draw(ln, M.left + 9.5, ay + i * lineH(7.6), { family: "Geist", size: 7.6 }, C.limeInk));
+    anchorLines.forEach((ln, i) => draw(ln, M.left + 9.5, ay + i * lineH(7.6), { family: "Geist", size: 7.6 }, C.goldInk));
   }
   y += fpH + 3.5;
 
@@ -550,7 +555,7 @@ export async function buildWorksheetPdf(
       doc.roundedRect(cx, y, cardW, cardH, 2.5, 2.5, "S");
     }
     draw(k, cx + 5, y + 6, { family: "Geist", size: 7.4 }, dark ? [200, 198, 192] : C.ink2);
-    draw(ngn(v), cx + 5, y + 15.2, { family: "Serif", size: 21 }, dark ? C.white : C.ink);
+    draw(ngn(v), cx + 5, y + 15.2, { family: "Display", size: 21 }, dark ? C.gold : C.ink);
   });
   y += cardH + 4.5;
 
@@ -811,8 +816,8 @@ export async function buildWorksheetPdf(
     doc.setPage(i);
     if (isDraft) drawWatermark(doc, GState, W, H);
     if (i > 1) {
-      drawMark(doc, M.left, 8.6, 4.4, C.ink);
-      draw("uwii", M.left + 5.8, 12.3, { family: "Serif", size: 12 });
+      drawMark(doc, M.left, 8.6, 4.4, C.goldDeep);
+      draw("uwii", M.left + 5.8, 12.3, { family: "Display", size: 12 });
       draw(`Virtual asset tax computation ${report.year} · ${report.account}${isDraft ? " · DRAFT" : ""}`, W - M.right, 12.1, { family: "Geist", size: 7 }, C.ink2, "right");
       doc.setDrawColor(...C.line);
       doc.setLineWidth(0.25);

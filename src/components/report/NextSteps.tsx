@@ -20,7 +20,7 @@ export function NextSteps({ isDraft, account }: { isDraft: boolean; account: str
         <ol className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,260px),1fr))] gap-3">
           {NEXT_STEPS.map((s, i) => (
             <li key={s.title} className="flex gap-3.5 rounded-tile bg-muted p-[18px]">
-              <span aria-hidden="true" className="grid size-7 flex-none place-items-center rounded-full bg-ink font-mono text-label text-white">
+              <span aria-hidden="true" className="grid size-7 flex-none place-items-center rounded-full bg-ink font-mono text-label text-on-ink">
                 {i + 1}
               </span>
               <span className="flex flex-col gap-1">

@@ -48,15 +48,15 @@ function Vessel({ fraction }: { fraction: number }) {
           <path d={BOWL} />
         </clipPath>
       </defs>
-      <path d={BOWL} fill="#E9E6E0" />
+      <path d={BOWL} fill="var(--color-muted)" />
       <g clipPath="url(#uwii-bowl)">
         <g style={{ transform: `translateY(${y.toFixed(2)}px)`, transition: "transform 700ms ease-out" }}>
           <g style={{ animation: "uwii-wave 5.5s linear infinite reverse" }}>
-            <path d={BACK} fill="#3A3936" />
+            <path d={BACK} fill="#7a6240" />
           </g>
           <g transform="translate(0 7)">
             <g style={{ animation: "uwii-wave 3.6s linear infinite" }}>
-              <path d={FRONT} fill="#0E0E0C" />
+              <path d={FRONT} fill="var(--color-gold)" />
             </g>
           </g>
         </g>
@@ -69,7 +69,7 @@ function StepIcon({ state }: { state: StepState }) {
   switch (state) {
     case "done":
       return (
-        <span className="grid size-6 place-items-center rounded-full bg-lime text-ink">
+        <span className="grid size-6 place-items-center rounded-full bg-gold text-on-ink">
           <CheckIcon size={12} />
         </span>
       );
@@ -251,7 +251,7 @@ export default function ScanClient({ account, cached = false }: { account: strin
       )}
 
       <div
-        className="relative z-[1] mt-5 flex items-baseline gap-2.5 font-serif text-[clamp(104px,11cqi,160px)] leading-[0.9] tracking-[-0.03em]"
+        className="relative z-[1] mt-5 flex items-baseline gap-2.5 font-serif text-[clamp(104px,11cqi,160px)] leading-[0.9] tracking-[-0.05em]"
         aria-label={count !== null && view.total !== null ? `${count} of ${view.total} transactions labelled` : "Waiting for your transactions"}
         role="img"
       >

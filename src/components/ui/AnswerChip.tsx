@@ -17,7 +17,7 @@ export function AnswerChip({ selected, className, children, ...rest }: { selecte
       aria-pressed={selected}
       className={cx(
         "inline-flex min-h-[38px] items-center gap-1.5 rounded-full border px-[15px] text-small font-medium transition-colors",
-        selected ? "border-ink bg-ink text-white" : "border-border-strong bg-surface text-ink hover:border-ink",
+        selected ? "border-ink bg-ink text-on-ink" : "border-border-strong bg-surface text-ink hover:border-ink",
         className,
       )}
       {...rest}

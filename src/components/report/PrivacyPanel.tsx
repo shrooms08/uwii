@@ -26,7 +26,7 @@ const GROUPS: { id: ProofCheck["group"]; title: string }[] = [
 function CheckRow({ c }: { c: ProofCheck }) {
   return (
     <li className="flex items-start gap-2.5 border-b border-chip py-2.5 text-small">
-      <span className={c.ok ? "mt-0.5 grid size-5 flex-none place-items-center rounded-full bg-lime text-ink" : "mt-0.5 grid size-5 flex-none place-items-center rounded-full bg-red-tint text-red-ink ring-1 ring-red-line"}>
+      <span className={c.ok ? "mt-0.5 grid size-5 flex-none place-items-center rounded-full bg-gold text-on-ink" : "mt-0.5 grid size-5 flex-none place-items-center rounded-full bg-red-tint text-red-ink ring-1 ring-red-line"}>
         {c.ok ? <CheckIcon size={11} /> : <span aria-hidden="true" className="text-caption font-semibold">×</span>}
       </span>
       <span className="flex min-w-0 flex-col gap-0.5">
@@ -86,7 +86,7 @@ export function PrivacyPanel({ proof, account, ruleCount, onClose }: { proof: Pr
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div aria-hidden="true" onClick={onClose} className="fixed inset-0 bg-ink/40" />
+      <div aria-hidden="true" onClick={onClose} className="fixed inset-0 bg-page/75" />
       <div className="pointer-events-none relative flex min-h-full justify-center p-[clamp(12px,3cqi,48px)]">
         <div
           ref={panel}
@@ -107,7 +107,7 @@ export function PrivacyPanel({ proof, account, ruleCount, onClose }: { proof: Pr
                   {noAi ? "No checks needed" : "Check results not recorded"}
                 </Chip>
               )}
-              <h2 id="proof-h" className="font-serif text-[clamp(40px,4cqi,56px)] leading-none font-normal tracking-[-0.02em]">
+              <h2 id="proof-h" className="font-serif text-[clamp(40px,4cqi,56px)] leading-none font-normal tracking-[-0.045em]">
                 {heading}
               </h2>
             </div>
@@ -198,7 +198,7 @@ export function PrivacyPanel({ proof, account, ruleCount, onClose }: { proof: Pr
               <ul className="flex flex-col gap-1.5 text-label leading-normal text-ink-soft">
                 {PRIVACY_SCOPE.covers.map((c) => (
                   <li key={c.title} className="flex gap-2">
-                    <span aria-hidden="true" className="text-lime-ink">✓</span>
+                    <span aria-hidden="true" className="text-gold-ink">✓</span>
                     {c.text}
                   </li>
                 ))}

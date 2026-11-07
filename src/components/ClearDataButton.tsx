@@ -34,7 +34,7 @@ export function ClearDataButton({ className }: { className?: string }) {
         setState("done");
         router.push("/");
       }}
-      className={cx("p-0 text-ink underline underline-offset-[3px] hover:text-ink-soft disabled:opacity-60", className)}
+      className={cx("p-0 disabled:opacity-60", className ?? "text-ink underline underline-offset-[3px] hover:text-ink-soft")}
     >
       {state === "done" ? "Cleared" : "Clear my data from this browser"}
     </button>

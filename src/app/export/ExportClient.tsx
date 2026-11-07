@@ -140,7 +140,7 @@ export default function ExportClient({ account }: { account: string }) {
   return (
     <>
       <div className="pt-[clamp(20px,3cqi,40px)] pb-[clamp(20px,2.4cqi,28px)]">
-        <h1 className="font-serif text-[clamp(44px,5cqi,72px)] leading-none font-normal tracking-[-0.02em]">Export your worksheet</h1>
+        <h1 className="font-serif text-[clamp(44px,5cqi,72px)] leading-none font-normal tracking-[-0.045em]">Export your worksheet</h1>
         <p className="mt-3 max-w-[620px] text-body leading-[1.55] text-ink-2">A PDF your tax consultant can check line by line, with every figure tied to the NRS circular.</p>
       </div>
 
@@ -175,7 +175,7 @@ export default function ExportClient({ account }: { account: string }) {
             </div>
             <p className="-mt-2 text-label leading-normal text-ink-2">
               SHA-256 of the report&apos;s canonical data (your personal details are not included). The same value is printed in the PDF and the summary CSV.{" "}
-              {recomputed && (recomputed === r.fingerprint ? <span className="text-lime-ink">Recomputed in your browser: matches.</span> : <span className="text-red-ink">Recomputed in your browser: does NOT match.</span>)}
+              {recomputed && (recomputed === r.fingerprint ? <span className="text-gold-ink">Recomputed in your browser: matches.</span> : <span className="text-red-ink">Recomputed in your browser: does NOT match.</span>)}
             </p>
             {isDraft && (
               <div role="status" className="rounded-inset border border-amber-line bg-amber-tint px-4 py-3 text-small leading-normal text-amber-ink">
@@ -250,26 +250,26 @@ export default function ExportClient({ account }: { account: string }) {
 
         <div className="flex flex-col gap-4">
         <AnchorCard fingerprint={r.fingerprint} isFinal={!isDraft} body={saved ? requestBody(account, saved) : { account }} onAnchor={onAnchor} />
-        <section aria-label="Worksheet contents" className="flex flex-col gap-4 rounded-card bg-ink p-[clamp(20px,2.4cqi,32px)] text-white">
+        <section aria-label="Worksheet contents" className="flex flex-col gap-4 rounded-card border border-gold-line bg-surface bg-[radial-gradient(120%_90%_at_100%_100%,rgb(230_187_121_/0.12),transparent_60%)] p-[clamp(20px,2.4cqi,32px)] text-ink">
           <div className="flex items-center justify-between gap-3">
-            <span className="text-small text-onink">In this worksheet</span>
+            <span className="text-small text-ink-2">In this worksheet</span>
             {isDraft ? <Chip tone="draft">Draft</Chip> : <Chip tone="onInk">Final</Chip>}
           </div>
           <Money value={r.tax.taxAttributableToVaNgn} className="text-[56px] leading-[0.95] tracking-[-0.02em]" />
-          <span className="-mt-2 text-label text-onink">Tax attributable to your crypto, {r.year}</span>
-          <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-2.5 border-t border-white/14 pt-4 text-small">
-            <dt className="text-onink">Chargeable VA</dt>
+          <span className="-mt-2 text-label text-ink-2">Tax attributable to your crypto, {r.year}</span>
+          <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-2.5 border-t border-gold-line pt-4 text-small">
+            <dt className="text-ink-2">Chargeable VA</dt>
             <dd className="font-mono text-label">₦{fmtNgn(r.totals.chargeableVaNgn)}</dd>
-            <dt className="text-onink">Lines, each with circular ref</dt>
+            <dt className="text-ink-2">Lines, each with circular ref</dt>
             <dd className="font-mono text-label">{r.lines.length}</dd>
-            <dt className="text-onink">Warnings</dt>
+            <dt className="text-ink-2">Warnings</dt>
             <dd className="font-mono text-label">{plainWarnings(r).length}</dd>
-            <dt className="text-onink">Privacy proof</dt>
+            <dt className="text-ink-2">Privacy proof</dt>
             <dd className="font-mono text-label">
               {r.privacyProof.aiDecisions === 0 ? "rules only" : counts ? `${counts.passed}/${counts.total} checks${verified ? "" : " (not all verified)"}` : "counts not recorded"}
             </dd>
           </dl>
-          <Button variant="secondary" size="md" onClick={() => setProofOpen(true)} className="focus-onink self-start border-white">
+          <Button variant="secondary" size="md" onClick={() => setProofOpen(true)} className="self-start">
             View privacy proof
           </Button>
         </section>
@@ -284,7 +284,7 @@ export default function ExportClient({ account }: { account: string }) {
         <p className="max-w-[620px] text-small leading-normal text-ink-2">
           Your answers, personal details, reliefs and saved scan stay only in this browser. Done here, or on a shared computer? Remove them.
         </p>
-        <ClearDataButton className="text-small font-medium" />
+        <ClearDataButton className="text-small font-medium text-ink underline underline-offset-[3px] hover:text-ink-soft" />
       </div>
 
       <p className="mt-10 max-w-[760px] border-t border-rule pt-[22px] text-small leading-normal text-ink-2">

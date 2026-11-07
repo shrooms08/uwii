@@ -208,7 +208,13 @@ every finding:
 npm test                         # 132 tests (node:test via tsx): engine, rules, reports, sections, API limits, signing, anchoring
 npm run lint
 (cd contracts/anchor && cargo test)   # 8 contract unit tests (Rust 1.93, near-sdk 5.29)
+npm run stats                    # re-measures the landing page's "Live" row into src/content/stats.json
 ```
+
+The landing page's **Live** row shows only measured numbers: tests passing and NRS illustrations
+reproduced (from `npm test`), reports anchored (counted from the anchor contract's state on testnet),
+and privacy checks per scan (from the committed demo run). `npm run stats` refreshes them and refuses to
+write if any test fails.
 
 ## Limitations
 
@@ -265,9 +271,12 @@ npm run lint
 | Dev: typescript, eslint, eslint-config-next, tsx, playwright | see `package.json` | Apache-2.0 / MIT | Build, lint, tests, screenshots |
 
 - **Fonts** (SIL Open Font License 1.1):
-  - Geist and Geist Mono (Vercel);
-  - Instrument Serif;
-  - IBM Plex Mono (the ₦ sign in the PDF).
+  - Geist and Geist Mono (Vercel), for all text, figures and the glyph art;
+  - IBM Plex Mono (the ₦ sign in the PDF and the social cards).
+- **Artwork.** The landing hero draws Marinus van Reymerswaele's *The Tax Collectors* (1540s, public
+  domain) in gold text characters. `npm run glyph-art` rebuilds the committed luminance grid
+  (`src/content/glyph-art.json`) from the Wikimedia Commons file. Source, licence and the visual
+  reference are recorded in [docs/CREDITS.md](docs/CREDITS.md).
   - Licence files are in `public/pdf-fonts/`. The web app loads the same families through `next/font`.
 
 ## Licence

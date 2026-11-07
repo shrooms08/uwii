@@ -174,7 +174,7 @@ export default function QuestionsClient({ account }: { account: string }) {
     <>
       <div className="flex flex-wrap items-end justify-between gap-4 pt-[clamp(20px,3cqi,40px)] pb-[clamp(20px,2.4cqi,32px)]">
         <div className="max-w-[720px]">
-          <h1 className="font-serif text-[clamp(44px,5cqi,72px)] leading-none font-normal tracking-[-0.02em]">
+          <h1 className="font-serif text-[clamp(44px,5cqi,72px)] leading-none font-normal tracking-[-0.045em]">
             {n === 0 ? "Nothing needs you" : n === 1 ? "1 thing needs you" : `${n} things need you`}
           </h1>
           <p className="mt-3 text-body leading-[1.55] text-pretty text-ink-2">
@@ -236,7 +236,7 @@ export default function QuestionsClient({ account }: { account: string }) {
                 <span className="text-small text-ink-2">{isDraft ? "Draft tax so far" : "Tax on your crypto"}</span>
                 {report && (isDraft ? <Chip tone="draft" size="sm">Draft</Chip> : <Chip tone="final" size="sm">Final</Chip>)}
               </div>
-              <div aria-live="polite" className={cx("font-serif text-[52px] leading-none tracking-[-0.02em] transition-opacity", updating && report && "opacity-60")}>
+              <div aria-live="polite" className={cx("font-serif text-[52px] leading-none tracking-[-0.045em] transition-opacity", updating && report && "opacity-60")}>
                 {taxFigure}
               </div>
               <p className="text-label leading-normal text-ink-2">
@@ -283,14 +283,14 @@ export default function QuestionsClient({ account }: { account: string }) {
         </aside>
       </div>
 
-      <div className="sticky bottom-3 mb-3 flex items-center gap-3 rounded-full bg-ink py-2.5 pr-2.5 pl-5 text-white shadow-float @min-[760px]:hidden">
+      <div className="sticky bottom-3 mb-3 flex items-center gap-3 rounded-full bg-ink py-2.5 pr-2.5 pl-5 text-on-ink shadow-float @min-[760px]:hidden">
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span className="text-caption text-onink">
             {answered}/{n} answered{report ? ` · ${isDraft ? "Draft" : "Final"}` : ""}
           </span>
           <span className="font-serif text-2xl leading-none">{taxFigure}</span>
         </span>
-        <ButtonLink href={resultHref} variant="secondary" size="md" arrow className="focus-onink border-white">
+        <ButtonLink href={resultHref} variant="secondary" size="md" arrow className="focus-onink border-on-ink">
           See result
         </ButtonLink>
       </div>

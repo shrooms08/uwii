@@ -16,7 +16,7 @@ export function readAccount(sp: Record<string, string | string[] | undefined>): 
 export function InvalidAccount({ reason }: { reason: string }) {
   return (
     <AppShell mainClassName="items-center justify-center gap-6 py-24 text-center">
-      <h1 className="font-serif text-[clamp(40px,5cqi,64px)] leading-none tracking-[-0.02em]">Which account?</h1>
+      <h1 className="font-serif text-[clamp(40px,5cqi,64px)] leading-none tracking-[-0.045em]">Which account?</h1>
       <p className="text-body text-ink-2">{reason} Start from the home page with your NEAR account.</p>
       <ButtonLink href="/" arrow>
         Enter your account

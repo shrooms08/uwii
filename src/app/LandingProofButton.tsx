@@ -10,7 +10,7 @@ export function LandingProofButton({ proof, account, ruleCount, label }: { proof
   const close = useCallback(() => setOpen(false), []);
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="self-start text-small font-medium text-ink underline underline-offset-[3px] hover:text-ink-soft">
+      <button type="button" onClick={() => setOpen(true)} className="self-start text-left text-small font-medium text-gold underline-offset-[3px] hover:underline">
         {label}
         <span aria-hidden="true"> →</span>
       </button>

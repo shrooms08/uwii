@@ -1,71 +1,131 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { AppShell } from "@/components/AppShell";
+import { GlyphArt } from "@/components/GlyphArt";
 import { CheckIcon } from "@/components/ui/AnswerChip";
 import { Chip } from "@/components/ui/Chip";
-import { DEMO_ACCOUNT_ID, faq, hero, howItWorks, scope, trust, whoFor } from "@/content/landing";
+import { Eyebrow, TwoTone } from "@/components/ui/Eyebrow";
+import { PercentMark } from "@/components/ui/Mark";
+import { DEMO_ACCOUNT_ID, faq, hero, howItWorks, liveStats, scope, sections, trust, whoFor } from "@/content/landing";
+import stats from "@/content/stats.json";
 import { demoPrivacyProof, demoRecordedAt, demoRuleCount } from "@/lib/demo/demo-proof";
+import { proofCounts } from "@/lib/report/privacy-summary";
 import { FinishedReportButton } from "./FinishedReportButton";
 import { LandingForm } from "./LandingForm";
 import { LandingProofButton } from "./LandingProofButton";
 
-function Section({ id, title, children }: { id: string; title: string; children: ReactNode }) {
+const GUTTER = "px-[clamp(20px,4cqi,64px)]";
+
+function Section({ id, head, children }: { id: string; head: { index: string; label: string; headline: string; muted: string; body: string }; children: ReactNode }) {
   return (
-    <section aria-labelledby={id} className="mx-auto mt-[clamp(72px,9cqi,128px)] w-full max-w-[1120px] text-left">
-      <h2 id={id} className="font-serif text-[clamp(36px,4cqi,56px)] leading-none font-normal tracking-[-0.02em] text-balance">
-        {title}
-      </h2>
-      <div className="mt-[clamp(20px,2.4cqi,32px)]">{children}</div>
+    <section id={id} aria-labelledby={`${id}-h`} className="mx-auto w-full max-w-[1280px] scroll-mt-28 pt-[clamp(80px,9cqi,126px)] text-left">
+      <Eyebrow index={head.index}>{head.label}</Eyebrow>
+      <TwoTone id={`${id}-h`} lead={head.headline} muted={head.muted} className="mt-5 max-w-[900px] text-[clamp(34px,4.2cqi,56px)]" />
+      {head.body && <p className="mt-4 max-w-[620px] text-[17px] leading-[1.6] text-pretty text-ink-2">{head.body}</p>}
+      <div className="mt-[clamp(28px,3.4cqi,48px)]">{children}</div>
     </section>
   );
 }
 
-const linkClass = "self-start text-small font-medium text-ink underline underline-offset-[3px] hover:text-ink-soft";
+/** A row of numbered items separated by hairlines (2 / 3 / 4 across as the width allows). */
+function Row({ children, cols }: { children: ReactNode; cols: 3 | 4 }) {
+  return (
+    <ol className={`grid gap-px overflow-hidden rounded-card border border-border bg-border ${cols === 4 ? "@min-[640px]:grid-cols-2 @min-[1040px]:grid-cols-4" : "@min-[760px]:grid-cols-3"}`}>
+      {children}
+    </ol>
+  );
+}
+
+const linkClass = "self-start text-small font-medium text-gold underline-offset-[3px] hover:underline";
 
 export default function Landing() {
+  const checks = proofCounts(demoPrivacyProof);
+  const statItems: [string, string][] = [
+    [String(stats.tests.passing), liveStats.tests],
+    [String(stats.illustrations.reproduced), liveStats.illustrations],
+    [checks ? `${checks.passed}/${checks.total}` : "–", liveStats.checks],
+    [String(stats.anchors.count), liveStats.anchors],
+  ];
   return (
-    <AppShell landing mainClassName="items-center text-center pt-[clamp(28px,5cqi,80px)] pb-[clamp(48px,6cqi,96px)]">
-      {/* Hero: the scan input stays above the fold. */}
-      <Chip tone="neutral" className="h-8 px-3.5">
-        {hero.deadline}
-      </Chip>
-      <h1 className="mt-6 max-w-[1000px] font-serif text-[clamp(46px,6.6cqi,100px)] leading-[0.98] font-normal tracking-[-0.025em] text-balance">
-        {hero.headline}
-        <em className="block italic">{hero.headlineItalic}</em>
-      </h1>
-      <p className="mt-5 max-w-[660px] text-[clamp(17px,1.4cqi,20px)] leading-[1.55] text-pretty text-ink-2">{hero.subline}</p>
-      <LandingForm />
-      <div className="mt-5 flex flex-col items-center gap-2">
-        <FinishedReportButton recordedAt={demoRecordedAt} />
-        <p className="max-w-[340px] text-label text-balance text-ink-2 @min-[640px]:max-w-none">Cached demo result · questions answered for illustration · no AI call</p>
-      </div>
+    <AppShell landing recordedAt={demoRecordedAt} mainClassName="pb-[clamp(48px,6cqi,96px)]">
+      {/* Hero: text first (it is the LCP); the glyph art is drawn after first paint. */}
+      <section aria-labelledby="hero-h" className={`relative -mx-[clamp(20px,4cqi,64px)] -mt-[88px] overflow-hidden ${GUTTER} pt-[88px]`}>
+        <GlyphArt className="pointer-events-none absolute inset-0 h-full w-full" />
+        <p className="sr-only">
+          Decorative background: Marinus van Reymerswaele&apos;s painting The Tax Collectors (1540s, public domain), drawn in gold text characters.
+        </p>
+        <div className="relative mx-auto w-full max-w-[1280px] pt-[clamp(340px,92cqi,400px)] pb-[clamp(56px,7cqi,104px)] @min-[760px]:pt-[clamp(96px,11cqi,168px)]">
+          <div className="flex max-w-[620px] flex-col items-start gap-6">
+            <Eyebrow star>{hero.eyebrow}</Eyebrow>
+            <h1 id="hero-h" className="font-serif text-[clamp(44px,4.7cqi,68px)] leading-[1.04] tracking-[-0.05em]">
+              <span className="block text-ink">{hero.headline}</span>
+              <span className="block text-ink-3 @min-[1100px]:whitespace-nowrap">
+                {hero.headlineMuted}
+                <PercentMark size="0.56em" className="ml-[0.16em] inline-block align-[-0.04em] text-gold drop-shadow-[0_0_14px_rgb(230_187_121_/0.75)]" />
+              </span>
+            </h1>
+            <p className="max-w-[520px] text-[17px] leading-[1.6] text-pretty text-ink-2">{hero.subline}</p>
+            <LandingForm />
+            <div className="flex flex-wrap items-center gap-3">
+              <FinishedReportButton recordedAt={demoRecordedAt} />
+              <Chip tone="neutral" className="h-8 border-border bg-transparent px-3.5 text-ink-2">
+                {hero.deadline}
+              </Chip>
+            </div>
+            <p className="-mt-2 text-caption text-ink-3">Finished report: cached demo result · questions answered for illustration · no AI call</p>
+          </div>
+        </div>
+      </section>
 
-      <Section id="how-h" title={howItWorks.title}>
-        <ol className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,280px),1fr))] gap-3">
+      {/* Live numbers: each one measured (npm run stats; the committed demo run), never typed by hand. */}
+      <section aria-label="Live numbers" className="mx-auto w-full max-w-[1280px]">
+        <div className="flex flex-wrap items-center gap-x-10 gap-y-4 rounded-card border border-border bg-surface/60 px-6 py-5">
+          <span className="flex items-center gap-2 font-mono text-eyebrow font-medium text-green-dot uppercase">
+            <span aria-hidden="true" className="size-[7px] rounded-full bg-green-dot shadow-[0_0_10px_rgb(127_209_139_/0.8)]" />
+            {liveStats.label}
+          </span>
+          {statItems.map(([v, l]) => (
+            <span key={l} className="flex items-baseline gap-2">
+              <span className="font-mono text-[22px] text-ink tabular-nums">{v}</span>
+              <span className="text-label text-ink-2">{l}</span>
+            </span>
+          ))}
+        </div>
+        <p className="mt-2 px-1 text-caption text-ink-3">
+          Measured {stats.generatedAt.slice(0, 10)}: the test suite, the anchor contract&apos;s state on testnet ({stats.anchors.contract}), and the demo scan ({demoRuleCount} of{" "}
+          {demoRuleCount + demoPrivacyProof.aiDecisions} transactions labelled by the NRS rules).
+        </p>
+      </section>
+
+      <Section id="how" head={sections.how}>
+        <Row cols={3}>
           {howItWorks.steps.map((s) => (
-            <li key={s.number} className="flex flex-col gap-3 rounded-card border border-border bg-surface p-[clamp(20px,2.2cqi,28px)]">
-              <span aria-hidden="true" className="font-mono text-label text-ink-2">
+            <li key={s.number} className="flex flex-col gap-3 bg-page p-[clamp(20px,2.4cqi,32px)]">
+              <span aria-hidden="true" className="font-mono text-eyebrow font-medium text-gold">
                 {s.number}
               </span>
-              <h3 className="font-serif text-[28px] leading-[1.05] tracking-[-0.01em]">
+              <h3 className="text-[19px] font-medium tracking-[-0.03em]">
                 <span className="sr-only">Step {s.number}: </span>
                 {s.title}
               </h3>
-              <p className="text-ui leading-normal text-ink-2">{s.body}</p>
+              <p className="text-small leading-[1.6] text-ink-2">{s.body}</p>
             </li>
           ))}
-        </ol>
+        </Row>
       </Section>
 
-      <Section id="trust-h" title={trust.title}>
-        <ul className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,250px),1fr))] gap-3">
-          {trust.cards.map((c) => (
-            <li key={c.title} className="flex flex-col gap-3 rounded-card border border-border bg-surface p-[clamp(20px,2.2cqi,24px)]">
-              <span className="grid size-8 place-items-center rounded-full bg-lime-tint text-lime-ink" aria-hidden="true">
-                <CheckIcon size={13} />
+      <Section id="trust" head={sections.trust}>
+        <Row cols={4}>
+          {trust.cards.map((c, i) => (
+            <li key={c.title} className="flex flex-col gap-3 bg-page p-[clamp(20px,2.2cqi,28px)]">
+              <span aria-hidden="true" className="flex items-center gap-2 font-mono text-eyebrow font-medium text-gold">
+                {String(i + 1).padStart(2, "0")}
+                <span className="grid size-5 place-items-center rounded-full bg-gold-tint text-gold">
+                  <CheckIcon size={10} />
+                </span>
               </span>
-              <h3 className="text-[17px] leading-snug font-semibold tracking-[-0.01em]">{c.title}</h3>
-              <p className="flex-1 text-small leading-normal text-ink-2">{c.body}</p>
+              <h3 className="text-[17px] leading-snug font-medium tracking-[-0.02em]">{c.title}</h3>
+              <p className="flex-1 text-small leading-[1.6] text-ink-2">{c.body}</p>
               {c.action.kind === "privacy" ? (
                 <LandingProofButton proof={demoPrivacyProof} account={DEMO_ACCOUNT_ID} ruleCount={demoRuleCount} label={c.action.label} />
               ) : c.action.external ? (
@@ -82,28 +142,31 @@ export default function Landing() {
               )}
             </li>
           ))}
-        </ul>
+        </Row>
       </Section>
 
-      <Section id="who-h" title={whoFor.title}>
-        <ul className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,420px),1fr))] gap-x-8 rounded-card border border-border bg-surface px-[clamp(20px,2.4cqi,32px)] py-2">
-          {whoFor.items.map((w) => (
-            <li key={w.who} className="flex flex-col gap-1 border-b border-line py-4 last:border-b-0 @min-[1040px]:[&:nth-last-child(2)]:border-b-0">
-              <span className="text-body font-semibold">{w.who}</span>
-              <span className="text-ui leading-normal text-ink-2">{w.line}</span>
+      <Section id="who" head={sections.who}>
+        <Row cols={4}>
+          {whoFor.items.map((w, i) => (
+            <li key={w.who} className="flex flex-col gap-2 bg-page p-[clamp(20px,2.2cqi,28px)]">
+              <span aria-hidden="true" className="font-mono text-eyebrow font-medium text-gold">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <span className="text-[17px] leading-snug font-medium tracking-[-0.02em]">{w.who}</span>
+              <span className="text-small leading-[1.6] text-ink-2">{w.line}</span>
             </li>
           ))}
-        </ul>
+        </Row>
       </Section>
 
-      <Section id="scope-h" title={scope.title}>
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,340px),1fr))] gap-3">
-          <div className="rounded-card border border-border bg-surface p-[clamp(20px,2.4cqi,32px)]">
-            <h3 className="text-lg font-semibold">{scope.can.title}</h3>
+      <Section id="scope" head={sections.scope}>
+        <div className="grid gap-px overflow-hidden rounded-card border border-border bg-border @min-[760px]:grid-cols-2">
+          <div className="bg-page p-[clamp(20px,2.4cqi,32px)]">
+            <h3 className="font-mono text-eyebrow font-medium text-gold uppercase">{scope.can.title}</h3>
             <ul className="mt-3 flex flex-col">
               {scope.can.items.map((it) => (
                 <li key={it} className="flex items-start gap-3 border-t border-line py-3 text-ui first:border-t-0">
-                  <span className="mt-0.5 grid size-5 flex-none place-items-center rounded-full bg-lime text-ink" aria-hidden="true">
+                  <span className="mt-0.5 grid size-5 flex-none place-items-center rounded-full bg-gold text-on-ink" aria-hidden="true">
                     <CheckIcon size={11} />
                   </span>
                   {it}
@@ -111,12 +174,12 @@ export default function Landing() {
               ))}
             </ul>
           </div>
-          <div className="rounded-card border border-border bg-muted p-[clamp(20px,2.4cqi,32px)]">
-            <h3 className="text-lg font-semibold">{scope.cant.title}</h3>
+          <div className="bg-page p-[clamp(20px,2.4cqi,32px)]">
+            <h3 className="font-mono text-eyebrow font-medium text-ink-2 uppercase">{scope.cant.title}</h3>
             <ul className="mt-3 flex flex-col">
               {scope.cant.items.map((it) => (
-                <li key={it} className="flex items-start gap-3 border-t border-border py-3 text-ui text-ink-soft first:border-t-0">
-                  <span className="mt-0.5 grid size-5 flex-none place-items-center rounded-full border border-border-strong bg-surface text-[11px] leading-none text-ink-2" aria-hidden="true">
+                <li key={it} className="flex items-start gap-3 border-t border-line py-3 text-ui text-ink-soft first:border-t-0">
+                  <span className="mt-0.5 grid size-5 flex-none place-items-center rounded-full border border-border-strong text-[11px] leading-none text-ink-2" aria-hidden="true">
                     ×
                   </span>
                   <span>
@@ -131,26 +194,29 @@ export default function Landing() {
         <p className="mt-4 rounded-tile border border-amber-line bg-amber-tint px-5 py-4 text-ui leading-normal text-amber-ink">{scope.note}</p>
       </Section>
 
-      <Section id="faq-h" title={faq.title}>
-        <div className="rounded-card border border-border bg-surface px-[clamp(16px,2.4cqi,32px)]">
+      <Section id="faq" head={sections.faq}>
+        <div className="rounded-card border border-border px-[clamp(16px,2.4cqi,32px)]">
           {faq.items.map((f) => (
             <details key={f.q} className="group border-b border-line last:border-b-0">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-5 text-body font-semibold [&::-webkit-details-marker]:hidden">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-5 text-body font-medium tracking-[-0.01em] [&::-webkit-details-marker]:hidden">
                 {f.q}
-                <span aria-hidden="true" className="grid size-8 flex-none place-items-center rounded-full border border-border-strong text-small transition-transform group-open:rotate-45">
+                <span aria-hidden="true" className="grid size-8 flex-none place-items-center rounded-full border border-border-strong text-small text-gold transition-transform group-open:rotate-45">
                   +
                 </span>
               </summary>
-              <p className="max-w-[760px] pb-5 text-ui leading-[1.6] text-ink-2">{f.a}</p>
+              <p className="max-w-[760px] pb-5 text-ui leading-[1.65] text-ink-2">{f.a}</p>
             </details>
           ))}
         </div>
         <p className="mt-4 text-ui text-ink-2">
           New to crypto tax?{" "}
-          <Link href="/guide" className="font-medium text-ink underline underline-offset-[3px]">
+          <Link href="/guide" className="font-medium text-gold underline-offset-[3px] hover:underline">
             Read the plain-English guide
           </Link>
-          <span aria-hidden="true"> →</span>
+          <span aria-hidden="true" className="text-gold">
+            {" "}
+            →
+          </span>
         </p>
       </Section>
     </AppShell>

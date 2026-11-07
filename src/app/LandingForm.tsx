@@ -40,11 +40,11 @@ export function LandingForm() {
   }
 
   return (
-    <form onSubmit={start} noValidate className="mt-11 w-full max-w-[600px] text-left">
-      <label htmlFor="acct" className="mb-2.5 ml-1.5 block text-small font-medium">
+    <form onSubmit={start} noValidate className="w-full max-w-[560px] text-left">
+      <label htmlFor="acct" className="mb-2.5 ml-1 block text-small font-medium text-ink-soft">
         Your NEAR account
       </label>
-      <div className="flex flex-wrap gap-2 rounded-[34px] border border-border bg-surface p-2 shadow-raised">
+      <div className="flex flex-wrap gap-2 rounded-card border border-border-strong bg-surface/80 p-1.5 shadow-raised backdrop-blur-sm">
         <input
           id="acct"
           name="account"
@@ -59,12 +59,12 @@ export function LandingForm() {
           spellCheck={false}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? errId : undefined}
-          className="h-[54px] min-w-0 flex-[999_1_220px] rounded-full px-[18px] font-mono text-[17px] text-ink"
+          className="h-[50px] min-w-0 flex-[999_1_220px] rounded-control bg-transparent px-4 font-mono text-[17px] text-ink"
         />
         <button
           type="submit"
           disabled={starting}
-          className="flex h-[54px] flex-[1_0_auto] items-center justify-center gap-2.5 rounded-full bg-ink px-7 text-body font-medium text-white transition-colors hover:bg-ink-hover disabled:opacity-60"
+          className="flex h-[50px] flex-[1_0_auto] items-center justify-center gap-2.5 rounded-control bg-gold px-6 text-ui font-medium text-on-ink shadow-[0_0_0_1px_rgb(230_187_121_/0.35),0_10px_34px_-8px_rgb(230_187_121_/0.6)] transition-[background-color,box-shadow] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-gold-hover hover:shadow-[0_0_0_1px_rgb(239_203_148_/0.5),0_12px_40px_-6px_rgb(230_187_121_/0.75)] disabled:opacity-60"
         >
           {starting ? "Starting…" : "Start private scan"}
           <span aria-hidden="true">→</span>
@@ -76,7 +76,7 @@ export function LandingForm() {
         </p>
       )}
 
-      <div className="mt-3.5 ml-1.5 flex flex-wrap items-center gap-x-5 gap-y-2">
+      <div className="mt-3 ml-1 flex flex-wrap items-center gap-x-5 gap-y-2">
         {!showOthers && (
           <TextButton aria-expanded={false} aria-controls="others-panel" onClick={() => setShowOthers(true)}>
             + Other accounts you own
@@ -112,7 +112,7 @@ export function LandingForm() {
             autoCapitalize="none"
             aria-invalid={othersError ? true : undefined}
             aria-describedby={othersError ? `${othersErrId} others-help` : "others-help"}
-            className="min-h-[46px] resize-y rounded-[23px] border border-border-strong bg-surface px-4 py-[11px] font-mono text-ui leading-[1.5] text-ink"
+            className="min-h-[46px] resize-y rounded-control border border-border-strong bg-sunken px-4 py-[11px] font-mono text-ui leading-[1.5] text-ink"
           />
           {othersError && (
             <p id={othersErrId} role="alert" className="text-label text-red-ink">

@@ -116,14 +116,14 @@ export function AnchorCard({ fingerprint, isFinal, body, onAnchor }: { fingerpri
           Anchoring on NEAR…
         </span>
       ) : (
-        <div role="status" className="flex flex-col gap-3 rounded-[18px] border border-lime-line bg-lime-tint p-[18px]">
-          <span className="flex items-center gap-2.5 text-ui font-semibold text-lime-ink">
-            <span className="grid size-6 flex-none place-items-center rounded-full bg-lime text-ink">
+        <div role="status" className="flex flex-col gap-3 rounded-[18px] border border-gold-line bg-gold-tint p-[18px]">
+          <span className="flex items-center gap-2.5 text-ui font-semibold text-gold-ink">
+            <span className="grid size-6 flex-none place-items-center rounded-full bg-gold text-on-ink">
               <CheckIcon size={12} />
             </span>
             {state.already ? "Already anchored on NEAR testnet" : "Anchored on NEAR testnet"}
           </span>
-          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-small text-[#1F3F07]">
+          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-small text-gold-ink">
             <dt>Block</dt>
             <dd className="font-mono text-label">{groupInt(state.anchor.blockHeight)}</dd>
             <dt>Time</dt>
@@ -137,7 +137,7 @@ export function AnchorCard({ fingerprint, isFinal, body, onAnchor }: { fingerpri
                 href={state.anchor.explorerUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex h-10 max-w-full min-w-0 items-center gap-2 rounded-full border border-lime-line bg-surface px-4 font-mono text-label hover:border-ink"
+                className="inline-flex h-10 max-w-full min-w-0 items-center gap-2 rounded-full border border-gold-line bg-surface px-4 font-mono text-label hover:border-ink"
                 title={state.anchor.txHash}
               >
                 <span className="truncate">nearvalidate.org/txns/{shortHash(state.anchor.txHash)}</span>
@@ -145,11 +145,11 @@ export function AnchorCard({ fingerprint, isFinal, body, onAnchor }: { fingerpri
                 <span className="sr-only"> (opens in a new tab)</span>
               </a>
             ) : (
-              <a href={state.anchor.blockUrl} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center rounded-full border border-lime-line bg-surface px-4 font-mono text-label hover:border-ink">
+              <a href={state.anchor.blockUrl} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center rounded-full border border-gold-line bg-surface px-4 font-mono text-label hover:border-ink">
                 block {groupInt(state.anchor.blockHeight)} ↗
               </a>
             )}
-            <Link href={`/verify?fingerprint=${fingerprint}`} className="text-label text-lime-ink underline underline-offset-[3px]">
+            <Link href={`/verify?fingerprint=${fingerprint}`} className="text-label text-gold-ink underline underline-offset-[3px]">
               Verify it
             </Link>
           </div>

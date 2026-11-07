@@ -16,7 +16,7 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
             {GENERIC_ERROR} <span className="font-mono text-ink">{id}</span>.
           </p>
           <div className="flex flex-wrap gap-3">
-            <button type="button" onClick={reset} className="inline-flex h-12 items-center rounded-full bg-ink px-6 text-ui font-medium text-white">
+            <button type="button" onClick={reset} className="inline-flex h-12 items-center rounded-full bg-ink px-6 text-ui font-medium text-on-ink">
               Try again
             </button>
             {/* A plain link: the app's router may be the thing that failed. */}

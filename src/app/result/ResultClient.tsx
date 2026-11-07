@@ -43,7 +43,7 @@ function StatCard({ label, value, note, wide }: { label: string; value: string; 
 
 /** Faint "%" mark on the final hero card (decorative). */
 function HeroMark() {
-  return <PercentMark size="100%" className="pointer-events-none absolute right-[-6%] bottom-[-14%] aspect-square h-auto w-[clamp(200px,44%,300px)] text-white opacity-[0.08]" />;
+  return <PercentMark size="100%" className="pointer-events-none absolute right-[-6%] bottom-[-14%] aspect-square h-auto w-[clamp(200px,44%,300px)] text-gold opacity-[0.1]" />;
 }
 
 function incomeNote(r: ReportData): string {
@@ -103,7 +103,7 @@ export default function ResultClient({ account }: { account: string }) {
   const firstLineFor = (recordId: string) => r.lines.find((l) => l.recordId === recordId && l.kind !== "gas_fee") ?? r.lines.find((l) => l.recordId === recordId) ?? null;
   const subline = r.tax.basis === "marginal_over_other_income" && r.tax.otherIncomeNgn ? (
     <>
-      Marginal over other income of <span className={cx("font-mono", isDraft ? "text-ink" : "text-white")}>₦{fmtNgn(r.tax.otherIncomeNgn).replace(/\.00$/, "")}</span>
+      Marginal over other income of <span className={cx("font-mono", isDraft ? "text-ink" : "text-gold")}>₦{fmtNgn(r.tax.otherIncomeNgn).replace(/\.00$/, "")}</span>
     </>
   ) : (
     "Assumes no other income"
@@ -113,14 +113,14 @@ export default function ResultClient({ account }: { account: string }) {
     <>
       <div className="flex flex-wrap items-end justify-between gap-4 pt-[clamp(20px,3cqi,40px)] pb-[clamp(20px,2.4cqi,28px)]">
         <div>
-          <h1 className="font-serif text-[clamp(44px,5cqi,72px)] leading-none font-normal tracking-[-0.02em]">Your {r.year} crypto tax</h1>
+          <h1 className="font-serif text-[clamp(44px,5cqi,72px)] leading-none font-normal tracking-[-0.045em]">Your {r.year} crypto tax</h1>
           <p className="mt-3 text-ui text-ink-2">
             <span className="font-mono">{r.account}</span> · {plural(flow.total, "transaction")} · 1 Jan to 31 Dec {r.year}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="secondary" size="md" onClick={() => setProofOpen(true)}>
-            <span aria-hidden="true" className={cx("size-[7px] rounded-full", verified ? "bg-lime-dot" : proof.aiDecisions === 0 ? "bg-ink" : "bg-red-dot")} />
+            <span aria-hidden="true" className={cx("size-[7px] rounded-full", verified ? "bg-gold-dot" : proof.aiDecisions === 0 ? "bg-ink" : "bg-red-dot")} />
             Privacy proof
           </Button>
           <ButtonLink href={q("/export")} size="md" arrow>
@@ -146,7 +146,7 @@ export default function ResultClient({ account }: { account: string }) {
           <Chip tone="draft" className="bg-surface">
             Draft
           </Chip>
-          <div className="flex flex-[1_1_300px] flex-col gap-1 text-ui leading-[1.45] text-[#3F2700]">
+          <div className="flex flex-[1_1_300px] flex-col gap-1 text-ui leading-[1.45] text-amber-ink">
             <span className="font-medium">
               {r.blockingQuestions > 0 ? `Answer ${plural(r.blockingQuestions, "question")} to finalise.` : "This report is still a draft."}
             </span>
@@ -164,14 +164,14 @@ export default function ResultClient({ account }: { account: string }) {
 
       <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,440px),1fr))] gap-4">
         {isDraft ? (
-          <section aria-label="Provisional tax result" className="flex min-h-[340px] flex-col justify-between gap-9 rounded-hero border border-dashed border-[#BDB9B1] bg-sunken p-[clamp(24px,2.6cqi,36px)]">
+          <section aria-label="Provisional tax result" className="flex min-h-[340px] flex-col justify-between gap-9 rounded-hero border border-dashed border-dash bg-sunken p-[clamp(24px,2.6cqi,36px)]">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <span className="max-w-[260px] text-ui leading-[1.4] text-ink-2">Tax attributable to your crypto, {r.year}</span>
               <Chip tone="draft">Draft</Chip>
             </div>
             <div>
               <span className="mb-2.5 inline-block font-mono text-caption tracking-[0.08em] text-ink-2 uppercase">Provisional</span>
-              <div className="text-[clamp(68px,7.6cqi,116px)] leading-[0.9] tracking-[-0.03em] text-[#5E5A53]">
+              <div className="text-[clamp(52px,5.8cqi,92px)] leading-[0.9] tracking-[-0.03em] text-ink-2">
                 <Money value={r.tax.taxAttributableToVaNgn} koboClassName="opacity-80" />
               </div>
               <p className="mt-4 text-ui text-ink-2">
@@ -181,16 +181,16 @@ export default function ResultClient({ account }: { account: string }) {
             </div>
           </section>
         ) : (
-          <section aria-label="Tax result" className="relative flex min-h-[340px] flex-col justify-between gap-9 overflow-hidden rounded-hero bg-ink p-[clamp(24px,2.6cqi,36px)] text-white">
+          <section aria-label="Tax result" className="relative flex min-h-[340px] flex-col justify-between gap-9 overflow-hidden rounded-hero border border-gold-line bg-surface bg-[radial-gradient(120%_90%_at_100%_100%,rgb(230_187_121_/0.14),transparent_60%)] p-[clamp(24px,2.6cqi,36px)] text-ink">
             <HeroMark />
             <div className="relative flex flex-wrap items-start justify-between gap-3">
-              <span className="max-w-[260px] text-ui leading-[1.4] text-onink">Tax attributable to your crypto, {r.year}</span>
+              <span className="max-w-[260px] text-ui leading-[1.4] text-ink-2">Tax attributable to your crypto, {r.year}</span>
               <span className="flex flex-wrap gap-1.5">
                 <Chip tone="onInk">Final</Chip>
                 {verified ? (
                   <Chip tone="onInk">Verified private</Chip>
                 ) : (
-                  <span className="inline-flex h-7 items-center gap-1.5 rounded-full border border-white/16 bg-white/8 px-3 text-label font-medium text-white">
+                  <span className="inline-flex h-7 items-center gap-1.5 rounded-full border border-border-strong bg-muted px-3 text-label font-medium text-ink">
                     <span aria-hidden="true" className="size-[7px] rounded-full bg-onink" />
                     {proofSummary}
                   </span>
@@ -198,11 +198,11 @@ export default function ResultClient({ account }: { account: string }) {
               </span>
             </div>
             <div className="relative">
-              <div className="text-[clamp(68px,7.6cqi,116px)] leading-[0.9] tracking-[-0.03em]">
+              <div className="text-[clamp(52px,5.8cqi,92px)] leading-[0.9] tracking-[-0.03em]">
                 <Money value={r.tax.taxAttributableToVaNgn} />
               </div>
-              <p className="mt-4 text-ui text-onink">{subline}</p>
-              {rel && <p className="mt-2 text-small text-onink">{reliefSavedText(rel)}</p>}
+              <p className="mt-4 text-ui text-ink-2">{subline}</p>
+              {rel && <p className="mt-2 text-small text-ink-2">{reliefSavedText(rel)}</p>}
             </div>
           </section>
         )}

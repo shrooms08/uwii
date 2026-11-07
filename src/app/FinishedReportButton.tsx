@@ -9,7 +9,7 @@ import { DEMO_ACCOUNT, ILLUSTRATIVE_ANSWERS } from "@/lib/demo/illustrative-answ
  * Opens the finished demo report in one click: the committed classified run of the demo account (the
  * cached-demo path, no live AI call) with the illustrative answers loaded in this browser.
  */
-export function FinishedReportButton({ recordedAt }: { recordedAt: string }) {
+export function FinishedReportButton({ recordedAt, compact }: { recordedAt: string; compact?: boolean }) {
   const router = useRouter();
   const [opening, setOpening] = useState(false);
   return (
@@ -24,10 +24,10 @@ export function FinishedReportButton({ recordedAt }: { recordedAt: string }) {
         setSource(DEMO_ACCOUNT, { source: "fixture", recordedAt });
         router.push(`/result?account=${DEMO_ACCOUNT}`);
       }}
-      className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-border-strong bg-surface px-6 text-ui font-medium text-ink transition-colors hover:border-ink disabled:opacity-60"
+      className={`inline-flex items-center justify-center gap-2 border border-white/14 bg-transparent font-medium text-ink backdrop-blur-sm transition-colors duration-200 hover:border-ink-2 hover:bg-white/[0.03] disabled:opacity-60 ${compact ? "h-9 rounded-control px-3.5 text-label" : "h-12 rounded-[10px] px-5 text-ui"}`}
     >
       {opening ? "Opening…" : "See a finished report"}
-      <span aria-hidden="true">→</span>
+      {!compact && <span aria-hidden="true">→</span>}
     </button>
   );
 }

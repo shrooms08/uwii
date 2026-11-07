@@ -16,7 +16,9 @@
     "test": "tsx --test src/lib/tax/ng/*.test.ts src/lib/report/*.test.ts src/lib/scan/*.test.ts src/lib/near/*.test.ts src/lib/server/*.test.ts",
     "fetch:fx": "tsx scripts/fetch-cbn-nafem.ts",
     "report": "tsx --env-file-if-exists=.env.local scripts/report.ts",
-    "deploy:anchor": "tsx --env-file-if-exists=.env.anchor-admin.local scripts/deploy-anchor.ts"
+    "deploy:anchor": "tsx --env-file-if-exists=.env.anchor-admin.local scripts/deploy-anchor.ts",
+    "stats": "tsx scripts/stats.ts",
+    "glyph-art": "tsx scripts/glyph-art.ts"
   },
   "dependencies": {
     "@phala/dcap-qvl": "^0.7.1",

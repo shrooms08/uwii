@@ -6,10 +6,10 @@ export type ButtonVariant = "primary" | "secondary";
 export type ButtonSize = "lg" | "md";
 
 const base =
-  "inline-flex items-center justify-center gap-2.5 rounded-full font-medium whitespace-nowrap transition-colors disabled:opacity-50";
+  "inline-flex items-center justify-center gap-2.5 rounded-control font-medium whitespace-nowrap transition-colors disabled:opacity-50";
 const variants: Record<ButtonVariant, string> = {
-  primary: "bg-ink text-white hover:bg-ink-hover",
-  secondary: "bg-surface text-ink border border-border-strong hover:border-ink",
+  primary: "bg-gold text-on-ink shadow-[0_8px_28px_-10px_rgb(230_187_121_/0.55)] hover:bg-gold-hover",
+  secondary: "bg-transparent text-ink border border-border-strong hover:border-ink-2",
 };
 const sizes: Record<ButtonSize, string> = {
   lg: "h-[52px] px-7 text-body",

@@ -6,55 +6,63 @@
 @import "tailwindcss/theme.css" layer(theme);
 @import "tailwindcss/utilities.css" layer(utilities);
 
-/* Design tokens: "Calm, sealed, exact." (design/uwii-screens.html, Tokens section). */
+/*
+ * Design tokens: editorial dark with a single gold accent (style reference: orbio.so/protocol; notes in
+ * design/reference/orbio/NOTES.md). Names are semantic: "ink" is the foreground, "on-ink" is text on an
+ * ink (light) fill, "gold" is the one accent. Contrast ratios (WCAG) are noted per text colour.
+ */
 @theme {
   --color-*: initial;
   --color-white: #ffffff;
   --color-transparent: transparent;
-  --color-page: #f4f2ee;
-  --color-surface: #ffffff;
-  --color-muted: #f7f6f3;
-  --color-panel: #faf9f7;
-  --color-sunken: #e9e6e0;
-  --color-chip: #f1efea;
-  --color-line: #efece7;
-  --color-border: #e7e4de;
-  --color-rule: #e2dfd9;
-  --color-border-strong: #dad6cf;
-  --color-dash: #cfcbc3;
-  --color-ink: #0e0e0c;
-  --color-ink-hover: #2a2925;
-  --color-ink-soft: #3d3b36;
-  --color-ink-2: #5f5b54;
-  --color-ink-3: #77736b;
-  --color-onink: #c9c6bf;
-  --color-lime: #c5f06a;
-  --color-lime-tint: #eaf8cf;
-  --color-lime-line: #d3efa6;
-  --color-lime-ink: #24520b;
-  --color-lime-dot: #4e9a0e;
-  --color-amber-tint: #fbefd5;
-  --color-amber-line: #f3ddae;
-  --color-amber-ink: #6e4300;
-  --color-amber-dot: #d88a06;
-  /* Errors (not in the design tokens; AA on white and on the tint). */
-  --color-red-tint: #fbe9e6;
-  --color-red-line: #f2c4bd;
-  --color-red-ink: #9f2214;
-  --color-red-dot: #d23a26;
+  --color-page: #0b0c0e;
+  --color-surface: #121316;
+  --color-muted: #17181b;
+  --color-panel: #141518;
+  --color-sunken: #0f1012;
+  --color-chip: #1d1e22;
+  --color-line: #1f2024;
+  --color-border: #24252a;
+  --color-rule: #2a2b30;
+  --color-border-strong: #36373d;
+  --color-dash: #45464c;
+  --color-ink: #f1f0ed; /* 17.2:1 on page, 16.3:1 on surface */
+  --color-ink-hover: #ffffff;
+  --color-ink-soft: #d9d7d2; /* 13.6:1 on page */
+  --color-ink-2: #a3a3a6; /* 7.8:1 on page, 7.4:1 on surface */
+  --color-ink-3: #8c8c8f; /* 5.8:1 on page, 5.5:1 on surface, 5.3:1 on muted */
+  --color-on-ink: #0b0c0e; /* on ink fills: 17.2:1 */
+  --color-onink: #4b4842; /* secondary text on ink fills: 8.0:1 */
+  --color-gold: #e6bb79; /* 10.9:1 on page, 10.4:1 on surface; on-gold text 10.9:1 */
+  --color-gold-hover: #efcb94;
+  --color-gold-tint: #221d14;
+  --color-gold-line: #4a3c26;
+  --color-gold-ink: #e6bb79; /* 9.4:1 on gold-tint */
+  --color-gold-dot: #e6bb79;
+  --color-amber-tint: #2a1c0e;
+  --color-amber-line: #5a3d1d;
+  --color-amber-ink: #f2a869; /* 8.3:1 on amber-tint, 9.9:1 on page */
+  --color-amber-dot: #f2a869;
+  --color-red-tint: #2c1513;
+  --color-red-line: #5c2a24;
+  --color-red-ink: #f3a196; /* 8.5:1 on red-tint */
+  --color-red-dot: #e8604f;
+  --color-green-dot: #7fd18b;
 
-  --font-serif: var(--font-instrument-serif), Georgia, serif;
+  /* Display role (headlines, figures): Geist, tight. Instrument Serif is no longer used in the UI. */
+  --font-serif: var(--font-geist-sans), system-ui, sans-serif;
   --font-sans: var(--font-geist-sans), system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 
-  --radius-inset: 16px;
-  --radius-tile: 20px;
-  --radius-card: 24px;
-  --radius-hero: 28px;
+  --radius-inset: 10px;
+  --radius-tile: 12px;
+  --radius-card: 14px;
+  --radius-hero: 18px;
+  --radius-control: 9px;
 
-  --shadow-raised: 0 1px 2px rgb(14 14 12 / 0.04), 0 12px 32px -16px rgb(14 14 12 / 0.12);
-  --shadow-overlay: 0 40px 100px -30px rgb(14 14 12 / 0.5);
-  --shadow-float: 0 12px 32px -12px rgb(14 14 12 / 0.4);
+  --shadow-raised: 0 1px 0 rgb(255 255 255 / 0.03) inset, 0 16px 40px -20px rgb(0 0 0 / 0.7);
+  --shadow-overlay: 0 40px 120px -30px rgb(0 0 0 / 0.85);
+  --shadow-float: 0 12px 32px -12px rgb(0 0 0 / 0.8);
 
   /* Type scale (size / line-height / tracking from the tokens). */
   --text-caption: 12px;
@@ -67,6 +75,9 @@
   --text-h2--line-height: 1.35;
   --text-stat: 40px;
   --text-stat--line-height: 1;
+  /* Mono section labels: "01 / HOW IT WORKS". */
+  --text-eyebrow: 11px;
+  --text-eyebrow--letter-spacing: 0.22em;
 }
 
 @layer base {
@@ -103,23 +114,14 @@
   }
 
   :root {
-    --background: #ffffff;
-    --foreground: #171717;
+    --background: #0b0c0e;
+    --foreground: #f1f0ed;
+    color-scheme: dark;
   }
 
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --background: #0a0a0a;
-      --foreground: #ededed;
-    }
-    html {
-      color-scheme: dark;
-    }
-  }
-
-  /* Product UI: scoped reset (light only, matching the approved design). */
+  /* Product UI: scoped reset (dark editorial theme). */
   .uwii {
-    color-scheme: light;
+    color-scheme: dark;
     color: var(--color-ink);
     background: var(--color-page);
     font-family: var(--font-sans);
@@ -150,6 +152,11 @@
     font-size: inherit;
     font-weight: inherit;
   }
+  /* Display face: Geist at 450 with tight tracking (explicit tracking utilities still win). */
+  .uwii .font-serif {
+    font-weight: 450;
+    letter-spacing: -0.04em;
+  }
   .uwii ol,
   .uwii ul {
     list-style: none;
@@ -166,7 +173,7 @@
     outline-offset: 3px;
   }
   .uwii .focus-onink:focus-visible {
-    outline-color: #ffffff;
+    outline-color: var(--color-on-ink);
   }
 }
 

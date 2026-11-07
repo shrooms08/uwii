@@ -1,0 +1,49 @@
+# Credits
+
+## Artwork: the landing hero
+
+- **Work:** *The Tax Collectors*, Marinus van Reymerswaele (attributed), 1540s.
+- **Source file:** Wikimedia Commons,
+  [File:Marinus_van_Reymerswale_-_The_Tax_Collectors_-_WGA19332.jpg](https://commons.wikimedia.org/wiki/File:Marinus_van_Reymerswale_-_The_Tax_Collectors_-_WGA19332.jpg)
+  (1000 × 1232, from the Web Gallery of Art, WGA19332).
+- **Licence:** public domain. The painter died in the 16th century; Wikimedia Commons marks the file
+  PD-Art, a faithful photographic reproduction of a two-dimensional public-domain work, which is
+  itself public domain.
+- **Why this file:** it is attributed to Reymerswaele himself. The National Museum in Warsaw version on
+  Commons is labelled "After Marinus van Reymerswaele" (a 1600–1649 copy), so we did not use it.
+- **How it is used:**
+  - `scripts/glyph-art.ts` downloads the file to a temp folder at build time (it is never committed).
+  - It crops the faces, hands, ledger and coins and reduces them to a 180 × 110 luminance grid with
+    16 levels.
+  - It commits only that grid (`src/content/glyph-art.json`, about 13 KB).
+  - The browser draws the grid as gold text characters (`src/components/GlyphArt.tsx`); the social
+    cards draw a static frame of it (`src/lib/site/og.tsx`).
+  - The painting itself is never shipped.
+- **Credited in:** the site footer ("Glyph art after Marinus van Reymerswaele, *The Tax Collectors*
+  (1540s), public domain", linked to the Commons page) and the hero's screen-reader description.
+
+## Fonts
+
+All are under the SIL Open Font License 1.1.
+
+| Font | Where | Source | Licence file |
+| --- | --- | --- | --- |
+| Geist, Geist Mono (Vercel) | Site (via `next/font`), PDF, social cards, glyph art | https://github.com/vercel/geist-font | `public/pdf-fonts/OFL-Geist.txt` |
+| IBM Plex Mono | The ₦ sign in the PDF and the social cards (Geist has no U+20A6) | https://github.com/google/fonts/tree/main/ofl/ibmplexmono | `public/pdf-fonts/OFL-IBMPlexMono.txt` |
+
+## Visual reference
+
+The dark editorial theme follows the *style* of [orbio.so/protocol](https://orbio.so/protocol):
+- a near-black page and a single warm gold accent;
+- Geist with tight tracking, two-tone headlines and mono eyebrow labels;
+- a floating pill nav and glyph-art imagery.
+
+Notes on what we measured are in [design/reference/orbio/NOTES.md](../design/reference/orbio/NOTES.md).
+
+No Orbio logo, copy, artwork or other asset is used. The colours and type are re-chosen and checked for
+WCAG AA in `src/app/globals.css`.
+
+## Data
+
+Powered by NearBlocks.io APIs. Other data sources and libraries are listed in the
+[README](../README.md#hackathon-disclosures).

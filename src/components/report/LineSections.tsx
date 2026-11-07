@@ -52,7 +52,7 @@ function FilterChip({ on, onClick, children }: { on: boolean; onClick: () => voi
       type="button"
       aria-pressed={on}
       onClick={onClick}
-      className={cx("h-[30px] flex-none rounded-full border px-3 text-label whitespace-nowrap", on ? "border-ink bg-ink text-white" : "border-border-strong bg-surface text-ink hover:border-ink")}
+      className={cx("h-[30px] flex-none rounded-full border px-3 text-label whitespace-nowrap", on ? "border-ink bg-ink text-on-ink" : "border-border-strong bg-surface text-ink hover:border-ink")}
     >
       {children}
     </button>

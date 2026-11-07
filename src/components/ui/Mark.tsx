@@ -17,12 +17,12 @@ export function PercentMark({ size = 34, className }: { size?: number | string; 
   );
 }
 
-/** Header mark + serif wordmark, linking home ("Uwii home" for screen readers). */
+/** Header mark (gold %) + wordmark, linking home ("Uwii home" for screen readers). */
 export function Wordmark() {
   return (
     <Link href="/" aria-label="Uwii home" className="flex items-center gap-2 text-ink">
-      <PercentMark size={30} />
-      <span aria-hidden="true" className="font-serif text-[32px] leading-none tracking-[-0.01em]">
+      <PercentMark size={22} className="text-gold" />
+      <span aria-hidden="true" className="font-sans text-[21px] leading-none font-medium tracking-[-0.045em]">
         uwii
       </span>
     </Link>

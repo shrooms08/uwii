@@ -10,10 +10,37 @@ export const DEMO_ACCOUNT_ID = "rybergh44.near";
 
 export const hero = {
   deadline: "First filing deadline: 31 March 2027",
-  headline: "Crypto tax, without the guesswork.",
+  eyebrow: "Private AI · NRS Circular 2026/21",
+  /** Two-tone headline: line 1 in the foreground colour, line 2 muted (ends with the gold % mark). */
+  headline: "Crypto tax,",
+  headlineMuted: "without the guesswork.",
   headlineItalic: "Worked out privately.",
   subline:
     "Uwii reads your NEAR transactions, asks you a few plain questions, and computes your 2026 Nigerian tax under NRS Circular 2026/21.",
+};
+
+/** Numbered section headers: "01 / HOW IT WORKS", a one-line two-tone headline, a short line. */
+export const sections = {
+  how: {
+    index: "01",
+    label: "How it works",
+    headline: "Three steps.",
+    muted: "Scan, answer, file.",
+    body: "Fixed tax rules first, private AI only for what they can't label, then a worksheet that cites the circular line by line.",
+  },
+  trust: { index: "02", label: "Why trust the number", headline: "Checked and cited.", muted: "Proven, then anchored.", body: "Four things you can check yourself." },
+  who: { index: "03", label: "Who it's for", headline: "Paid, staked or swapped", muted: "on NEAR in 2026.", body: "Individuals filing personal income tax in Nigeria." },
+  scope: { index: "04", label: "Scope", headline: "What Uwii can do,", muted: "and what it can't yet.", body: "" },
+  faq: { index: "05", label: "FAQ", headline: "Questions,", muted: "answered plainly.", body: "" },
+};
+
+/** Labels for the "Live" row; every number is measured (src/content/stats.json and the demo run). */
+export const liveStats = {
+  label: "Live",
+  tests: "tests passing",
+  illustrations: "NRS illustrations reproduced",
+  checks: "privacy checks per scan",
+  anchors: "reports anchored on NEAR testnet",
 };
 
 export const howItWorks = {

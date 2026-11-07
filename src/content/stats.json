@@ -1,0 +1,18 @@
+{
+  "generatedAt": "2026-11-07T12:58:06.009Z",
+  "tests": {
+    "passing": 132,
+    "total": 132,
+    "source": "npm test (node:test summary)"
+  },
+  "illustrations": {
+    "reproduced": 2,
+    "source": "tests named 'Circular Illustration …' in src/lib/tax/ng/engine.test.ts"
+  },
+  "anchors": {
+    "count": 5,
+    "contract": "uwii-anchor.testnet",
+    "blockHeight": 276634002,
+    "source": "view_state of uwii-anchor.testnet (entries of its anchors map)"
+  }
+}
