@@ -137,69 +137,79 @@ export function MotionRoot() {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduced) return () => window.removeEventListener("scroll", onScroll);
 
-    const seen = new WeakSet<Element>();
-    const vh = () => window.innerHeight || document.documentElement.clientHeight;
-
-    const revealIO = new IntersectionObserver(
-      (entries) => {
-        const hits = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top || a.boundingClientRect.left - b.boundingClientRect.left);
-        hits.forEach((e, i) => {
-          const el = e.target as HTMLElement;
-          el.style.setProperty("--reveal-delay", `${Math.min(i, 6) * 70}ms`);
-          el.setAttribute("data-shown", "");
-          revealIO.unobserve(el);
-          el.addEventListener("transitionend", () => el.style.removeProperty("--reveal-delay"), { once: true });
-        });
-      },
-      { rootMargin: "0px 0px -6% 0px", threshold: 0.08 },
-    );
-    const onceIO = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) {
-          if (!e.isIntersecting) continue;
-          const el = e.target;
-          onceIO.unobserve(el);
-          if (el.hasAttribute("data-decode")) decode(el);
-          if (el.hasAttribute("data-countup")) countUp(el, el.getAttribute("data-countup") === "scramble");
-        }
-      },
-      { threshold: 0.3 },
-    );
-
-    const scan = (initial: boolean) => {
-      document.querySelectorAll("[data-reveal]").forEach((el) => {
-        if (seen.has(el)) return;
-        seen.add(el);
-        // Already on screen at load: never hidden (no flash, no delay to the first view).
-        if (initial && el.getBoundingClientRect().top < vh()) el.setAttribute("data-shown", "");
-        else revealIO.observe(el);
-      });
-      document.querySelectorAll("[data-decode],[data-countup]").forEach((el) => {
-        if (seen.has(el)) return;
-        seen.add(el);
-        onceIO.observe(el);
-      });
-    };
-    scan(true);
-    // Hidden states apply only once JS is running (content is never hidden without it).
-    root.classList.add("motion");
-
-    // Pages that render after data arrives (Result, Export): pick up new elements.
+    // Set up after hydration, in an idle callback (kept out of the hydration task). Until then nothing is
+    // hidden, so content is never held back.
+    let revealIO: IntersectionObserver | null = null;
+    let onceIO: IntersectionObserver | null = null;
+    let mo: MutationObserver | null = null;
     let pending = 0;
-    const mo = new MutationObserver(() => {
-      if (pending) return;
-      pending = requestAnimationFrame(() => {
-        pending = 0;
-        scan(false);
+    const init = () => {
+      const seen = new WeakSet<Element>();
+      const vh = () => window.innerHeight || document.documentElement.clientHeight;
+      const rio = new IntersectionObserver(
+        (entries) => {
+          const hits = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top || a.boundingClientRect.left - b.boundingClientRect.left);
+          hits.forEach((e, i) => {
+            const el = e.target as HTMLElement;
+            el.style.setProperty("--reveal-delay", `${Math.min(i, 6) * 70}ms`);
+            el.setAttribute("data-shown", "");
+            rio.unobserve(el);
+            el.addEventListener("transitionend", () => el.style.removeProperty("--reveal-delay"), { once: true });
+          });
+        },
+        { rootMargin: "0px 0px -6% 0px", threshold: 0.08 },
+      );
+      const oio = new IntersectionObserver(
+        (entries) => {
+          for (const e of entries) {
+            if (!e.isIntersecting) continue;
+            const el = e.target;
+            oio.unobserve(el);
+            if (el.hasAttribute("data-decode")) decode(el);
+            if (el.hasAttribute("data-countup")) countUp(el, el.getAttribute("data-countup") === "scramble");
+          }
+        },
+        { threshold: 0.3 },
+      );
+      revealIO = rio;
+      onceIO = oio;
+      const scan = (initial: boolean) => {
+        document.querySelectorAll("[data-reveal]").forEach((el) => {
+          if (seen.has(el)) return;
+          seen.add(el);
+          // Already on screen when motion starts: never hidden (no flash, no delay to the first view).
+          if (initial && el.getBoundingClientRect().top < vh()) el.setAttribute("data-shown", "");
+          else rio.observe(el);
+        });
+        document.querySelectorAll("[data-decode],[data-countup]").forEach((el) => {
+          if (seen.has(el)) return;
+          seen.add(el);
+          oio.observe(el);
+        });
+      };
+      scan(true);
+      // Hidden states apply only once JS is running (content is never hidden without it).
+      root.classList.add("motion");
+      // Pages that render after data arrives (Result, Export): pick up new elements.
+      mo = new MutationObserver(() => {
+        if (pending) return;
+        pending = requestAnimationFrame(() => {
+          pending = 0;
+          scan(false);
+        });
       });
-    });
-    mo.observe(document.body, { childList: true, subtree: true });
+      mo.observe(document.body, { childList: true, subtree: true });
+    };
+    const idle = typeof window.requestIdleCallback === "function";
+    const handle = idle ? window.requestIdleCallback(init, { timeout: 400 }) : window.setTimeout(init, 50);
 
     return () => {
       window.removeEventListener("scroll", onScroll);
-      revealIO.disconnect();
-      onceIO.disconnect();
-      mo.disconnect();
+      if (idle) window.cancelIdleCallback(handle);
+      else window.clearTimeout(handle);
+      revealIO?.disconnect();
+      onceIO?.disconnect();
+      mo?.disconnect();
       cancelAnimationFrame(pending);
     };
   }, []);

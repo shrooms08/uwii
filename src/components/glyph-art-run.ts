@@ -68,13 +68,6 @@ const smooth = (e0: number, e1: number, x: number) => {
   return t * t * (3 - 2 * t);
 };
 
-function decode(g: Grid): Uint8Array {
-  const bytes = Uint8Array.from(atob(g.data), (c) => c.charCodeAt(0));
-  const out = new Uint8Array(g.cols * g.rows);
-  for (let i = 0; i < out.length; i++) out[i] = i % 2 === 0 ? bytes[i >> 1] >> 4 : bytes[i >> 1] & 15;
-  return out;
-}
-
 function monoFamily(): string {
   const v = getComputedStyle(document.documentElement).getPropertyValue("--font-geist-mono").trim();
   return `${v ? `${v}, ` : ""}ui-monospace, Menlo, monospace`;
@@ -92,7 +85,7 @@ export function run(canvas: HTMLCanvasElement, grid: Grid, reduced: boolean): ()
   const ctx = canvas.getContext("2d");
   if (!ctx) return () => {};
   const family = monoFamily();
-  const levels = decode(grid);
+  let levels: Uint8Array | null = null;
   const random = rng(20261107);
   const nav = navigator as Navigator & { deviceMemory?: number };
   const lowEnd = (nav.hardwareConcurrency ?? 8) <= 4 || (nav.deviceMemory ?? 8) <= 4;
@@ -118,8 +111,6 @@ export function run(canvas: HTMLCanvasElement, grid: Grid, reduced: boolean): ()
   let artAlpha = 1;
   let atlas: HTMLCanvasElement | null = null;
   let nctx: CanvasRenderingContext2D | null = null;
-  let builtLayer = 0;
-  let builtNoise = 0;
   let ready = false;
   const noiseRng = rng(2026);
   let layer: HTMLCanvasElement | null = null;
@@ -144,7 +135,35 @@ export function run(canvas: HTMLCanvasElement, grid: Grid, reduced: boolean): ()
   const cellY = (r: number) => Math.round(artYd + r * cellH * dpr);
   const rampFor = (v: number) => Math.min(N_RAMP - 1, Math.max(0, Math.round(Math.pow(v, 0.8) * (N_RAMP - 1))));
 
-  function layout() {
+  /** Ambient field drawable (atlas tint 0 and clusters exist) before the art itself is ready. */
+  let fieldReady = false;
+
+  /**
+   * Start-up and re-layout as a sequence of small steps (each well under 16 ms on a 4x-throttled phone),
+   * run in idle slices by runSteps(): grid decode, geometry, the atlas one tint at a time (the ambient
+   * field starts drawing after the first), the cells a few rows at a time, then the art and decode layers
+   * in batches. The intro decode starts when the last step is done.
+   */
+  function* initSteps(): Generator<void> {
+    ready = false;
+    fieldReady = false;
+    if (!levels) {
+      const bytes = atob(grid.data);
+      yield;
+      const out = new Uint8Array(grid.cols * grid.rows);
+      for (let i = 0; i < out.length; i++) {
+        const b = bytes.charCodeAt(i >> 1);
+        out[i] = i % 2 === 0 ? b >> 4 : b & 15;
+        if ((i & 8191) === 8191) yield;
+      }
+      levels = out;
+      yield;
+    }
+    yield* layoutSteps();
+  }
+
+  function* layoutSteps(): Generator<void> {
+    const src = levels!;
     const rect = canvas.getBoundingClientRect();
     W = Math.max(1, Math.round(rect.width));
     H = Math.max(1, Math.round(rect.height));
@@ -153,6 +172,7 @@ export function run(canvas: HTMLCanvasElement, grid: Grid, reduced: boolean): ()
     dpr = Math.min(window.devicePixelRatio || 1, lowEnd ? 1.5 : 2);
     canvas.width = Math.round(W * dpr);
     canvas.height = Math.round(H * dpr);
+    yield;
 
     // Art: anchored right, bleeding off the right edge. Desktop: up to ~74% of the width and the hero
     // height; narrow screens: wider than the screen, behind the headline area, at reduced opacity.
@@ -177,7 +197,8 @@ export function run(canvas: HTMLCanvasElement, grid: Grid, reduced: boolean): ()
     sw = Math.ceil(cellW * dpr);
     sh = Math.ceil(cellH * dpr);
 
-    // Sprite atlas: CHARS across, TINTS down, drawn once.
+    // Sprite atlas: CHARS across, TINTS down, one tint per step. The ambient field only needs tint 0,
+    // so it starts drawing as soon as that row exists.
     atlas = document.createElement("canvas");
     atlas.width = sw * N_CHARS;
     atlas.height = sh * TINTS.length;
@@ -185,10 +206,19 @@ export function run(canvas: HTMLCanvasElement, grid: Grid, reduced: boolean): ()
     a.font = `600 ${Math.max(5, cellH * dpr * 0.98)}px ${family}`;
     a.textAlign = "center";
     a.textBaseline = "middle";
-    TINTS.forEach(([r, g, b], t) => {
+    for (let t = 0; t < TINTS.length; t++) {
+      const [r, g, b] = TINTS[t];
       a.fillStyle = `rgb(${r},${g},${b})`;
       CHARS.forEach((c, k) => a.fillText(c, k * sw + sw / 2, t * sh + sh / 2));
-    });
+      yield;
+      if (t === 0) {
+        // Ambient field: sparse clusters anywhere in the hero (also behind the nav).
+        const count = small ? 14 : 34;
+        clusters = Array.from({ length: count }, () => spawn(random() * 6000));
+        fieldReady = true;
+        yield;
+      }
+    }
 
     // Cells.
     const n = cols * rows;
@@ -204,7 +234,7 @@ export function run(canvas: HTMLCanvasElement, grid: Grid, reduced: boolean): ()
         let m = 0;
         for (let dy = 0; dy < step; dy++) {
           for (let dx = 0; dx < step; dx++) {
-            const q = levels[(r * step + dy) * grid.cols + (c * step + dx)];
+            const q = src[(r * step + dy) * grid.cols + (c * step + dx)];
             if (q) {
               s += q;
               m++;
@@ -222,14 +252,17 @@ export function run(canvas: HTMLCanvasElement, grid: Grid, reduced: boolean): ()
         alpha[i] = artAlpha * (small ? 0.16 + 0.84 * Math.pow(v, 0.95) : 0.1 + 0.9 * Math.pow(v, 1.3));
         list.push(i);
       }
+      if ((r & 7) === 7) yield;
     }
     filled = Uint32Array.from(list);
+    yield;
 
     // Art layer: every filled cell, drawn once (the shimmer updates single cells).
     layer = document.createElement("canvas");
     layer.width = Math.ceil(artW * dpr) + sw;
     layer.height = Math.ceil(artH * dpr) + sh;
     lctx = layer.getContext("2d")!;
+    yield;
 
     // Decode layer (only while the intro runs): the same cells as random glyphs.
     rowJitter = Float32Array.from({ length: rows }, () => r0());
@@ -240,15 +273,64 @@ export function run(canvas: HTMLCanvasElement, grid: Grid, reduced: boolean): ()
       noise.width = layer.width;
       noise.height = layer.height;
       nctx = noise.getContext("2d")!;
+      yield;
     }
-    // Both layers are filled by build(), a few milliseconds per frame (no long task on slow phones).
-    builtLayer = 0;
-    builtNoise = 0;
-    ready = false;
+    // Fill both layers in batches.
+    for (let k = 0; k < filled.length; k++) {
+      drawLayerCell(filled[k]);
+      if ((k & 127) === 127) yield;
+    }
+    yield;
+    if (nctx) {
+      for (let k = 0; k < filled.length; k++) {
+        const i = filled[k];
+        const c = i % cols;
+        const r = (i - c) / cols;
+        sprite(nctx, Math.floor(noiseRng() * N_CHARS), Math.floor(noiseRng() * 3), Math.round(c * cellW * dpr), Math.round(r * cellH * dpr), alpha[i] * 0.75);
+        if ((k & 127) === 127) yield;
+      }
+    }
+    ready = true;
+    // The intro decode starts once its layers exist.
+    if (decoding) start = performance.now();
+  }
 
-    // Ambient field: sparse clusters anywhere in the hero (also behind the nav).
-    const count = small ? 14 : 34;
-    clusters = Array.from({ length: count }, () => spawn(random() * 6000));
+  // ---------- chunked start-up scheduler ----------
+  let job: Generator<void> | null = null;
+  let jobHandle = 0;
+  const hasIdle = typeof window.requestIdleCallback === "function";
+  /** Called when the current job finishes (draws the static frame under reduced motion). */
+  let onReady: () => void = () => {};
+
+  function slice() {
+    jobHandle = 0;
+    if (disposed || !job) return;
+    const t0 = performance.now();
+    // ~8 ms of steps per slice; each step is small, so no task comes near 50 ms.
+    do {
+      if (job.next().done) {
+        job = null;
+        onReady();
+        return;
+      }
+    } while (performance.now() - t0 < 8);
+    schedule();
+  }
+  function schedule() {
+    jobHandle = hasIdle ? window.requestIdleCallback(slice, { timeout: 120 }) : window.setTimeout(slice, 16);
+  }
+  function cancelJob() {
+    if (jobHandle) {
+      if (hasIdle) window.cancelIdleCallback(jobHandle);
+      else window.clearTimeout(jobHandle);
+    }
+    jobHandle = 0;
+    job = null;
+  }
+  function relayout() {
+    cancelJob();
+    job = initSteps();
+    schedule();
   }
 
   function drawLayerCell(i: number) {
@@ -302,18 +384,20 @@ export function run(canvas: HTMLCanvasElement, grid: Grid, reduced: boolean): ()
   let lastShimmer = 0;
 
   function scheduleGlitch(now: number) {
-    nextGlitch = now + 4000 + random() * 4000;
+    nextGlitch = now + 3000 + random() * 3000;
   }
 
   function makeGlitch(now: number) {
-    const nb = 2 + Math.floor(random() * 3);
+    // 3-6 bands of 1-4 rows, placed on rows that have art (so every band shows), shifted 24-90 px.
+    const nb = 3 + Math.floor(random() * 4);
     const bands = Array.from({ length: nb }, () => {
       const h = 1 + Math.floor(random() * 4);
-      const r0 = Math.floor(random() * (rows - h));
-      return { r0, r1: r0 + h, dx: (random() < 0.5 ? -1 : 1) * (14 + random() * 46) };
+      const at = Math.floor((filled[Math.floor(random() * filled.length)] ?? 0) / cols);
+      const r0 = Math.max(0, Math.min(rows - h, at - Math.floor(h / 2)));
+      return { r0, r1: r0 + h, dx: (random() < 0.5 ? -1 : 1) * (24 + random() * 66) };
     });
     let swap = null;
-    if (random() < 0.45) {
+    if (random() < 1 / 3) {
       const w = 6 + Math.floor(random() * 8);
       const h = 3 + Math.floor(random() * 4);
       // Two blocks on filled cells, so the swap is visible.
@@ -330,7 +414,7 @@ export function run(canvas: HTMLCanvasElement, grid: Grid, reduced: boolean): ()
         dur: 420 + random() * 200,
       };
     }
-    glitch = { t0: now, dur: 150 + random() * 150, bands, swap };
+    glitch = { t0: now, dur: 180 + random() * 180, bands, swap };
   }
 
   // ---------- drawing ----------
@@ -447,12 +531,19 @@ export function run(canvas: HTMLCanvasElement, grid: Grid, reduced: boolean): ()
         const y1 = cellY(b.r1);
         ctx!.clearRect(0, y0, canvas.width, y1 - y0);
         const dx = b.dx * (hash(b.r0, jitter) < 0.5 ? 1 : 0.4) * dpr;
+        // Split: a faint duplicate offset against the shift direction (an RGB-split look in gold).
+        const split = -Math.sign(b.dx) * (7 + 5 * hash(jitter, b.r0)) * dpr;
         for (let r = b.r0; r < b.r1; r++) {
           for (let c = 0; c < cols; c++) {
             const i = r * cols + c;
             if (!lv[i]) continue;
             const scramble = hash(i, jitter) < 0.55;
-            sprite(ctx!, scramble ? Math.floor(hash(jitter, i) * N_CHARS) : ch[i], scramble ? Math.min(TINTS.length - 1, tint[i] + 2) : tint[i], Math.round(cellX(c) + dx), cellY(r), alpha[i] * (scramble ? 1.35 : 1) + (scramble ? 0.1 : 0));
+            const k = scramble ? Math.floor(hash(jitter, i) * N_CHARS) : ch[i];
+            const t = scramble ? Math.min(TINTS.length - 1, tint[i] + 2) : tint[i];
+            const a = alpha[i] * (scramble ? 1.35 : 1) + (scramble ? 0.1 : 0);
+            const x = Math.round(cellX(c) + dx);
+            sprite(ctx!, k, TINTS.length - 1, Math.round(x + split), cellY(r) - Math.round(dpr), a * 0.35);
+            sprite(ctx!, k, t, x, cellY(r), a);
           }
         }
       }
@@ -479,35 +570,14 @@ export function run(canvas: HTMLCanvasElement, grid: Grid, reduced: boolean): ()
     }
   }
 
-  /** Fills the art and decode layers in slices of at most budget ms; true when both are complete. */
-  function build(budget: number): boolean {
-    const t0 = performance.now();
-    while (builtLayer < filled.length) {
-      drawLayerCell(filled[builtLayer++]);
-      if ((builtLayer & 63) === 0 && performance.now() - t0 > budget) return false;
-    }
-    while (nctx && builtNoise < filled.length) {
-      const i = filled[builtNoise++];
-      const c = i % cols;
-      const r = (i - c) / cols;
-      sprite(nctx, Math.floor(noiseRng() * N_CHARS), Math.floor(noiseRng() * 3), Math.round(c * cellW * dpr), Math.round(r * cellH * dpr), alpha[i] * 0.75);
-      if ((builtNoise & 63) === 0 && performance.now() - t0 > budget) return false;
-    }
-    return true;
-  }
-
   function frame(now: number, dt: number) {
     ctx!.setTransform(1, 0, 0, 1, 0, 0);
     ctx!.globalAlpha = 1;
     ctx!.clearRect(0, 0, canvas.width, canvas.height);
     if (!ready) {
-      ready = build(reduced ? Infinity : 5);
-      if (!ready) {
-        drawAmbient(now, dt);
-        return;
-      }
-      // The decode starts once its layers exist.
-      if (decoding) start = now;
+      // Still starting up: the ambient field draws as soon as its atlas row exists.
+      if (fieldReady) drawAmbient(now, dt);
+      return;
     }
     const t = now - start;
     if (decoding && t < DECODE_MS + 50) {
@@ -562,19 +632,22 @@ export function run(canvas: HTMLCanvasElement, grid: Grid, reduced: boolean): ()
   };
 
   // ---------- run ----------
-  layout();
-  start = performance.now();
   if (reduced) {
+    // One static frame once the layers are built (again after a resize).
     decoding = false;
-    frame(start, 0);
+    onReady = () => frame(performance.now(), 0);
+    relayout();
     const ro = new ResizeObserver(() => {
-      if (!resized()) return;
-      layout();
-      frame(performance.now(), 0);
+      if (resized()) relayout();
     });
     ro.observe(canvas);
-    return () => ro.disconnect();
+    return () => {
+      disposed = true;
+      cancelJob();
+      ro.disconnect();
+    };
   }
+  relayout();
 
   let last = performance.now();
   let acc = 0;
@@ -646,9 +719,7 @@ export function run(canvas: HTMLCanvasElement, grid: Grid, reduced: boolean): ()
     else pause();
   });
   const ro = new ResizeObserver(() => {
-    if (!resized()) return;
-    layout();
-    frame(performance.now(), 0);
+    if (resized()) relayout();
   });
   io.observe(canvas);
   ro.observe(canvas);
@@ -662,6 +733,7 @@ export function run(canvas: HTMLCanvasElement, grid: Grid, reduced: boolean): ()
   return () => {
     disposed = true;
     pause();
+    cancelJob();
     io.disconnect();
     ro.disconnect();
     window.removeEventListener("pointermove", onMove);
