@@ -13,7 +13,7 @@ export function GlyphArt({ className }: { className?: string }) {
     let cleanup = () => {};
     let cancelled = false;
     const start = async () => {
-      const [{ run }, { default: grid }] = await Promise.all([import("./glyph-art-run"), import("@/content/glyph-art.json"), document.fonts?.ready]);
+      const [{ run }, { default: grid }] = await Promise.all([import("./glyph-art-run"), import("@/content/glyph-art.json"), document.fonts?.ready, document.fonts?.load('600 16px "Uwii Mono Symbols"', "\u20a6").catch(() => [])]);
       if (cancelled || !ref.current) return;
       const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       cleanup = run(ref.current, grid, reduced);

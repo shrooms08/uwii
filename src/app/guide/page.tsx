@@ -42,7 +42,7 @@ export default function GuidePage() {
                     {it.decision && (
                       <a href={it.decision.href} target="_blank" rel="noreferrer" className="text-label text-ink underline underline-offset-[3px]">
                         {it.decision.id} in the decision log
-                        <span aria-hidden="true"> ↗</span>
+                        <span aria-hidden="true"> <span className="sys-glyph">↗</span></span>
                         <span className="sr-only"> (opens in a new tab)</span>
                       </a>
                     )}

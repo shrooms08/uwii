@@ -12,7 +12,7 @@ The hosted demo runs on Vercel's Hobby plan, imported from the GitHub repository
 | Install command | `npm install` (default) |
 | Build command | `npm run build` (default `next build`) |
 | Output directory | default (`.next`) |
-| Node.js version | 24.x (also pinned by `"engines": { "node": "24.x" }` in package.json) |
+| Node.js version | 24.x (package.json `"engines"` allows `>=22`) |
 | Fluid compute | on (the default for new projects) |
 | Function region | default `iad1` is fine |
 

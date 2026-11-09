@@ -474,7 +474,7 @@ function TxRow({
   return (
     <li className="border-t border-line">
       <div className="flex flex-wrap items-center gap-3.5 px-[clamp(8px,1cqi,12px)] py-3">
-        <span aria-hidden="true" className="grid size-[34px] flex-none place-items-center rounded-full bg-page text-ui">
+        <span aria-hidden="true" className="sys-glyph grid size-[34px] flex-none place-items-center rounded-full bg-page text-ui">
           {incoming ? "↙" : "↗"}
         </span>
         <span className="flex min-w-0 flex-[1_1_120px] flex-col gap-0.5">

@@ -151,7 +151,7 @@ export default function Landing() {
               ) : c.action.external ? (
                 <a href={c.action.href} target="_blank" rel="noreferrer" className={linkClass}>
                   {c.action.label}
-                  <span aria-hidden="true"> ↗</span>
+                  <span aria-hidden="true"> <span className="sys-glyph">↗</span></span>
                   <span className="sr-only"> (opens in a new tab)</span>
                 </a>
               ) : (

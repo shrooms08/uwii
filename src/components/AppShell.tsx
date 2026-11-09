@@ -47,7 +47,7 @@ function Ext({ href, children }: { href: string; children: ReactNode }) {
       {children}
       <span aria-hidden="true" className="text-ink-3">
         {" "}
-        ↗
+        <span className="sys-glyph">↗</span>
       </span>
       <span className="sr-only"> (opens in a new tab)</span>
     </a>

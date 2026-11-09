@@ -27,11 +27,11 @@
 
 ## Fonts
 
-All are under the SIL Open Font License 1.1.
+All are under the SIL Open Font License 1.1. Every font is bundled with the site at build time; none is fetched from Google Fonts or any other host.
 
 | Font | Where | Source | Licence file |
 | --- | --- | --- | --- |
-| Geist, Geist Mono (Vercel) | Site (via `next/font`), PDF, social cards, glyph art | https://github.com/vercel/geist-font | `public/pdf-fonts/OFL-Geist.txt` |
+| Geist, Geist Mono (Vercel) | Site (the `geist` npm package, 1.9.2), PDF, social cards, glyph art | https://github.com/vercel/geist-font | `public/pdf-fonts/OFL-Geist.txt`; the package ships its own `LICENSE.txt` (OFL-1.1) |
 | IBM Plex Mono | The ₦ sign in the PDF and the social cards (Geist has no U+20A6) | https://github.com/google/fonts/tree/main/ofl/ibmplexmono | `public/pdf-fonts/OFL-IBMPlexMono.txt` |
 
 ## Visual reference

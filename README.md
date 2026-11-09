@@ -49,7 +49,7 @@ Live: <https://uwii-chi.vercel.app> · Computation for review; not tax advice.
 
 ## Run locally
 
-Requirements: Node.js 24 and npm. Optional: Rust 1.93 for the contract tests (`rust-toolchain.toml`
+Requirements: Node.js 22 or later and npm. Optional: Rust 1.93 for the contract tests (`rust-toolchain.toml`
 pins it).
 
 ```bash
@@ -258,6 +258,7 @@ write if any test fails.
 | Library | Version | Licence | Used for |
 | --- | --- | --- | --- |
 | next | 16.4.5 | MIT | Web app and API routes |
+| geist | 1.9.2 | OFL-1.1 (Vercel) | Geist and Geist Mono, bundled at build time (no font is fetched) |
 | react, react-dom | 19.3.0 | MIT | UI |
 | near-api-js | 7.3.1 | MIT and Apache-2.0 | Anchor transactions, RPC |
 | @phala/dcap-qvl | ^0.7.1 | Apache-2.0 | Intel TDX quote verification |
@@ -278,7 +279,7 @@ write if any test fails.
   (one static frame under reduced motion). `npm run glyph-art` rebuilds the committed, full-tone
   luminance grid (`src/content/glyph-art.json`) from the Wikimedia Commons file. Source, licence and the visual
   reference are recorded in [docs/CREDITS.md](docs/CREDITS.md).
-  - Licence files are in `public/pdf-fonts/`. The web app loads the same families through `next/font`.
+  - Licence files are in `public/pdf-fonts/`. The web app gets the same families from the `geist` npm package: they are bundled at build time, so building needs no network beyond the npm registry.
 
 ## Licence
 

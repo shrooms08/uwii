@@ -70,7 +70,7 @@ const smooth = (e0: number, e1: number, x: number) => {
 
 function monoFamily(): string {
   const v = getComputedStyle(document.documentElement).getPropertyValue("--font-geist-mono").trim();
-  return `${v ? `${v}, ` : ""}ui-monospace, Menlo, monospace`;
+  return `"Uwii Mono Symbols", ${v ? `${v}, ` : ""}ui-monospace, Menlo, monospace`;
 }
 
 interface Cluster {
