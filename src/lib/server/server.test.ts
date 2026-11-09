@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { sseDecode, type ScanEvent } from "../scan/events";
-import { DailyCap, SlidingWindowLimiter, clientKey, envInt, limitState, BUSY_MESSAGE } from "./limits";
+import { DailyCap, SlidingWindowLimiter, clientKey, envInt, limitState } from "./limits";
 import { health } from "./health";
 
 const HOUR = 3_600_000;
@@ -74,7 +74,7 @@ test("scan: daily AI cap and per-IP limit return 429 with the busy message befor
   const capped = await scanPost({ account: "rybergh44.near" });
   assert.equal(capped.status, 429);
   const j1 = (await capped.json()) as { error: string; code: string };
-  assert.equal(j1.error, BUSY_MESSAGE);
+  assert.match(j1.error, /Try again in .*cached demo report/);
   assert.equal(j1.code, "daily_cap");
 
   delete (globalThis as { __uwiiLimits?: unknown }).__uwiiLimits;

@@ -4,7 +4,7 @@
  * invents or extrapolates one.
  */
 import type { ClassifyEvent } from "../tax/ng/classify";
-import type { ClassifiedRun } from "../tax/ng/types";
+import type { AiSkipped, ClassifiedRun } from "../tax/ng/types";
 
 export type ScanEvent =
   /** Replay of the committed classified fixture (no live calls): the cached demo result. */
@@ -26,17 +26,28 @@ export type ScanEvent =
       attestationVerified: boolean;
       aiResponses: number;
       aiResponsesVerified: number;
+      /** The private AI step did not run for these records (they are in the questions). */
+      aiSkipped?: AiSkipped;
       /** Live scans only: the classified run (signed by the server) for the browser to keep and send back. */
       run?: ClassifiedRun;
       runSig?: string;
     }
-  | { type: "error"; stage: "input" | "history" | "classification"; message: string; code?: "busy" | "timeout" | "rate_limited" | "daily_cap" };
+  | { type: "error"; stage: "input" | "history" | "classification"; message: string; code?: ScanErrorCode };
+
+export type ScanErrorCode = "busy" | "timeout" | "rate_limited" | "daily_cap" | "history_busy" | "too_large" | "connection";
 
 export type ScanEventType = ScanEvent["type"];
 
+export const HISTORY_BUSY_MESSAGE = "NEAR history service is busy, try again in a few minutes.";
+export const CONNECTION_LOST_MESSAGE = "The connection to the scan was lost before it finished. Scan again, or load the cached demo report.";
+export const tooManyTransactionsMessage = (count: number) =>
+  `This account made about ${count.toLocaleString("en-US")} transactions in 2026, which is too large for the hosted demo. Load the cached demo report, or run Uwii locally from the README.`;
+/** Longest silence on the scan stream (the server sends a heartbeat every 15 s) before the page gives up. */
+export const STREAM_SILENCE_LIMIT_MS = 45_000;
+
 /** Shown when a scan cannot finish inside the hosted demo's function time limit. */
-export const TOO_LARGE_MESSAGE = "This account is too large for the hosted demo's time limit. Run Uwii locally from the README.";
-export const OUT_OF_TIME_MESSAGE = "The hosted demo's time limit was reached before the scan finished. Run Uwii locally from the README.";
+export const TOO_LARGE_MESSAGE = "This account is too large for the hosted demo's time limit. Load the cached demo report, or run Uwii locally from the README.";
+export const OUT_OF_TIME_MESSAGE = "The hosted demo's time limit was reached before the scan finished. Load the cached demo report, or run Uwii locally from the README.";
 
 /** Server-Sent Events wire format: one `event:` line and one JSON `data:` line per event. */
 export function sseEncode(event: ScanEvent): string {

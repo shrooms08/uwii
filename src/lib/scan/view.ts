@@ -4,7 +4,8 @@
  */
 import { percent, type ScanEvent } from "./events";
 
-const LIMIT_CODES = new Set(["rate_limited", "daily_cap", "busy"]);
+/** The scan stopped before doing the work, for a reason outside the user's account: no step is marked failed. */
+export const LIMIT_CODES = new Set(["rate_limited", "daily_cap", "busy", "history_busy", "too_large"]);
 
 export type StepState = "pending" | "active" | "done" | "warn" | "failed" | "skipped";
 
@@ -19,6 +20,10 @@ export interface ScanView {
   attestation: { state: "pending" | "active" | "done" | "failed"; passed: number | null; checks: number | null; detail: string | null };
   ai: { processed: number; accepted: number } | null;
   signatures: { received: number; verified: number };
+  /** The private AI step did not run for these records. */
+  aiSkipped: { count: number; reason: "unavailable" | "attestation" | "out_of_time" } | null;
+  /** A live scan that used the committed history of the demo account instead of reading NearBlocks. */
+  historySnapshot: boolean;
   done: Extract<ScanEvent, { type: "done" }> | null;
   error: { stage: string; message: string; code?: string } | null;
 }
@@ -33,6 +38,8 @@ export const INITIAL_SCAN_VIEW: ScanView = {
   attestation: { state: "pending", passed: null, checks: null, detail: null },
   ai: null,
   signatures: { received: 0, verified: 0 },
+  aiSkipped: null,
+  historySnapshot: false,
   done: null,
   error: null,
 };
@@ -48,7 +55,7 @@ export function applyScanEvent(v: ScanView, e: ScanEvent): ScanView {
     case "history_progress":
       return { ...v, rowsRead: e.rowsRead };
     case "history":
-      return { ...v, total: e.count };
+      return { ...v, total: e.count, historySnapshot: e.origin === "fixture" && !v.cached };
     case "rules":
       return { ...v, total: e.total, rules: { matched: e.matched, pending: e.pending } };
     case "attestation_started":
@@ -66,6 +73,8 @@ export function applyScanEvent(v: ScanView, e: ScanEvent): ScanView {
       };
     case "ai_batch":
       return { ...v, ai: { processed: e.processed, accepted: e.accepted } };
+    case "ai_skipped":
+      return { ...v, aiSkipped: { count: e.count, reason: e.reason } };
     case "done":
       return { ...v, done: e };
     case "error":
@@ -97,7 +106,7 @@ export function scanSteps(v: ScanView): ScanStep[] {
 
   const read: ScanStep =
     v.total !== null
-      ? { key: "read", state: "done", text: `Read ${plural(v.total, "transaction")} from NEAR`, detail: `${v.total} tx` }
+      ? { key: "read", state: "done", text: v.historySnapshot ? `Read ${plural(v.total, "transaction")}: history from committed snapshot` : `Read ${plural(v.total, "transaction")} from NEAR`, detail: `${v.total} tx` }
       : {
           key: "read",
           state: v.started ? "active" : "pending",
@@ -110,7 +119,9 @@ export function scanSteps(v: ScanView): ScanStep[] {
     : { key: "rules", state: v.total !== null ? "active" : "pending", text: "Label with NRS circular rules", detail: null };
 
   let attestation: ScanStep;
+  const skipped = v.aiSkipped;
   if (noAi) attestation = { key: "attestation", state: "skipped", text: "Hardware attestation not needed: no transaction left for AI", detail: null };
+  else if (skipped && v.attestation.state !== "done") attestation = { key: "attestation", state: "skipped", text: skipped.reason === "attestation" ? "Hardware attestation could not be verified" : "Hardware attestation not completed: the private AI step did not run", detail: null };
   else if (v.attestation.state === "done")
     attestation = { key: "attestation", state: "done", text: `Verified hardware attestation (${plural(v.attestation.passed ?? 0, "check")})`, detail: `${v.attestation.passed} / ${v.attestation.checks}` };
   else if (attFailed)
@@ -124,7 +135,15 @@ export function scanSteps(v: ScanView): ScanStep[] {
 
   let ai: ScanStep;
   if (noAi) ai = { key: "ai", state: "skipped", text: "AI not needed: every transaction matched a rule", detail: null };
-  else if (attFailed) ai = { key: "ai", state: "failed", text: "Not sent to the AI model, because attestation was not verified", detail: null };
+  else if (skipped) {
+    const accepted = v.ai?.accepted ?? 0;
+    ai = {
+      key: "ai",
+      state: "warn",
+      text: accepted > 0 ? `AI classified ${accepted}; the other ${skipped.count} go to your questions` : `Private AI step unavailable: ${plural(skipped.count, "transaction")} go to your questions`,
+      detail: accepted > 0 ? `${accepted} / ${pending}` : null,
+    };
+  } else if (attFailed) ai = { key: "ai", state: "failed", text: "Not sent to the AI model, because attestation was not verified", detail: null };
   else if (aiDone) {
     const accepted = v.ai?.accepted ?? 0;
     ai =
@@ -141,7 +160,8 @@ export function scanSteps(v: ScanView): ScanStep[] {
 
   let signatures: ScanStep;
   const { received, verified } = v.signatures;
-  if (noAi) signatures = { key: "signatures", state: "skipped", text: "No AI responses to verify", detail: null };
+  if (noAi || (skipped && received === 0)) signatures = { key: "signatures", state: "skipped", text: "No AI responses to verify", detail: null };
+  else if (skipped) signatures = { key: "signatures", state: "warn", text: `Verified ${verified} of ${received} AI response ${received === 1 ? "signature" : "signatures"} before the step stopped`, detail: `${verified} / ${received}` };
   else if (attFailed) signatures = { key: "signatures", state: "failed", text: "No AI responses: nothing was sent", detail: null };
   else if (aiDone)
     signatures =
@@ -166,6 +186,14 @@ export function scanSteps(v: ScanView): ScanStep[] {
   if (v.error && !LIMIT_CODES.has(v.error.code ?? "")) {
     const i = steps.findIndex((s) => s.state === "active" || s.state === "pending");
     if (i >= 0) steps[i] = { ...steps[i], state: "failed" };
+  }
+  // A stopped scan never ends on a spinner.
+  if (v.error) {
+    return steps.map((s) => {
+      const stoppedRead = s.key === "read" && s.state !== "done";
+      const text = stoppedRead ? (v.live ? "Could not finish reading from the NearBlocks free tier" : "Read your 2026 transactions from NEAR") : s.text;
+      return { ...s, text, state: s.state === "active" ? ("pending" as const) : s.state };
+    });
   }
   return steps;
 }

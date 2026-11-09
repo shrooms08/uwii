@@ -16,6 +16,13 @@ const PRICE_DIR = path.join(CACHE_DIR, "prices");
 const LIST_CACHE = path.join(CACHE_DIR, "coingecko-near-platform.json");
 const MIN_INTERVAL_MS = Number(process.env.COINGECKO_MIN_INTERVAL_MS) || 6_500;
 const HOUR_MS = 3_600_000;
+/** Longest total wait on 429/5xx for one request; after that the service counts as down for a while. */
+const RETRY_BUDGET_MS = Number(process.env.COINGECKO_RETRY_BUDGET_MS) || 30_000;
+const DOWN_FOR_MS = 120_000;
+
+/** CoinGecko is rate limiting or failing: prices are unknown for now (not "no verifiable price"). */
+export class PriceServiceBusyError extends Error {}
+let downUntil = 0;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 let nextAt = 0;
@@ -27,10 +34,12 @@ async function slot() {
 }
 
 async function cgGet(pathAndQuery: string): Promise<string> {
+  if (Date.now() < downUntil) throw new PriceServiceBusyError("CoinGecko is rate limiting; not retrying yet");
   const headers: Record<string, string> = { accept: "application/json" };
   if (process.env.COINGECKO_DEMO_API_KEY) headers["x-cg-demo-api-key"] = process.env.COINGECKO_DEMO_API_KEY;
   let last = "";
-  for (let attempt = 1; attempt <= 6; attempt++) {
+  let waited = 0;
+  for (let attempt = 1; attempt <= 6 && waited <= RETRY_BUDGET_MS; attempt++) {
     await slot();
     try {
       const res = await fetch(`${COINGECKO_API}${pathAndQuery}`, { headers, signal: AbortSignal.timeout(60_000), cache: "no-store" });
@@ -39,16 +48,22 @@ async function cgGet(pathAndQuery: string): Promise<string> {
       last = `HTTP ${res.status}: ${text.slice(0, 200)}`;
       if (res.status === 429 || res.status >= 500) {
         const ra = Number(res.headers.get("retry-after"));
-        nextAt = Math.max(nextAt, Date.now() + (Number.isFinite(ra) && ra > 0 ? ra * 1000 : 30_000 * attempt));
+        const wait = Number.isFinite(ra) && ra > 0 ? ra * 1000 : 5_000 * attempt;
+        waited += wait;
+        if (waited > RETRY_BUDGET_MS) break;
+        nextAt = Math.max(nextAt, Date.now() + wait);
         continue;
       }
-      break;
+      throw new Error(`CoinGecko ${pathAndQuery.split("?")[0]} failed: ${last}`);
     } catch (e) {
+      if (e instanceof Error && e.message.startsWith("CoinGecko ")) throw e;
       last = e instanceof Error ? e.message : String(e);
+      waited += 5_000 * attempt;
       nextAt = Math.max(nextAt, Date.now() + 5_000 * attempt);
     }
   }
-  throw new Error(`CoinGecko ${pathAndQuery.split("?")[0]} failed: ${last}`);
+  downUntil = Date.now() + DOWN_FOR_MS;
+  throw new PriceServiceBusyError(`CoinGecko ${pathAndQuery.split("?")[0]} unavailable: ${last}`);
 }
 
 // ---------- asset -> coin id ----------

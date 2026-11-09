@@ -38,11 +38,13 @@ values in the repository. Values marked secret must be "Sensitive".
 | `MAX_ANCHORS_PER_DAY` | no | no | Global cap on new anchor transactions per UTC day. Default 100. |
 | `NEAR_ARCHIVAL_RPC_URL` | no | if it embeds a token | Faster mainnet archival RPC for staking snapshots of uncached accounts. |
 | `NEAR_ARCHIVAL_RPC_MIN_INTERVAL_MS` | no | no | Pacing for that archival RPC (default 61000 for the public endpoint). |
+| `SCAN_MAX_TXNS` | no | no | Live scans decline accounts with more 2026 transactions than this (default 1500). |
+| `UWII_FAULTS` | never set this on Vercel | no | Local resilience testing only (`nearai402`, `nearblocks429`, `archival429`, `coingecko429`, `timeout`, `sim`). Ignored on every Vercel deployment and in production builds without `UWII_ENABLE_DEV_PAGES=1`. |
 | `COINGECKO_DEMO_API_KEY` | no | yes | CoinGecko demo key; the keyless public API is used without it. |
 | `COINGECKO_MIN_INTERVAL_MS` | no | no | Pacing between CoinGecko calls. |
 | `NEAR_TESTNET_RPC_URL` | no | if it embeds a token | Testnet RPC override (default FastNEAR, then rpc.testnet.near.org). |
 | `NEAR_TESTNET_ARCHIVAL_RPC_URL` | no | if it embeds a token | Testnet archival RPC override for the verify page's transaction lookup. |
-| `SCAN_TIME_BUDGET_MS` | no | no | Override for the scan time budget (default on Vercel: 280000, i.e. 300 s minus a 20 s margin). |
+| `SCAN_TIME_BUDGET_MS` | no | no | Override for the scan time budget (default on Vercel: 250000, i.e. 300 s minus a 50 s margin). |
 | `UWII_CACHE_DIR` | no | no | Override for the runtime cache directory (default on Vercel: `<os.tmpdir()>/uwii-cache`). |
 
 Vercel sets `VERCEL` and `VERCEL_GIT_COMMIT_SHA` itself; do not set them.

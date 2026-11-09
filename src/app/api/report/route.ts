@@ -10,6 +10,8 @@ import { buildReport } from "@/lib/tax/ng/report";
 
 /** Vercel Hobby (Fluid compute): 300 s default and maximum per invocation. */
 export const maxDuration = 300;
+/** Outside lookups stop after this; what is missing leaves the report a draft instead of failing it. */
+const REPORT_TIME_BUDGET_MS = 200_000;
 
 export async function POST(request: Request) {
   const limited = apiLimit("reportPerIp", request);
@@ -19,7 +21,7 @@ export async function POST(request: Request) {
   const resolved = await resolveReportRequest(parsed.body);
   if (!resolved.ok) return resolved.response;
   try {
-    const { report } = await buildReport(resolved.req);
+    const { report } = await buildReport({ ...resolved.req, deadlineAt: Date.now() + REPORT_TIME_BUDGET_MS });
     return Response.json(report, { headers: noStore });
   } catch (e) {
     if (e instanceof NotScannedError) return Response.json({ error: e.message, code: "not_scanned" }, { status: 409, headers: noStore });

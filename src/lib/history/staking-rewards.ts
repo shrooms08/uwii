@@ -10,6 +10,9 @@
  * where deposits/withdrawals are DEPOSIT / WITHDRAW staking events executed after the day's start snapshot
  * block and at or before its end snapshot block. A boundary is not queried when its balance is provably 0:
  * before the first ever event with the pool, or after a 0 snapshot with no events since.
+ *
+ * With a deadline (the hosted scan) a snapshot that cannot be read in time is skipped instead of failing the
+ * scan: only days with both boundaries known produce a reward, and info.incomplete keeps the report a draft.
  */
 import path from "node:path";
 import { NS_PER_MS, ZERO, formatUnits, parseUnits } from "./amount";
@@ -53,8 +56,12 @@ export async function deriveStakingRewards(opts: {
   /** All-time staking events for the account. */
   events: StakingEvent[];
   onProgress?: ProgressFn;
+  /** Absolute time (ms) after which no snapshot is read. Set: unreadable snapshots are skipped, not fatal. */
+  deadlineAt?: number;
 }): Promise<{ records: NormalizedTx[]; info: StakingRewardsInfo }> {
-  const { accountId, fromDate, toDate, events, onProgress } = opts;
+  const { accountId, fromDate, toDate, events, onProgress, deadlineAt } = opts;
+  const tolerant = deadlineAt !== undefined;
+  const limits = { deadlineAt };
   const pools = [...new Set(events.map((e) => e.pool))].sort();
   const info: StakingRewardsInfo = {
     pools: [],
@@ -65,7 +72,15 @@ export async function deriveStakingRewards(opts: {
   };
   if (pools.length === 0) return { records: [], info };
 
-  const final = await finalBlock();
+  const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
+  let final: BlockRef;
+  try {
+    final = await finalBlock();
+  } catch (e) {
+    if (!tolerant) throw e;
+    info.incomplete = { pools, detail: errText(e) };
+    return { records: [], info };
+  }
   // Boundaries are the midnights starting each day in range, plus the one after the last day, up to now.
   const boundaries = dayList(fromDate, addDays(toDate, 1)).filter((d) => midnightNs(d) <= final.timestampNs);
   if (boundaries.length < 2) return { records: [], info };
@@ -88,7 +103,7 @@ export async function deriveStakingRewards(opts: {
       prevAnchor && prevAnchor.height !== anchor.height
         ? Number((anchor.timestampNs - prevAnchor.timestampNs) / BigInt(anchor.height - prevAnchor.height))
         : undefined;
-    const b = await closestBlock(midnightNs(date), anchor, hint);
+    const b = await closestBlock(midnightNs(date), anchor, hint, limits);
     [prevAnchor, anchor] = [anchor, b];
     midnightCache[date] = { height: b.height, hash: b.hash, timestampNs: b.timestampNs.toString() };
     await writeJson(MIDNIGHT_CACHE, midnightCache);
@@ -96,7 +111,13 @@ export async function deriveStakingRewards(opts: {
   }
 
   const records: NormalizedTx[] = [];
+  const skippedPools = new Set<string>();
+  let stopReason: string | null = null;
   for (const pool of pools) {
+    if (stopReason) {
+      skippedPools.add(pool);
+      continue;
+    }
     const poolEvents = events.filter((e) => e.pool === pool).sort((a, b) => (a.timestampNs < b.timestampNs ? -1 : 1));
     const firstTs = poolEvents[0].timestampNs;
     onProgress?.(`Pool ${pool}: first interaction ${new Date(Number(firstTs / NS_PER_MS)).toISOString()}`);
@@ -117,16 +138,27 @@ export async function deriveStakingRewards(opts: {
         snaps.push({ date, block: null, totalBalance: "0", method: "known_zero" });
         continue;
       }
-      const block = await blockFor(date);
-      const key = `${pool}@${block.height}`;
-      let total = snapCache[key];
-      if (total === undefined) {
-        onProgress?.(`  ${pool} @ ${date} 00:00 (block ${block.height}): querying archival RPC…`);
-        const v = await viewAtBlock(pool, "get_account_total_balance", { account_id: accountId }, block.height, onProgress);
-        total = parseUnits(v, "get_account_total_balance").toString();
-        snapCache[key] = total;
-        await writeJson(snapshotCacheFile(accountId), snapCache);
-        queried++;
+      let block: BlockRef;
+      let total: string | undefined;
+      try {
+        block = await blockFor(date);
+        const key = `${pool}@${block.height}`;
+        total = snapCache[key];
+        if (total === undefined) {
+          onProgress?.(`  ${pool} @ ${date} 00:00 (block ${block.height}): querying archival RPC…`);
+          const v = await viewAtBlock(pool, "get_account_total_balance", { account_id: accountId }, block.height, onProgress, limits);
+          total = parseUnits(v, "get_account_total_balance").toString();
+          snapCache[key] = total;
+          await writeJson(snapshotCacheFile(accountId), snapCache);
+          queried++;
+        }
+      } catch (e) {
+        if (!tolerant) throw e;
+        // Stop reading: the snapshots so far still give correct rewards for the days they cover.
+        stopReason = errText(e);
+        skippedPools.add(pool);
+        onProgress?.(`  ${pool} @ ${date}: snapshot skipped (${stopReason})`);
+        break;
       }
       snaps.push({
         date,
@@ -136,6 +168,7 @@ export async function deriveStakingRewards(opts: {
       });
     }
 
+    if (snaps.length === 0) continue;
     const boundaryTs = (s: PoolSnapshot) => (s.block ? BigInt(s.block.timestampNs) : midnightNs(s.date));
     let depTotal = ZERO;
     let wdTotal = ZERO;
@@ -213,5 +246,6 @@ export async function deriveStakingRewards(opts: {
     });
     onProgress?.(`  ${pool}: ${queried} new archival queries, ${rewardDays} reward days, ${negativeDays.length} negative days`);
   }
+  if (skippedPools.size) info.incomplete = { pools: [...skippedPools], detail: stopReason ?? "snapshots skipped" };
   return { records, info };
 }

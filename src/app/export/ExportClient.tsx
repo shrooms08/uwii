@@ -7,6 +7,7 @@ import { ClearDataButton } from "@/components/ClearDataButton";
 import { AnchorCard } from "@/components/report/AnchorCard";
 import { NextSteps } from "@/components/report/NextSteps";
 import { proofAllVerified, proofCounts } from "@/lib/report/privacy-summary";
+import { needsRescan } from "@/lib/report/status";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
@@ -273,7 +274,7 @@ export default function ExportClient({ account }: { account: string }) {
             <dd className="font-mono text-label">{plainWarnings(r).length}</dd>
             <dt className="text-ink-2">Privacy proof</dt>
             <dd className="font-mono text-label">
-              {r.privacyProof.aiDecisions === 0 ? "rules only" : counts ? `${counts.passed}/${counts.total} checks${verified ? "" : " (not all verified)"}` : "counts not recorded"}
+              {r.privacyProof.aiSkipped ? "private AI step skipped" : r.privacyProof.aiDecisions === 0 ? "rules only" : counts ? `${counts.passed}/${counts.total} checks${verified ? "" : " (not all verified)"}` : "counts not recorded"}
             </dd>
           </dl>
           <Button variant="secondary" size="md" onClick={() => setProofOpen(true)} className="self-start">
@@ -284,7 +285,7 @@ export default function ExportClient({ account }: { account: string }) {
       </div>
 
       <div className="mt-4">
-        <NextSteps isDraft={isDraft} account={account} />
+        <NextSteps isDraft={isDraft} account={account} rescan={needsRescan(r)} />
       </div>
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-tile border border-border bg-surface px-5 py-4">

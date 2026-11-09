@@ -22,3 +22,4 @@ export const NEXT_STEPS: { title: string; body: string }[] = [
 
 /** Shown instead of the steps while the report is a draft. */
 export const NEXT_STEPS_DRAFT = "Finish the questions to get a final figure.";
+export const NEXT_STEPS_RERUN = "Some outside data could not be read right now. Scan this account again later to get a final figure.";

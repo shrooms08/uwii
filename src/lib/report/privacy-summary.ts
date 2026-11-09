@@ -4,6 +4,7 @@ import type { PrivacyProof } from "./privacy";
 /** Every recorded check passed and every AI decision has a verified response signature. */
 export function proofAllVerified(p: PrivacyProof): boolean {
   return (
+    !p.aiSkipped &&
     p.aiDecisions > 0 &&
     p.gatewayAndModelReportsVerified === true &&
     p.checksPassed !== null &&

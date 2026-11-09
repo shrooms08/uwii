@@ -292,5 +292,5 @@ export function runQuestionFlow(input0: ClassifiedRun, input: { ownAccounts: str
   const withOwn = reapplyRules(run, input.ownAccounts);
   const questions = groupQuestions(withOwn);
   const { records, summary } = applyAnswers(withOwn, questions, input.answers);
-  return { questions, records, summary, metrics: computeMetrics(records, run.aiResponses, run.attestation.verified) };
+  return { questions, records, summary, metrics: computeMetrics(records, run.aiResponses, run.attestation.verified, run.aiSkipped?.count) };
 }

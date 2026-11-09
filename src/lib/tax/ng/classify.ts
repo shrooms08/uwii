@@ -29,6 +29,7 @@ import {
   CLASSIFIED_SCHEMA_VERSION,
   type AiEvidence,
   type AiResponseRecord,
+  type AiSkipped,
   type ClassificationMetrics,
   type ClassifiedRun,
   type ClassifiedTx,
@@ -45,7 +46,7 @@ export interface Decision {
   label: LabelId;
   assetCategory?: AssetCategory;
   confidence: number;
-  method: "rule" | "ai" | "user";
+  method: "rule" | "ai" | "user" | "unlabelled";
   reason: string;
   pairingId?: string;
   swapRole?: "disposed" | "acquired";
@@ -291,7 +292,7 @@ export function preflightVerified(p: Preflight): { ok: boolean; details: string 
 
 // ---------- run ----------
 
-export function computeMetrics(records: ClassifiedTx[], aiResponses: AiResponseRecord[], attestationVerified: boolean): ClassificationMetrics {
+export function computeMetrics(records: ClassifiedTx[], aiResponses: AiResponseRecord[], attestationVerified: boolean, aiSkipped?: number): ClassificationMetrics {
   const total = records.length;
   const count = (m: string) => records.filter((r) => r.method === m).length;
   const pct = (n: number) => (total ? `${((n * 100) / total).toFixed(1)}%` : "0%");
@@ -308,6 +309,7 @@ export function computeMetrics(records: ClassifiedTx[], aiResponses: AiResponseR
     aiResponses: aiResponses.filter((r) => r.chatId).length,
     aiResponsesVerified: aiResponses.filter((r) => r.signatureVerified).length,
     attestationVerified,
+    ...(aiSkipped ? { aiSkipped } : {}),
   };
 }
 
@@ -317,13 +319,45 @@ export type ClassifyEvent =
   | { type: "attestation_started"; model: string }
   | { type: "attestation"; verified: boolean; checksPassed: number; checksTotal: number; detail: string }
   | { type: "ai_response"; batch: number; attempt: number; txCount: number; received: boolean; valid: boolean; signatureVerified: boolean }
-  | { type: "ai_batch"; processed: number; accepted: number; total: number };
+  | { type: "ai_batch"; processed: number; accepted: number; total: number }
+  /** The private AI step did not run for `count` records; they go to the user's questions. */
+  | { type: "ai_skipped"; count: number; reason: AiSkipped["reason"] };
 
 export interface ClassifyOptions {
   ownAccounts?: string[];
   onProgress?: (message: string) => void;
   onEvent?: (event: ClassifyEvent) => void;
+  /** Absolute time (ms) after which no further AI call is started; the rest go to the user's questions. */
+  deadlineAt?: number;
+  /** Tests only: replaces the NEAR AI calls. */
+  ai?: { chooseModel?: typeof chooseModel; preflight?: typeof preflightAttestation; complete?: typeof complete };
 }
+
+/** Longest wait for NEAR AI's model list and attestation, and for one chat completion, before giving up on the AI step. */
+export const AI_PREFLIGHT_LIMIT_MS = 60_000;
+export const AI_CALL_LIMIT_MS = 75_000;
+/** Do not start another AI call with less than this left in the scan's time budget. */
+const AI_MIN_REMAINING_MS = 15_000;
+
+/** Rejects if p has not settled within ms (the timer is always cleared; p itself keeps running). */
+async function withLimit<T>(p: Promise<T>, ms: number, what: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const limit = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${what} did not finish within ${Math.round(ms / 1000)}s`)), Math.max(0, ms));
+  });
+  try {
+    return await Promise.race([p, limit]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Why a record waits for the user; shown on the question and the report line. Never claims the AI ran. */
+export const AI_SKIPPED_REASONS: Record<AiSkipped["reason"], string> = {
+  unavailable: "The private AI step was unavailable, so this transaction needs your answer.",
+  attestation: "The private AI's hardware could not be verified, so nothing was sent to it and this transaction needs your answer.",
+  out_of_time: "The scan ran out of time before the private AI step reached this transaction, so it needs your answer.",
+};
 
 export async function classifyHistory(history: HistoryResult, options: ClassifyOptions = {}): Promise<ClassifiedRun> {
   const ownAccounts = [...new Set((options.ownAccounts ?? []).map((a) => a.trim().toLowerCase()).filter(Boolean))].sort();
@@ -343,20 +377,35 @@ export async function classifyHistory(history: HistoryResult, options: ClassifyO
   let acceptedTotal = 0;
 
   const aiResponses: AiResponseRecord[] = [];
+  let aiSkipped: AiSkipped | undefined;
+  /** The private AI step cannot be used for these records: they wait for the user (nothing is claimed about them). */
+  const skipAi = (txs: NormalizedTx[], reason: AiSkipped["reason"]) => {
+    for (const tx of txs) classified.set(tx.id, toClassified(tx, { label: "unknown", confidence: 0, method: "unlabelled", reason: AI_SKIPPED_REASONS[reason], forceQuestion: true }));
+    aiSkipped = { count: txs.length, reason };
+    log(`Private AI step skipped for ${txs.length} record(s): ${reason}`);
+    emit({ type: "ai_skipped", count: txs.length, reason });
+  };
+  const timeLeft = () => (options.deadlineAt ? options.deadlineAt - Date.now() : Infinity);
   let model: string | null = null;
   let attestation: ClassifiedRun["attestation"] = { verified: false, details: "not needed: every record matched a rule", nonce: null };
 
   if (pending.length) {
     let preflight: Preflight | null = null;
+    let preflightUnavailable = false;
     try {
-      model = (await chooseModel()).id;
+      const preflightLimit = Math.min(AI_PREFLIGHT_LIMIT_MS, timeLeft() - AI_MIN_REMAINING_MS);
+      model = (await withLimit((options.ai?.chooseModel ?? chooseModel)(), preflightLimit, "NEAR AI model list")).id;
       log(`Model ${model}; verifying TEE attestation (fresh nonce)…`);
       emit({ type: "attestation_started", model });
-      preflight = await preflightAttestation(model, {
-        onStatus: (st) => {
-          if (st.state === "retrying verification") log(`  retrying verification (${st.attempt}/${st.maxRetries}): ${st.detail}`);
-        },
-      });
+      preflight = await withLimit(
+        (options.ai?.preflight ?? preflightAttestation)(model, {
+          onStatus: (st) => {
+            if (st.state === "retrying verification") log(`  retrying verification (${st.attempt}/${st.maxRetries}): ${st.detail}`);
+          },
+        }),
+        preflightLimit,
+        "attestation",
+      );
       const v = preflightVerified(preflight);
       attestation = {
         verified: v.ok,
@@ -373,23 +422,28 @@ export async function classifyHistory(history: HistoryResult, options: ClassifyO
       };
     } catch (e) {
       attestation = { verified: false, details: `attestation preflight failed: ${errMsg(e)}`, nonce: preflight?.nonce ?? null };
+      preflightUnavailable = true;
     }
     log(`Attestation ${attestation.verified ? "verified" : "NOT verified"}: ${attestation.details}`);
-    emit({
-      type: "attestation",
-      verified: attestation.verified,
-      checksPassed: attestation.checksPassed ?? 0,
-      checksTotal: attestation.checksTotal ?? 0,
-      detail: attestation.details,
-    });
 
     if (!attestation.verified || !preflight || !model) {
-      for (const tx of pending) {
-        classified.set(tx.id, toClassified(tx, { label: "unknown", confidence: 0, method: "ai", reason: `Not sent to AI: TEE attestation not verified (${attestation.details}).`, forceQuestion: true }));
-      }
+      // Nothing was sent to the model. No attestation event: the scan page shows the skipped step instead.
+      skipAi(pending, preflightUnavailable ? "unavailable" : "attestation");
     } else {
-      for (let b = 0; b * BATCH_SIZE < pending.length; b++) {
+      emit({
+        type: "attestation",
+        verified: true,
+        checksPassed: attestation.checksPassed ?? 0,
+        checksTotal: attestation.checksTotal ?? 0,
+        detail: attestation.details,
+      });
+      let stopped = false;
+      for (let b = 0; b * BATCH_SIZE < pending.length && !stopped; b++) {
         const batch = pending.slice(b * BATCH_SIZE, (b + 1) * BATCH_SIZE);
+        if (timeLeft() < AI_MIN_REMAINING_MS) {
+          skipAi(pending.slice(b * BATCH_SIZE), "out_of_time");
+          break;
+        }
         const { items, idMap } = buildPayload(batch, all, ruleMatches);
         let accepted: { items: ModelItem[]; evidence: AiEvidence } | null = null;
         let lastError = "";
@@ -397,12 +451,14 @@ export async function classifyHistory(history: HistoryResult, options: ClassifyO
           log(`AI batch ${b + 1} (${batch.length} txs), attempt ${attempt}…`);
           let c: Completion;
           try {
-            c = await complete(model, items);
+            c = await withLimit((options.ai?.complete ?? complete)(model, items), Math.min(AI_CALL_LIMIT_MS, timeLeft()), "NEAR AI completion");
           } catch (e) {
+            // 402, 429, 5xx, timeout or network (the SDK has already retried once): stop calling the AI for this scan.
             lastError = e instanceof OpenAI.APIError ? `NEAR AI API error ${e.status}: ${e.message}` : errMsg(e);
             aiResponses.push({ batch: b + 1, attempt, chatId: null, txCount: batch.length, valid: false, signatureVerified: false, detail: `request failed: ${lastError}` });
             emit({ type: "ai_response", batch: b + 1, attempt, txCount: batch.length, received: false, valid: false, signatureVerified: false });
-            continue;
+            stopped = true;
+            break;
           }
           const sig = await checkSignature(preflight, c);
           const parsed = parseModelOutput(c.content, items.map((i) => i.id));
@@ -429,6 +485,10 @@ export async function classifyHistory(history: HistoryResult, options: ClassifyO
           }
         }
 
+        if (stopped) {
+          skipAi(pending.slice(b * BATCH_SIZE), "unavailable");
+          break;
+        }
         processed += batch.length;
         if (accepted) acceptedTotal += batch.length;
         emit({ type: "ai_batch", processed, accepted: acceptedTotal, total: pending.length });
@@ -474,7 +534,8 @@ export async function classifyHistory(history: HistoryResult, options: ClassifyO
     model,
     attestation,
     aiResponses,
-    metrics: computeMetrics(records, aiResponses, attestation.verified),
+    metrics: computeMetrics(records, aiResponses, attestation.verified, aiSkipped?.count),
     records,
+    ...(aiSkipped ? { aiSkipped } : {}),
   };
 }

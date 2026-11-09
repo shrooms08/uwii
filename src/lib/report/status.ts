@@ -4,14 +4,16 @@
  * Draft if any of: an unresolved record remains (label unknown / needsQuestion); a
  * missing_acquisition_history warning (nil cost used, gains may be overstated); an acquisition_swap
  * with an incomplete source leg. A scan whose TEE attestation failed while the AI step was needed
- * is always a draft, even after every question is answered. No-verifiable-price exclusions (9.2(4)) and NFEM rate fallbacks (D8)
+ * is always a draft, even after every question is answered (when nothing was sent to the AI, the user's answers
+ * stand on their own and the report can be final). Outside data that could not be read (staking snapshots,
+ * opening balances, prices) also keeps a report a draft. No-verifiable-price exclusions (9.2(4)) and NFEM rate fallbacks (D8)
  * are documented treatments and do not by themselves make a report a draft.
  */
 
 export type ReportStatus = "final" | "draft";
 
 export interface DraftReason {
-  code: "unresolved_records" | "missing_acquisition_history" | "incomplete_source_leg" | "attestation_unverified";
+  code: "unresolved_records" | "missing_acquisition_history" | "incomplete_source_leg" | "attestation_unverified" | "staking_incomplete" | "opening_unavailable" | "prices_unavailable";
   message: string;
   relatedIds: string[];
 }
@@ -24,6 +26,8 @@ export interface StatusInput {
   questions: { groupId: string; txs: { id: string }[] }[];
   /** The scan's TEE attestation: when the AI step was needed but not verified, the report can never be final. */
   attestation?: { verified: boolean; aiNeeded: boolean };
+  /** Outside data that could not be read for this run (absent when everything was). */
+  dataGaps?: { stakingIncomplete?: boolean; openingUnavailable?: boolean; pricesUnavailable?: number };
 }
 
 export interface StatusResult {
@@ -35,6 +39,13 @@ export interface StatusResult {
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 const ids = (warnings: StatusInput["warnings"], code: string) => [...new Set(warnings.filter((w) => w.code === code && w.recordId).map((w) => w.recordId!))];
+
+const RETRY_LATER_CODES: ReadonlySet<DraftReason["code"]> = new Set(["staking_incomplete", "opening_unavailable", "prices_unavailable"]);
+
+/** The draft cannot be finished by answering anything: outside data was missing, so the next step is another scan. */
+export function needsRescan(r: { status: ReportStatus; blockingQuestions: number; draftReasons: DraftReason[] }): boolean {
+  return r.status === "draft" && r.blockingQuestions === 0 && r.draftReasons.some((d) => RETRY_LATER_CODES.has(d.code));
+}
 
 export function reportStatus(input: StatusInput): StatusResult {
   const unresolved = input.records.filter((r) => r.needsQuestion || r.label === "unknown").map((r) => r.id);
@@ -77,6 +88,16 @@ export function reportStatus(input: StatusInput): StatusResult {
     draftReasons.push({
       code: "attestation_unverified",
       message: "The private AI's hardware attestation could not be verified for this scan, so its results cannot be used for a final report. Scan the account again.",
+      relatedIds: [],
+    });
+  }
+  const gaps = input.dataGaps;
+  if (gaps?.stakingIncomplete) draftReasons.push({ code: "staking_incomplete", message: "Staking rewards could not be read right now; re-run later.", relatedIds: [] });
+  if (gaps?.openingUnavailable) draftReasons.push({ code: "opening_unavailable", message: "Your balances on 1 January 2026 could not be read right now, so earlier holdings have no cost; re-run later.", relatedIds: [] });
+  if (gaps?.pricesUnavailable) {
+    draftReasons.push({
+      code: "prices_unavailable",
+      message: `${plural(gaps.pricesUnavailable, "price")} could not be fetched right now because the price service is busy. The affected lines stay unpriced and out of the totals; re-run later.`,
       relatedIds: [],
     });
   }

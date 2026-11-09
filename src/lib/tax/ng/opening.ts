@@ -5,7 +5,7 @@
  * If the account did not exist at that block, every balance is zero (no further queries).
  */
 import path from "node:path";
-import { firstBlockAtOrAfter, viewAccountAtBlock, viewAtBlock } from "../../history/chain";
+import { firstBlockAtOrAfter, viewAccountAtBlock, viewAtBlock, type ChainLimits } from "../../history/chain";
 import { CACHE_DIR, readJsonIfExists, writeJson } from "../../history/paths";
 import type { Asset, HistoryResult } from "../../history/types";
 import { NEAR_ASSET } from "../../history/types";
@@ -54,16 +54,16 @@ export function openingInputsFromHistory(history: HistoryResult): OpeningInputs 
 
 export const openingCachePath = (accountId: string) => path.join(CACHE_DIR, `opening-${accountId}-${OPENING_YEAR}.json`);
 
-export async function fetchOpeningPosition(source: HistoryResult | OpeningInputs, onProgress?: (m: string) => void): Promise<OpeningPosition> {
+export async function fetchOpeningPosition(source: HistoryResult | OpeningInputs, onProgress?: (m: string) => void, limits?: ChainLimits): Promise<OpeningPosition> {
   const inputs = "records" in source ? openingInputsFromHistory(source) : source;
   const cacheFile = openingCachePath(inputs.accountId);
   const cached = await readJsonIfExists<OpeningPosition>(cacheFile);
   if (cached?.schemaVersion === 1) return cached;
 
   const date = `${OPENING_YEAR}-01-01`;
-  const block = await firstBlockAtOrAfter(BigInt(Date.parse(`${date}T00:00:00Z`)) * BigInt(1_000_000));
+  const block = await firstBlockAtOrAfter(BigInt(Date.parse(`${date}T00:00:00Z`)) * BigInt(1_000_000), limits);
   onProgress?.(`Opening position: first block of ${date} is ${block.height}; querying account state (archival RPC)…`);
-  const state = await viewAccountAtBlock(inputs.accountId, block.height, onProgress);
+  const state = await viewAccountAtBlock(inputs.accountId, block.height, onProgress, limits);
   const balances: OpeningBalance[] = [];
 
   if (state) {
@@ -81,7 +81,7 @@ export async function fetchOpeningPosition(source: HistoryResult | OpeningInputs
       onProgress?.(`  ft_balance_of ${contract} @${block.height}…`);
       let raw: unknown;
       try {
-        raw = await viewAtBlock(contract, "ft_balance_of", { account_id: inputs.accountId }, block.height, onProgress);
+        raw = await viewAtBlock(contract, "ft_balance_of", { account_id: inputs.accountId }, block.height, onProgress, limits);
       } catch (e) {
         // A token contract that did not exist yet at that block holds no balance for anyone.
         if (e instanceof Error && /UNKNOWN_ACCOUNT|does not exist|CodeDoesNotExist|MethodNotFound/i.test(e.message)) continue;

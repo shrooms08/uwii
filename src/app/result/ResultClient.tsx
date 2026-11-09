@@ -6,6 +6,7 @@ import { useFinishedDemo } from "@/components/CachedLabel";
 import { LineSections } from "@/components/report/LineSections";
 import { NextSteps } from "@/components/report/NextSteps";
 import { proofAllVerified, proofCounts } from "@/lib/report/privacy-summary";
+import { needsRescan } from "@/lib/report/status";
 import { ReliefsBreakdown, ReviewCard, TipsCard, reliefSavedText } from "@/components/report/TaxHelp";
 import { Button, ButtonLink, TextButton } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -94,10 +95,11 @@ export default function ResultClient({ account }: { account: string }) {
 
   const r = report;
   const isDraft = r.status === "draft";
+  const rescan = needsRescan(r);
   const proof = r.privacyProof;
   const verified = proofAllVerified(proof);
   const counts = proofCounts(proof);
-  const proofSummary = proof.aiDecisions === 0 ? "rules only" : `${counts ? `${counts.passed}/${counts.total} checks` : "checks not recorded"} · ${proof.aiResponsesVerified}/${proof.aiResponses} signatures`;
+  const proofSummary = proof.aiSkipped ? "private AI step skipped" : proof.aiDecisions === 0 ? "rules only" : `${counts ? `${counts.passed}/${counts.total} checks` : "checks not recorded"} · ${proof.aiResponsesVerified}/${proof.aiResponses} signatures`;
   const q = (path: string) => `${path}?account=${encodeURIComponent(account)}`;
   const rel = r.tax.reliefs ?? null;
   const firstLineFor = (recordId: string) => r.lines.find((l) => l.recordId === recordId && l.kind !== "gas_fee") ?? r.lines.find((l) => l.recordId === recordId) ?? null;
@@ -116,6 +118,7 @@ export default function ResultClient({ account }: { account: string }) {
           <h1 className="font-serif text-[clamp(44px,5cqi,72px)] leading-none font-normal tracking-[-0.045em]">Your {r.year} crypto tax</h1>
           <p className="mt-3 text-ui text-ink-2">
             <span className="font-mono">{r.account}</span> · {plural(flow.total, "transaction")} · 1 Jan to 31 Dec {r.year}
+            {r.origin.history === "committed snapshot" ? " · history from committed snapshot" : ""}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -156,8 +159,8 @@ export default function ResultClient({ account }: { account: string }) {
               ))}
             </ul>
           </div>
-          <ButtonLink href={q("/questions")} size="md" className="h-10">
-            Answer questions
+          <ButtonLink href={q(rescan ? "/scan" : "/questions")} size="md" className="h-10">
+            {rescan ? "Scan again" : "Answer questions"}
           </ButtonLink>
         </div>
       )}
@@ -239,7 +242,7 @@ export default function ResultClient({ account }: { account: string }) {
           <ReviewCard />
         </div>
         <div data-reveal="">
-          <NextSteps isDraft={isDraft} account={account} />
+          <NextSteps isDraft={isDraft} account={account} rescan={rescan} />
         </div>
       </div>
 

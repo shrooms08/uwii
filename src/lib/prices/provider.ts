@@ -17,7 +17,8 @@ export interface PriceQuote {
   method: string;
 }
 
-export type PriceResult = { status: "ok"; quote: PriceQuote } | { status: "no_verifiable_price"; attempted: string[] };
+/** temporary: the price could not be fetched right now (a busy service), so the line is unpriced for this run only. */
+export type PriceResult = { status: "ok"; quote: PriceQuote } | { status: "no_verifiable_price"; attempted: string[]; temporary?: true };
 
 export interface PriceProvider {
   quote(asset: Asset, timestamp: string): Promise<PriceResult>;
@@ -26,7 +27,21 @@ export interface PriceProvider {
 export const priceKey = (asset: Asset, timestamp: string) => `${asset.contract ?? "native:" + asset.symbol}|${timestamp}`;
 
 export class LivePriceProvider implements PriceProvider {
+  /** With a deadline (absolute ms), quotes after it are reported as temporarily unavailable. */
+  constructor(private readonly deadlineAt?: number) {}
+
+  /** A quote that fails for an operational reason leaves the line unpriced for this run instead of failing the report. */
   async quote(asset: Asset, timestamp: string): Promise<PriceResult> {
+    const unavailable: PriceResult = { status: "no_verifiable_price", attempted: ["price service unavailable right now"], temporary: true };
+    if (this.deadlineAt && Date.now() >= this.deadlineAt) return unavailable;
+    try {
+      return await this.lookup(asset, timestamp);
+    } catch {
+      return unavailable;
+    }
+  }
+
+  private async lookup(asset: Asset, timestamp: string): Promise<PriceResult> {
     const attempted: string[] = [];
     const id = await coinIdFor(asset.contract);
     if (id) {
@@ -89,6 +104,10 @@ export async function loadPriceFixture(file: string): Promise<PriceFixture | nul
 
 export async function writePriceFixture(file: string, results: Map<string, PriceResult>): Promise<void> {
   const quotes: Record<string, PriceResult> = {};
-  for (const k of [...results.keys()].sort()) quotes[k] = results.get(k)!;
+  for (const k of [...results.keys()].sort()) {
+    const r = results.get(k)!;
+    if (r.status !== "ok" && r.temporary) throw new Error(`Refusing to write a price fixture: ${k} was only temporarily unavailable`);
+    quotes[k] = r;
+  }
   await writeJson(file, { generatedAt: new Date().toISOString(), quotes } satisfies PriceFixture);
 }

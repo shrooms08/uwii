@@ -13,7 +13,8 @@ import type { jsPDF as JsPdf } from "jspdf";
 import type { CellHookData, UserOptions } from "jspdf-autotable";
 import type { ReportData } from "../tax/ng/report";
 import type { ReportLine } from "../tax/ng/engine";
-import { NEXT_STEPS, NEXT_STEPS_DRAFT, NEXT_STEPS_TITLE } from "../../content/next-steps";
+import { NEXT_STEPS, NEXT_STEPS_DRAFT, NEXT_STEPS_RERUN, NEXT_STEPS_TITLE } from "../../content/next-steps";
+import { needsRescan } from "./status";
 import { DECISION_LOG, appliedDecisionIds } from "./decisions";
 import { fmtQtyShort, shortLabel } from "./explain";
 import { fmtDate, fmtNgn, fmtPrice, fmtQty, fmtUsd } from "./format";
@@ -763,7 +764,7 @@ export async function buildWorksheetPdf(
 
   // ================= what to do next =================
   heading(NEXT_STEPS_TITLE, 30);
-  if (isDraft) paragraph(NEXT_STEPS_DRAFT, { family: "Geist", size: 9 }, C.ink);
+  if (isDraft) paragraph(needsRescan(report) ? NEXT_STEPS_RERUN : NEXT_STEPS_DRAFT, { family: "Geist", size: 9 }, C.ink);
   else
     NEXT_STEPS.forEach((st, i) => {
       ensure(12);

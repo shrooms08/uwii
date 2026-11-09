@@ -148,7 +148,7 @@ export default function QuestionsClient({ account }: { account: string }) {
   const total = flow.records.length;
   const needsYou = questions.reduce((k, q) => k + q.txs.length, 0);
   const m = flow.metrics;
-  const verified = m.attestationVerified && m.aiResponses > 0 && m.aiResponsesVerified === m.aiResponses;
+  const verified = !m.aiSkipped && m.attestationVerified && m.aiResponses > 0 && m.aiResponsesVerified === m.aiResponses;
   const isDraft = report ? report.status === "draft" : true;
   const resultHref = `/result?account=${encodeURIComponent(account)}`;
   const ctaLabel = report ? (isDraft ? "See draft result" : "See final result") : "See result";
@@ -180,6 +180,7 @@ export default function QuestionsClient({ account }: { account: string }) {
           <p className="mt-3 text-body leading-[1.55] text-pretty text-ink-2">
             Uwii labelled {total - needsYou} of {total} transactions on its own.{" "}
             {n > 0 ? "These need a person who knows the story. Answer in plain terms; you can change any answer later." : "There is nothing to ask you."}
+            {m.aiSkipped ? ` The private AI step was unavailable, so Uwii is asking you about ${m.aiSkipped} ${m.aiSkipped === 1 ? "transaction" : "transactions"} it would otherwise have tried to label.` : ""}
           </p>
           {account === DEMO_ACCOUNT && (
             <p className="mt-3 text-label text-ink-2">
@@ -195,7 +196,9 @@ export default function QuestionsClient({ account }: { account: string }) {
             </p>
           )}
         </div>
-        {verified ? (
+        {m.aiSkipped ? (
+          <Chip tone="draft">Private AI step skipped</Chip>
+        ) : verified ? (
           <Chip tone="verified">Verified private</Chip>
         ) : m.aiResponses === 0 && !m.attestationVerified ? (
           <Chip tone="neutral">Labelled by rules only</Chip>

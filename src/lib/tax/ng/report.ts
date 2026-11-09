@@ -35,6 +35,8 @@ export interface ReportRequest {
   classificationSource?: "fixture";
   /** Refuse to classify live (API routes). */
   noLiveClassification?: boolean;
+  /** API routes: absolute time (ms) by which outside lookups stop; what is missing leaves the report a draft. */
+  deadlineAt?: number;
   onProgress?: (m: string) => void;
 }
 
@@ -43,7 +45,7 @@ export interface ReportData extends EngineResult {
   from: string;
   to: string;
   generatedAt: string;
-  origin: { classification: string; prices: string; opening: string };
+  origin: { classification: string; prices: string; opening: string; history?: string };
   questionSummary: ApplySummary;
   opening: Pick<OpeningPosition, "date" | "block" | "accountExisted" | "method" | "balances">;
   dataSources: { name: string; detail: string; retrievedAt: string | null }[];
@@ -56,6 +58,23 @@ export interface ReportData extends EngineResult {
   draftReasons: DraftReason[];
   /** Question groups still unanswered. */
   blockingQuestions: number;
+}
+
+/** Longest a report waits on the archival RPC for the opening position. */
+const OPENING_LOOKUP_LIMIT_MS = 45_000;
+
+/** Used when the opening position cannot be read in time: no earlier holdings, and the report says so as a draft. */
+function unavailableOpening(accountId: string): OpeningPosition {
+  return {
+    schemaVersion: 1,
+    accountId,
+    date: `${OPENING_YEAR}-01-01`,
+    block: { height: 0, hash: "", timestampNs: "0" },
+    accountExisted: true,
+    balances: [],
+    fetchedAt: new Date().toISOString(),
+    method: "not available: the archival RPC could not be read when this report was built",
+  };
 }
 
 export const priceFixturePath = (account: string) => path.join(FIXTURE_DIR, `${account}-${OPENING_YEAR}.prices.json`);
@@ -107,13 +126,22 @@ export async function buildReport(req: ReportRequest): Promise<{ report: ReportD
     opening = ctx.opening;
     openingOrigin = "computed during the scan";
   }
+  let openingUnavailable = false;
   if (!opening) {
-    opening = await fetchOpeningPosition(ctx ? ctx.openingInputs : history!, log);
-    openingOrigin = "archival RPC (cached)";
+    try {
+      const limits = req.deadlineAt ? { deadlineAt: Math.min(req.deadlineAt, Date.now() + OPENING_LOOKUP_LIMIT_MS) } : undefined;
+      opening = await fetchOpeningPosition(ctx ? ctx.openingInputs : history!, log, limits);
+      openingOrigin = "archival RPC (cached)";
+    } catch (e) {
+      if (!req.deadlineAt) throw e;
+      opening = unavailableOpening(req.account);
+      openingOrigin = "unavailable";
+      openingUnavailable = true;
+    }
   }
 
   const fixture = await loadPriceFixture(priceFixturePath(req.account));
-  const recorder = new RecordingPriceProvider(fixture ? new FixturePriceProvider(fixture, new LivePriceProvider()) : new LivePriceProvider());
+  const recorder = new RecordingPriceProvider(fixture ? new FixturePriceProvider(fixture, new LivePriceProvider(req.deadlineAt)) : new LivePriceProvider(req.deadlineAt));
   const fx = await NafemTable.load();
 
   const engine = await runEngine({
@@ -140,6 +168,11 @@ export async function buildReport(req: ReportRequest): Promise<{ report: ReportD
     questions: flow.questions,
     // The base run (before answers): records the rules could not label went to the AI step.
     attestation: { verified: run.attestation.verified, aiNeeded: run.records.some((r) => r.method === "ai") },
+    dataGaps: {
+      stakingIncomplete: ctx ? ctx.stakingIncomplete === true : Boolean(history?.staking.incomplete),
+      openingUnavailable,
+      pricesUnavailable: [...recorder.results.values()].filter((p) => p.status !== "ok" && p.temporary).length,
+    },
   });
 
   const report: ReportData = {
@@ -158,6 +191,7 @@ export async function buildReport(req: ReportRequest): Promise<{ report: ReportD
       classification: classificationOrigin,
       prices: fixture ? `committed fixture (${fixture.generatedAt}) with live fallback` : "live",
       opening: openingOrigin,
+      ...(ctx?.historyOrigin === "fixture" ? { history: "committed snapshot" } : {}),
     },
     questionSummary: flow.summary,
     opening: { date: opening.date, block: opening.block, accountExisted: opening.accountExisted, method: opening.method, balances: opening.balances },

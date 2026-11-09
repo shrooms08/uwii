@@ -90,7 +90,15 @@ export interface PoolStakingSummary {
   queriedSnapshots: number;
 }
 
+/** Set when some staking snapshots could not be read: the rewards are partial and the report stays a draft. */
+export interface StakingIncomplete {
+  /** Pools with at least one snapshot that could not be read. */
+  pools: string[];
+  detail: string;
+}
+
 export interface StakingRewardsInfo {
+  incomplete?: StakingIncomplete;
   pools: PoolStakingSummary[];
   negativeRewardDays: number;
   /** Last UTC midnight with a snapshot; days after it are not yet complete. */

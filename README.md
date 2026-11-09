@@ -57,7 +57,7 @@ git clone https://github.com/shrooms08/uwii.git
 cd uwii
 npm ci
 cp .env.example .env.local      # no values are needed for the cached demo
-npm test                        # 132 tests
+npm test                        # 157 tests
 npm run build
 npm start                       # http://localhost:3000
 ```
@@ -205,7 +205,7 @@ every finding:
 ## Tests
 
 ```bash
-npm test                         # 132 tests (node:test via tsx): engine, rules, reports, sections, API limits, signing, anchoring
+npm test                         # 157 tests (node:test via tsx): engine, rules, reports, sections, API limits, signing, anchoring, service failures
 npm run lint
 (cd contracts/anchor && cargo test)   # 8 contract unit tests (Rust 1.93, near-sdk 5.29)
 npm run stats                    # re-measures the landing page's "Live" row into src/content/stats.json
@@ -228,8 +228,14 @@ write if any test fails.
 - Anchoring uses NEAR testnet. An anchor proves a report existed at that time, not that it is correct or
   that the account owner made it; every anchor is signed by Uwii's own account.
 - The privacy proof has the gaps listed above. Answers are processed on Uwii's server, not in the TEE.
-- The hosted demo has a 300-second function limit, so very large accounts may not finish a live scan.
-  Rate limits and daily caps are kept in memory per server instance.
+- The hosted demo has a 300-second function limit, so very large accounts may not finish a live scan. Scans
+  stop at about 250 seconds with a clear message, and accounts over 1,500 transactions in 2026 are declined
+  up front. Rate limits and daily caps are kept in memory per server instance.
+- When an outside service fails, a scan degrades instead of breaking:
+  - NEAR AI unavailable or attestation failed: the transactions go to your questions, the run makes no
+    private-AI claim, and the report can still become final once answered.
+  - NearBlocks busy: a clear message within about a minute, and the cached demo is offered.
+  - Archival RPC or CoinGecko busy: the report stays a draft and says what is missing.
 - On mobile Lighthouse runs, Result and Export score 86 to 87 on performance: the report is drawn after
   the browser sends its saved answers to the API.
 

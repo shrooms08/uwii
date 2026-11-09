@@ -142,6 +142,21 @@ export const SLOW_DOWN_MESSAGE = "Too many requests from this connection. Wait a
 
 export const BUSY_MESSAGE = "The hosted demo is busy. Try again later, or load the cached demo report.";
 
+/** "about 12 minutes", "about 7 hours": how long until a limit frees up. */
+export function humanWait(seconds: number): string {
+  if (seconds < 90) return "a minute or two";
+  const minutes = Math.ceil(seconds / 60);
+  if (minutes < 90) return `about ${minutes} minutes`;
+  return `about ${Math.ceil(minutes / 60)} hours`;
+}
+
+/** What a user sees when one of the hosted demo's own limits stops a scan: what happened, when to retry, the alternative. */
+export function scanLimitMessage(code: "rate_limited" | "daily_cap", retryAfterSec: number): string {
+  return code === "daily_cap"
+    ? `The hosted demo has used today's private AI allowance. Try again in ${humanWait(retryAfterSec)} (it resets at 00:00 UTC), or load the cached demo report.`
+    : `This connection has reached the limit of ${LIMITS.scansPerIpPerHour} live scans an hour. Try again in ${humanWait(retryAfterSec)}, or load the cached demo report.`;
+}
+
 export function tooManyRequests(code: "rate_limited" | "daily_cap", retryAfterSec: number, error = BUSY_MESSAGE): Response {
   return Response.json(
     { error, code, retryAfterSec },

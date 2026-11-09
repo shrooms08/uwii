@@ -1,5 +1,5 @@
 /** Privacy evidence (TEE attestation + response signatures) for the report; shared by server and browser. */
-import type { ClassifiedRun } from "../tax/ng/types";
+import type { AiSkipped, ClassifiedRun } from "../tax/ng/types";
 
 /** One verification step that actually ran, grouped for display. */
 export interface ProofCheck {
@@ -43,6 +43,8 @@ export interface PrivacyProof {
   aiEvidence: AiRecordEvidence[];
   /** Why parts are not available, if any. */
   missing: string[];
+  /** Set when the private AI step did not run for some records of this run. */
+  aiSkipped?: AiSkipped;
 }
 
 function groupPreflight(step: string): Pick<ProofCheck, "group" | "subject" | "step"> {
@@ -58,7 +60,8 @@ export function privacyProofFromRun(run: ClassifiedRun): PrivacyProof {
   const signers = [...new Set(responses.filter((r) => r.signatureVerified && r.signingAddress).map((r) => r.signingAddress!.toLowerCase()))];
   const a = run.attestation;
   const missing: string[] = [];
-  if (ai.length === 0) missing.push("no AI decisions in this run (every record matched a deterministic rule); attestation was not needed");
+  if (run.aiSkipped) missing.push(`the private AI step was skipped for ${run.aiSkipped.count} transaction(s); they were answered by the user instead`);
+  else if (ai.length === 0) missing.push("no AI decisions in this run (every record matched a deterministic rule); attestation was not needed");
   if (a.checksPassed === undefined) missing.push("attestation check count not recorded for this classification run");
   if (!a.attestedAt) missing.push("attestation time not recorded for this classification run");
   if (ai.length > 0 && signers.length === 0) missing.push("response signer addresses not recorded for this classification run");
@@ -91,6 +94,7 @@ export function privacyProofFromRun(run: ClassifiedRun): PrivacyProof {
     checksRecorded,
     aiEvidence,
     missing,
+    ...(run.aiSkipped ? { aiSkipped: run.aiSkipped } : {}),
   };
 }
 
@@ -98,6 +102,10 @@ const na = "not available";
 
 /** Plain-English summary used on the page and in the PDF. */
 export function privacyProofText(p: PrivacyProof): string {
+  if (p.aiSkipped && p.aiDecisions === 0) return `The private AI step was skipped for this run: nothing was sent to an AI model. ${p.aiSkipped.count} transaction(s) the rules could not label were answered by the user.`;
+  if (p.aiSkipped) {
+    return `The private AI step ran for only part of this run: ${p.aiDecisionsSignatureVerified}/${p.aiDecisions} AI decisions had verified response signatures, and ${p.aiSkipped.count} transaction(s) were not sent to it and were answered by the user.`;
+  }
   const checks = p.checksPassed === null ? na : `${p.checksPassed}${p.checksTotal !== null && p.checksTotal !== p.checksPassed ? ` of ${p.checksTotal}` : ""} checks`;
   const attest =
     p.gatewayAndModelReportsVerified === null

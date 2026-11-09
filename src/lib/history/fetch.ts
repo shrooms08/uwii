@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { NS_PER_MS, ZERO, absBig, formatUnits, parseUnits } from "./amount";
 import { resolveFtMetadata } from "./ft-metadata";
-import { NEARBLOCKS_SOURCE, fetchAllInRange, type ProgressFn, type RangeNs } from "./nearblocks";
+import { NEARBLOCKS_SOURCE, fetchAllInRange, type Bounds, type ProgressFn, type RangeNs } from "./nearblocks";
 import { sanitizeMethodName } from "./sanitize";
 import { deriveStakingRewards } from "./staking-rewards";
 import { HISTORY_SCHEMA_VERSION, NEAR_ASSET, type Direction, type HistoryResult, type NormalizedTx, type TxKind } from "./types";
@@ -328,6 +328,10 @@ function attachFees(accountId: string, records: NormalizedTx[], signed: { row: S
 
 export interface FetchHistoryOptions {
   onProgress?: ProgressFn;
+  /** Hosted scan limits for NearBlocks; without them retries are patient (local scripts). */
+  bounds?: Bounds;
+  /** Absolute time (ms) by which the staking snapshots must stop; the rest are skipped and reported. */
+  stakingDeadlineAt?: number;
 }
 
 const byTimeThenId = (a: NormalizedTx, b: NormalizedTx) =>
@@ -346,7 +350,7 @@ export async function fetchHistory(
 ): Promise<HistoryResult> {
   if (!isValidAccountId(accountId)) throw new Error(`Invalid NEAR account id: "${accountId}"`);
   const range = resolveRange(fromISO, toISO);
-  const { onProgress } = options;
+  const { onProgress, bounds } = options;
   const enc = encodeURIComponent(accountId);
 
   onProgress?.(`Fetching receipts for ${accountId}…`);
@@ -357,6 +361,7 @@ export async function fetchHistory(
       range,
       timestampOf: (r) => BigInt(r.block.block_timestamp),
       onProgress,
+      bounds,
     }),
     "receipts",
   );
@@ -369,6 +374,7 @@ export async function fetchHistory(
       range: { start: ZERO, endExclusive: range.endExclusive },
       timestampOf: (r) => BigInt(r.block_timestamp),
       onProgress,
+      bounds,
     }),
     "staking-txns",
   );
@@ -382,6 +388,7 @@ export async function fetchHistory(
       range,
       timestampOf: (r) => BigInt(r.block_timestamp),
       onProgress,
+      bounds,
     }),
     "ft-txns",
   );
@@ -395,6 +402,7 @@ export async function fetchHistory(
       range,
       timestampOf: (r) => BigInt(r.block_timestamp),
       onProgress,
+      bounds,
     }),
     "txns",
   );
@@ -442,6 +450,7 @@ export async function fetchHistory(
       receiptId: row.receipt_id,
     })),
     onProgress,
+    deadlineAt: options.stakingDeadlineAt,
   });
 
   const records = [...withFees, ...rewards.records].sort(byTimeThenId);

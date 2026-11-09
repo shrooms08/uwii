@@ -4,7 +4,9 @@
  * Free public tier, no API key: 6 calls/minute, 333 calls/day, 10,000 calls/month.
  * Each 25 rows of `limit` costs one call credit, so we page 25 rows at a time and
  * space requests ~10.5s apart. 429s and 5xx/network errors are retried with
- * exponential backoff (honouring Retry-After when present).
+ * exponential backoff (honouring Retry-After when present). The hosted scan passes a Bounds object: then the
+ * retry waits are capped (a persistent 429 or a daily cap ends in HistoryBusyError within about a minute) and
+ * nothing is scheduled past the scan's deadline.
  */
 
 export const NEARBLOCKS_BASE_URL = "https://api.nearblocks.io";
@@ -12,7 +14,7 @@ export const NEARBLOCKS_SOURCE = "nearblocks-v3";
 
 const PAGE_LIMIT = 25; // 1 credit per request
 const FREE_TIER_CALLS_PER_MINUTE = 6;
-const MIN_INTERVAL_MS = Math.ceil(60_000 / FREE_TIER_CALLS_PER_MINUTE) + 500;
+const MIN_INTERVAL_MS = Number(process.env.NEARBLOCKS_MIN_INTERVAL_MS) || Math.ceil(60_000 / FREE_TIER_CALLS_PER_MINUTE) + 500;
 const REQUEST_TIMEOUT_MS = 30_000;
 const MAX_ATTEMPTS = 8;
 const MAX_PAGES = 2_000; // hard stop against a misbehaving cursor (50k rows per endpoint)
@@ -23,9 +25,10 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Process-wide pacing shared by every caller, so concurrent fetches can't burst past the limit.
 let nextSlotAt = 0;
-async function acquireSlot(): Promise<void> {
+async function acquireSlot(bounds?: Bounds): Promise<void> {
   const now = Date.now();
   const startAt = Math.max(now, nextSlotAt);
+  if (bounds?.deadlineAt && startAt >= bounds.deadlineAt) throw new HistoryDeadlineError();
   nextSlotAt = startAt + MIN_INTERVAL_MS;
   if (startAt > now) await sleep(startAt - now);
 }
@@ -43,14 +46,42 @@ function retryAfterMs(res: Response): number | null {
 }
 
 export class NearBlocksError extends Error {}
+/** NearBlocks kept refusing (429, 5xx, network) past the retry budget, or asked for a longer wait than the budget allows. */
+export class HistoryBusyError extends Error {}
+/** The scan's time budget ran out while reading history. */
+export class HistoryDeadlineError extends Error {}
 
-async function getJson(path: string, params: Record<string, string>, onProgress?: ProgressFn): Promise<unknown> {
+/** Limits for one hosted scan. Waits count only while NearBlocks keeps refusing; a successful call resets them. */
+export interface Bounds {
+  /** Longest total wait on retries with no success in between. */
+  maxRetryWaitMs: number;
+  /** Absolute time (ms) after which no further request is scheduled. */
+  deadlineAt?: number;
+  /** Mutable: retry wait used since the last success. */
+  waited: number;
+}
+
+/** 60 s: what the hosted scan allows NearBlocks before telling the user the service is busy. */
+export const HOSTED_RETRY_WAIT_MS = 60_000;
+
+/** The wait to use, charged to the budget; throws when the budget cannot cover it. */
+function boundedWait(bounds: Bounds, attempt: number, retryAfter: number | null): number {
+  const remaining = bounds.maxRetryWaitMs - bounds.waited;
+  // A stated Retry-After longer than the budget (a daily cap, for example) cannot be honoured: stop now.
+  if (retryAfter !== null && retryAfter > remaining) throw new HistoryBusyError("NearBlocks asked for a wait longer than the retry budget");
+  const wait = retryAfter ?? Math.min(remaining, 5_000 * 2 ** (attempt - 1));
+  if (wait < 1_000) throw new HistoryBusyError("NearBlocks retry budget used up");
+  bounds.waited += wait;
+  return wait;
+}
+
+async function getJson(path: string, params: Record<string, string>, onProgress?: ProgressFn, bounds?: Bounds): Promise<unknown> {
   const url = new URL(path, NEARBLOCKS_BASE_URL);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
 
   let lastError = "";
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    await acquireSlot();
+    await acquireSlot(bounds);
     let res: Response;
     try {
       res = await fetch(url, {
@@ -60,31 +91,59 @@ async function getJson(path: string, params: Record<string, string>, onProgress?
       });
     } catch (e) {
       lastError = `network error: ${e instanceof Error ? e.message : String(e)}`;
-      const wait = Math.min(60_000, 2_000 * 2 ** (attempt - 1));
+      const wait = bounds ? boundedWait(bounds, attempt, null) : Math.min(60_000, 2_000 * 2 ** (attempt - 1));
       onProgress?.(`  ${url.pathname}: ${lastError}; retry ${attempt}/${MAX_ATTEMPTS - 1} in ${wait / 1000}s`);
       pushBackSlots(wait);
       continue;
     }
 
-    if (res.ok) return res.json();
+    if (res.ok) {
+      if (bounds) bounds.waited = 0;
+      return res.json();
+    }
 
     const body = (await res.text()).slice(0, 300);
     lastError = `HTTP ${res.status}: ${body}`;
     if (res.status === 429) {
-      const wait = retryAfterMs(res) ?? Math.min(120_000, 20_000 * 2 ** (attempt - 1));
+      const wait = bounds ? boundedWait(bounds, attempt, retryAfterMs(res)) : (retryAfterMs(res) ?? Math.min(120_000, 20_000 * 2 ** (attempt - 1)));
       onProgress?.(`  ${url.pathname}: rate limited (429); retry ${attempt}/${MAX_ATTEMPTS - 1} in ${Math.round(wait / 1000)}s`);
       pushBackSlots(wait);
       continue;
     }
     if (res.status >= 500) {
-      const wait = Math.min(60_000, 2_000 * 2 ** (attempt - 1));
+      const wait = bounds ? boundedWait(bounds, attempt, null) : Math.min(60_000, 2_000 * 2 ** (attempt - 1));
       onProgress?.(`  ${url.pathname}: ${lastError}; retry ${attempt}/${MAX_ATTEMPTS - 1} in ${wait / 1000}s`);
       pushBackSlots(wait);
       continue;
     }
     throw new NearBlocksError(`${url.pathname}${url.search} failed: ${lastError}`);
   }
+  if (bounds) throw new HistoryBusyError(`${url.pathname} failed after ${MAX_ATTEMPTS} attempts: ${lastError}`);
   throw new NearBlocksError(`${url.pathname}${url.search} failed after ${MAX_ATTEMPTS} attempts: ${lastError}`);
+}
+
+/**
+ * Transactions the account made in `year`, from the daily statistics (one call), or null when the figure is
+ * not available (the check is then skipped rather than blocking the scan). Busy and deadline errors pass through.
+ */
+export async function countTransactionsInYear(accountId: string, year: number, bounds?: Bounds, onProgress?: ProgressFn): Promise<number | null> {
+  let json: unknown;
+  try {
+    json = await getJson(`/v3/accounts/${encodeURIComponent(accountId)}/stats/txns`, { limit: "366" }, onProgress, bounds);
+  } catch (e) {
+    if (e instanceof HistoryBusyError || e instanceof HistoryDeadlineError) throw e;
+    return null;
+  }
+  const rows = (json as { data?: unknown }).data;
+  if (!Array.isArray(rows)) return null;
+  let total = 0;
+  for (const row of rows as { date?: unknown; txns?: unknown }[]) {
+    if (typeof row.date !== "string" || !row.date.startsWith(`${year}-`)) continue;
+    const n = Number(row.txns);
+    if (!Number.isFinite(n)) return null;
+    total += n;
+  }
+  return total;
 }
 
 export interface RangeNs {
@@ -108,8 +167,9 @@ export async function fetchAllInRange<T>(opts: {
   range: RangeNs;
   timestampOf: (row: T) => bigint;
   onProgress?: ProgressFn;
+  bounds?: Bounds;
 }): Promise<T[]> {
-  const { path, range, timestampOf, onProgress } = opts;
+  const { path, range, timestampOf, onProgress, bounds } = opts;
   const base = { ...(opts.params ?? {}), limit: String(PAGE_LIMIT) };
   const rows: T[] = [];
   const seenCursors = new Set<string>();
@@ -119,7 +179,7 @@ export async function fetchAllInRange<T>(opts: {
     const params: Record<string, string> = cursor
       ? { ...base, next: cursor }
       : { ...base, before_ts: range.endExclusive.toString().padStart(19, "0") };
-    const json = (await getJson(path, params, onProgress)) as Page;
+    const json = (await getJson(path, params, onProgress, bounds)) as Page;
     const data = (json.data ?? []) as T[];
 
     let reachedStart = false;

@@ -1,25 +1,41 @@
 /**
  * Chain access for pool snapshots.
  *
- * - Balance views: NEAR archival JSON-RPC (default https://archival-rpc.mainnet.near.org, the free public
- *   archival endpoint listed at docs.near.org/api/rpc/providers). It is severely rate limited (observed:
- *   a few calls, then 429 with Retry-After ≈ 500s; legacy published limit 4 req/min and 10 req/10 min),
- *   so calls are serialized ~61s apart and Retry-After is honoured. Override with NEAR_ARCHIVAL_RPC_URL /
- *   NEAR_ARCHIVAL_RPC_MIN_INTERVAL_MS (e.g. a keyed provider in .env.local).
+ * - Balance views: FastNEAR's archival RPC first (no key), then NEAR's free public archival endpoint
+ *   (docs.near.org/api/rpc/providers), which is severely rate limited (observed: a few calls, then 429 with
+ *   Retry-After ≈ 500s; legacy published limit 4 req/min and 10 req/10 min), so its calls are serialized ~61s
+ *   apart and Retry-After is honoured. NEAR_ARCHIVAL_RPC_URL / NEAR_ARCHIVAL_RPC_MIN_INTERVAL_MS replace both
+ *   (e.g. a keyed provider in .env.local). With a deadline, nothing is scheduled past it (ChainBudgetError).
  * - Block lookup by time: block headers from FastNEAR's public neardata API (mainnet.neardata.xyz, no key),
  *   so the scarce archival budget is spent only on balance views.
  */
 import { parseUnits } from "./amount";
 import type { ProgressFn } from "./nearblocks";
 
-export const ARCHIVAL_RPC_URL = process.env.NEAR_ARCHIVAL_RPC_URL || "https://archival-rpc.mainnet.near.org";
+const FASTNEAR_ARCHIVAL_URL = "https://archival-rpc.mainnet.fastnear.com";
+const PUBLIC_ARCHIVAL_URL = "https://archival-rpc.mainnet.near.org";
+const CONFIGURED_ARCHIVAL_URL = process.env.NEAR_ARCHIVAL_RPC_URL || null;
+/** The endpoint tried first (recorded as the data source). */
+export const ARCHIVAL_RPC_URL = CONFIGURED_ARCHIVAL_URL ?? FASTNEAR_ARCHIVAL_URL;
 const ARCHIVAL_MIN_INTERVAL_MS = Number(process.env.NEAR_ARCHIVAL_RPC_MIN_INTERVAL_MS) || 61_000;
+const FASTNEAR_MIN_INTERVAL_MS = 400;
 const ARCHIVAL_MAX_ATTEMPTS = 6;
 export const NEARDATA_URL = "https://mainnet.neardata.xyz";
 const FINAL_RPC_URL = "https://free.rpc.fastnear.com";
 const TIMEOUT_MS = 30_000;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Nothing is scheduled after deadlineAt (absolute ms); ChainBudgetError instead of waiting past it. */
+export interface ChainLimits {
+  deadlineAt?: number;
+}
+
+export class ChainBudgetError extends Error {
+  constructor(what: string) {
+    super(`${what}: would run past the time budget`);
+  }
+}
 
 export interface BlockRef {
   height: number;
@@ -41,10 +57,11 @@ async function neardataSlot() {
 }
 
 /** Header at exactly `height`, or null if no block was produced at that height. */
-async function headerAt(height: number): Promise<BlockRef | null> {
+async function headerAt(height: number, limits?: ChainLimits): Promise<BlockRef | null> {
   if (headerCache.has(height)) return headerCache.get(height)!;
   let lastErr = "";
   for (let attempt = 1; attempt <= 8; attempt++) {
+    if (limits?.deadlineAt && Math.max(Date.now(), nextNeardataAt) >= limits.deadlineAt) throw new ChainBudgetError("neardata header");
     await neardataSlot();
     try {
       const res = await fetch(`${NEARDATA_URL}/v0/block/${height}/headers`, {
@@ -73,9 +90,9 @@ async function headerAt(height: number): Promise<BlockRef | null> {
 }
 
 /** First produced block with height in [from, toExclusive), or null if none. */
-async function firstBlockIn(from: number, toExclusive: number): Promise<BlockRef | null> {
+async function firstBlockIn(from: number, toExclusive: number, limits?: ChainLimits): Promise<BlockRef | null> {
   for (let h = from; h < toExclusive; h++) {
-    const b = await headerAt(h);
+    const b = await headerAt(h, limits);
     if (b) return b;
   }
   return null;
@@ -105,7 +122,7 @@ export async function finalBlock(): Promise<BlockRef> {
  * produced block lies strictly between lo and hi. The closer of lo/hi wins (ties go to lo, the block
  * before midnight).
  */
-export async function closestBlock(targetNs: bigint, anchor: BlockRef, nsPerBlockHint?: number): Promise<BlockRef> {
+export async function closestBlock(targetNs: bigint, anchor: BlockRef, nsPerBlockHint?: number, limits?: ChainLimits): Promise<BlockRef> {
   // ~0.6s blocks on mainnet in 2026, unless the caller observed the actual rate between earlier blocks.
   const NS_PER_BLOCK_GUESS = nsPerBlockHint && nsPerBlockHint > 0 ? Math.round(nsPerBlockHint) : 600_000_000;
   let lo: BlockRef | null = anchor.timestampNs < targetNs ? anchor : null;
@@ -120,7 +137,7 @@ export async function closestBlock(targetNs: bigint, anchor: BlockRef, nsPerBloc
     // Aim slightly past the estimate so we cross the target and get a bracket quickly.
     const step = deltaBlocks + sign * Math.max(3, Math.ceil(Math.abs(deltaBlocks) * 0.002));
     const guess = Math.max(9_820_210, probe.height + step); // never before mainnet genesis
-    const b = (await firstBlockIn(guess, guess + 100)) ?? (await headerAt(guess));
+    const b = (await firstBlockIn(guess, guess + 100, limits)) ?? (await headerAt(guess, limits));
     if (!b) throw new Error(`closestBlock: no block near height ${guess}`);
     probe = b;
     if (b.timestampNs < targetNs) lo = !lo || b.height > lo.height ? b : lo;
@@ -137,7 +154,7 @@ export async function closestBlock(targetNs: bigint, anchor: BlockRef, nsPerBloc
     const frac = Number(((targetNs - lo.timestampNs) * BigInt(1_000_000)) / (hi.timestampNs - lo.timestampNs)) / 1_000_000;
     const estimate = lo.height + Math.round(frac * (hi.height - lo.height));
     const guess = Math.min(Math.max(estimate + bias, lo.height + 1), hiBound - 1);
-    const b = await firstBlockIn(guess, hiBound);
+    const b = await firstBlockIn(guess, hiBound, limits);
     if (!b) {
       hiBound = guess; // [guess, hi) has no blocks
       bias = bias < 0 ? bias * 2 : -1;
@@ -159,12 +176,61 @@ export async function closestBlock(targetNs: bigint, anchor: BlockRef, nsPerBloc
 
 // ---------- archival view calls ----------
 
-let nextArchivalAt = 0;
-async function archivalSlot() {
+interface ArchivalEndpoint {
+  url: string;
+  minIntervalMs: number;
+  /** Attempts before moving on; the last endpoint is the patient one. */
+  attempts: number;
+  nextAt: number;
+}
+
+const ARCHIVAL_ENDPOINTS: ArchivalEndpoint[] = CONFIGURED_ARCHIVAL_URL
+  ? [{ url: CONFIGURED_ARCHIVAL_URL, minIntervalMs: ARCHIVAL_MIN_INTERVAL_MS, attempts: ARCHIVAL_MAX_ATTEMPTS, nextAt: 0 }]
+  : [
+      { url: FASTNEAR_ARCHIVAL_URL, minIntervalMs: FASTNEAR_MIN_INTERVAL_MS, attempts: 1, nextAt: 0 },
+      { url: PUBLIC_ARCHIVAL_URL, minIntervalMs: ARCHIVAL_MIN_INTERVAL_MS, attempts: ARCHIVAL_MAX_ATTEMPTS, nextAt: 0 },
+    ];
+
+async function archivalSlot(ep: ArchivalEndpoint, what: string, limits?: ChainLimits) {
   const now = Date.now();
-  const at = Math.max(now, nextArchivalAt);
-  nextArchivalAt = at + ARCHIVAL_MIN_INTERVAL_MS;
+  const at = Math.max(now, ep.nextAt);
+  if (limits?.deadlineAt && at >= limits.deadlineAt) throw new ChainBudgetError(what);
+  ep.nextAt = at + ep.minIntervalMs;
   if (at > now) await sleep(at - now);
+}
+
+/** POST a JSON-RPC body to the archival endpoints in order; `read` returns the value, or throws a definitive error. */
+async function archivalCall<T>(what: string, body: string, read: (json: unknown) => T, definitive: (e: Error) => boolean, onProgress?: ProgressFn, limits?: ChainLimits): Promise<T> {
+  let lastErr = "";
+  for (let i = 0; i < ARCHIVAL_ENDPOINTS.length; i++) {
+    const ep = ARCHIVAL_ENDPOINTS[i];
+    const last = i === ARCHIVAL_ENDPOINTS.length - 1;
+    // An earlier endpoint that asked us to back off is skipped, not waited for.
+    if (!last && ep.nextAt - Date.now() > 3_000) continue;
+    for (let attempt = 1; attempt <= ep.attempts; attempt++) {
+      await archivalSlot(ep, what, limits);
+      try {
+        const res = await fetch(ep.url, { method: "POST", headers: { "content-type": "application/json" }, body, signal: AbortSignal.timeout(TIMEOUT_MS), cache: "no-store" });
+        if (res.status === 429 || res.status >= 500) {
+          const ra = Number(res.headers.get("retry-after"));
+          const wait = Number.isFinite(ra) && ra > 0 ? ra * 1000 + 1000 : Math.min(600_000, 60_000 * attempt);
+          lastErr = `HTTP ${res.status}`;
+          onProgress?.(`  archival RPC ${lastErr}; waiting ${Math.round(wait / 1000)}s (attempt ${attempt}/${ep.attempts})`);
+          ep.nextAt = Math.max(ep.nextAt, Date.now() + wait);
+          // archivalSlot refuses on the next attempt when this wait would pass the deadline.
+          continue;
+        }
+        return read(await res.json());
+      } catch (e) {
+        if (e instanceof ChainBudgetError) throw e;
+        if (e instanceof Error && definitive(e)) throw e;
+        lastErr = e instanceof Error ? e.message : String(e);
+        onProgress?.(`  archival RPC error: ${lastErr} (attempt ${attempt}/${ep.attempts})`);
+      }
+    }
+    if (last) break;
+  }
+  throw new Error(`${what} failed after all attempts: ${lastErr}`);
 }
 
 /** Call a JSON view method at a block height via archival RPC; returns the parsed JSON result. */
@@ -174,6 +240,7 @@ export async function viewAtBlock(
   args: object,
   height: number,
   onProgress?: ProgressFn,
+  limits?: ChainLimits,
 ): Promise<unknown> {
   const body = JSON.stringify({
     jsonrpc: "2.0",
@@ -187,42 +254,26 @@ export async function viewAtBlock(
       args_base64: Buffer.from(JSON.stringify(args)).toString("base64"),
     },
   });
-  let lastErr = "";
-  for (let attempt = 1; attempt <= ARCHIVAL_MAX_ATTEMPTS; attempt++) {
-    await archivalSlot();
-    try {
-      const res = await fetch(ARCHIVAL_RPC_URL, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body,
-        signal: AbortSignal.timeout(TIMEOUT_MS),
-        cache: "no-store",
-      });
-      if (res.status === 429 || res.status >= 500) {
-        const ra = Number(res.headers.get("retry-after"));
-        const wait = Number.isFinite(ra) && ra > 0 ? ra * 1000 + 1000 : Math.min(600_000, 60_000 * attempt);
-        lastErr = `HTTP ${res.status}`;
-        onProgress?.(`  archival RPC ${lastErr}; waiting ${Math.round(wait / 1000)}s (attempt ${attempt}/${ARCHIVAL_MAX_ATTEMPTS})`);
-        nextArchivalAt = Math.max(nextArchivalAt, Date.now() + wait);
-        continue;
-      }
-      const j = (await res.json()) as { result?: { result?: number[]; error?: string }; error?: { cause?: { name?: string } } };
-      if (j.result?.result) return JSON.parse(Buffer.from(j.result.result).toString("utf8"));
-      throw new Error(`view ${contract}.${method}@${height} failed: ${JSON.stringify(j.error ?? j.result)}`);
-    } catch (e) {
-      if (e instanceof Error && e.message.startsWith("view ")) throw e;
-      lastErr = e instanceof Error ? e.message : String(e);
-      onProgress?.(`  archival RPC error: ${lastErr} (attempt ${attempt}/${ARCHIVAL_MAX_ATTEMPTS})`);
-    }
-  }
-  throw new Error(`view ${contract}.${method}@${height} failed after ${ARCHIVAL_MAX_ATTEMPTS} attempts: ${lastErr}`);
+  const what = `view ${contract}.${method}@${height}`;
+  return archivalCall(
+    what,
+    body,
+    (json) => {
+      const j = json as { result?: { result?: number[]; error?: string }; error?: { cause?: { name?: string } } };
+      if (j.result?.result) return JSON.parse(Buffer.from(j.result.result).toString("utf8")) as unknown;
+      throw new Error(`${what} failed: ${JSON.stringify(j.error ?? j.result)}`);
+    },
+    (e) => e.message.startsWith("view "),
+    onProgress,
+    limits,
+  );
 }
 
 /** First produced block with timestamp >= targetNs (closestBlock returns the adjacent pair's closer side). */
-export async function firstBlockAtOrAfter(targetNs: bigint): Promise<BlockRef> {
-  const c = await closestBlock(targetNs, await finalBlock());
+export async function firstBlockAtOrAfter(targetNs: bigint, limits?: ChainLimits): Promise<BlockRef> {
+  const c = await closestBlock(targetNs, await finalBlock(), undefined, limits);
   if (c.timestampNs >= targetNs) return c;
-  const next = await firstBlockIn(c.height + 1, c.height + 500);
+  const next = await firstBlockIn(c.height + 1, c.height + 500, limits);
   if (!next || next.timestampNs < targetNs) throw new Error(`firstBlockAtOrAfter: no block found after height ${c.height}`);
   return next;
 }
@@ -232,30 +283,21 @@ export async function viewAccountAtBlock(
   accountId: string,
   height: number,
   onProgress?: ProgressFn,
+  limits?: ChainLimits,
 ): Promise<{ amount: string; locked: string } | null> {
   const body = JSON.stringify({ jsonrpc: "2.0", id: "uwii", method: "query", params: { request_type: "view_account", block_id: height, account_id: accountId } });
-  let lastErr = "";
-  for (let attempt = 1; attempt <= ARCHIVAL_MAX_ATTEMPTS; attempt++) {
-    await archivalSlot();
-    try {
-      const res = await fetch(ARCHIVAL_RPC_URL, { method: "POST", headers: { "content-type": "application/json" }, body, signal: AbortSignal.timeout(TIMEOUT_MS), cache: "no-store" });
-      if (res.status === 429 || res.status >= 500) {
-        const ra = Number(res.headers.get("retry-after"));
-        const wait = Number.isFinite(ra) && ra > 0 ? ra * 1000 + 1000 : Math.min(600_000, 60_000 * attempt);
-        lastErr = `HTTP ${res.status}`;
-        onProgress?.(`  archival RPC ${lastErr}; waiting ${Math.round(wait / 1000)}s (attempt ${attempt}/${ARCHIVAL_MAX_ATTEMPTS})`);
-        nextArchivalAt = Math.max(nextArchivalAt, Date.now() + wait);
-        continue;
-      }
-      const j = (await res.json()) as { result?: { amount?: string; locked?: string }; error?: { cause?: { name?: string } } };
+  const what = `view_account ${accountId}@${height}`;
+  return archivalCall(
+    what,
+    body,
+    (json) => {
+      const j = json as { result?: { amount?: string; locked?: string }; error?: { cause?: { name?: string } } };
       if (j.result?.amount !== undefined) return { amount: j.result.amount, locked: j.result.locked ?? "0" };
       if (j.error?.cause?.name === "UNKNOWN_ACCOUNT") return null;
-      throw new Error(`view_account ${accountId}@${height} failed: ${JSON.stringify(j.error ?? j.result)}`);
-    } catch (e) {
-      if (e instanceof Error && e.message.startsWith("view_account ")) throw e;
-      lastErr = e instanceof Error ? e.message : String(e);
-      onProgress?.(`  archival RPC error: ${lastErr} (attempt ${attempt}/${ARCHIVAL_MAX_ATTEMPTS})`);
-    }
-  }
-  throw new Error(`view_account ${accountId}@${height} failed after ${ARCHIVAL_MAX_ATTEMPTS} attempts: ${lastErr}`);
+      throw new Error(`${what} failed: ${JSON.stringify(j.error ?? j.result)}`);
+    },
+    (e) => e.message.startsWith("view_account "),
+    onProgress,
+    limits,
+  );
 }

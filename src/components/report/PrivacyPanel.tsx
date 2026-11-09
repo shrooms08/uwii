@@ -53,8 +53,11 @@ export function PrivacyPanel({ proof, account, ruleCount, onClose }: { proof: Pr
   const checks = proof.checks ?? [];
   const noAi = proof.aiDecisions === 0;
 
-  const heading = noAi ? "No AI was needed" : all ? "Verified private" : "Not fully verified";
-  const explanation = noAi
+  const skipped = proof.aiSkipped;
+  const heading = skipped ? "Private AI step skipped" : noAi ? "No AI was needed" : all ? "Verified private" : "Not fully verified";
+  const explanation = skipped
+    ? `The private AI step did not run for ${skipped.count} ${skipped.count === 1 ? "transaction" : "transactions"} in this scan${skipped.reason === "attestation" ? " because its hardware could not be verified" : skipped.reason === "out_of_time" ? " because the scan ran out of time" : " because the service was unavailable"}. ${noAi ? "Nothing was sent to an AI model." : "Those transactions were not sent to it."} You answered them yourself; ${ruleCount !== null ? `the other ${ruleCount - skipped.count}` : "the rest"} were labelled by deterministic NRS rules on Uwii's server${noAi ? "" : " or by the private AI step before it stopped"}.`
+    : noAi
     ? `Every transaction matched a deterministic NRS rule on Uwii's server, so nothing was sent to an AI model and no attestation was needed.`
     : `The ${proof.aiDecisions} transactions the rules could not label were classified by an AI model running in a TEE on NEAR AI Cloud, on hardware whose attestation Uwii verified (Intel TDX and NVIDIA GPU, debug off, a fresh nonce, the response-signing key bound to that hardware). ` +
       `Before anything was sent, Uwii verified the hardware's attestation; afterwards it verified the signature on every AI response. ` +
@@ -98,13 +101,13 @@ export function PrivacyPanel({ proof, account, ruleCount, onClose }: { proof: Pr
         >
           <div className="flex items-start justify-between gap-3">
             <div className="flex flex-col gap-3.5">
-              {counts ? (
+              {counts && !skipped ? (
                 <Chip tone={counts.passed === counts.total && all ? "verified" : noAi ? "neutral" : "error"} className="self-start">
                   {counts.passed} of {counts.total} checks passed
                 </Chip>
               ) : (
                 <Chip tone="neutral" className="self-start">
-                  {noAi ? "No checks needed" : "Check results not recorded"}
+                  {skipped ? "No AI checks ran" : noAi ? "No checks needed" : "Check results not recorded"}
                 </Chip>
               )}
               <h2 id="proof-h" className="font-serif text-[clamp(40px,4cqi,56px)] leading-none font-normal tracking-[-0.045em]">
@@ -190,6 +193,8 @@ export function PrivacyPanel({ proof, account, ruleCount, onClose }: { proof: Pr
               </div>
             ))}
 
+          {/* What attestation proves only applies when the AI actually ran. */}
+          {!(skipped && noAi) && (
           <section aria-labelledby="proof-scope" className="grid gap-4 rounded-tile bg-muted p-5 @min-[640px]:grid-cols-2">
             <div className="flex flex-col gap-2">
               <h3 id="proof-scope" className="text-small font-semibold">
@@ -216,9 +221,10 @@ export function PrivacyPanel({ proof, account, ruleCount, onClose }: { proof: Pr
               </ul>
             </div>
           </section>
+          )}
 
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <TextButton onClick={downloadJson}>Download attestation report (JSON)</TextButton>
+            {skipped && noAi ? <span /> : <TextButton onClick={downloadJson}>Download attestation report (JSON)</TextButton>}
             <Button size="md" onClick={onClose} className="h-[46px] px-6 text-ui">
               Done
             </Button>

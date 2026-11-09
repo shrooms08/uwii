@@ -12,8 +12,9 @@ import { saveRun } from "@/lib/client/runs";
 import { loadSaved, setSource } from "@/lib/client/storage";
 import { DEMO_ACCOUNT } from "@/lib/demo/illustrative-answers";
 import { parseAccountList } from "@/lib/near/account-id";
-import { sseDecode, type ScanEvent } from "@/lib/scan/events";
-import { INITIAL_SCAN_VIEW, activeStepIndex, applyScanEvent, labelledCount, scanProgress, scanSteps, type ScanView, type StepState } from "@/lib/scan/view";
+import { CONNECTION_LOST_MESSAGE, STREAM_SILENCE_LIMIT_MS, sseDecode, type ScanEvent } from "@/lib/scan/events";
+import { withinSilence } from "@/lib/scan/stream";
+import { INITIAL_SCAN_VIEW, LIMIT_CODES, activeStepIndex, applyScanEvent, labelledCount, scanProgress, scanSteps, type ScanView, type StepState } from "@/lib/scan/view";
 
 /** Cosmetic pacing only: each checklist step stays visible at least this long. Numbers are never invented. */
 const MIN_STEP_MS = 600;
@@ -65,7 +66,12 @@ const SR_STATE: Record<StepState, string> = {
   skipped: "not needed",
 };
 
-const BUSY_CODES = new Set(["rate_limited", "daily_cap", "busy"]);
+const STOPPED_CHIP: Record<string, string> = { history_busy: "History service busy", too_large: "Too large for the demo" };
+const AI_SKIPPED_TEXT = {
+  unavailable: (n: string) => `The private AI step was unavailable, so Uwii will ask you about these ${n}.`,
+  attestation: (n: string) => `The private AI's hardware could not be verified, so nothing was sent to it. Uwii will ask you about these ${n}.`,
+  out_of_time: (n: string) => `The scan ran out of time before the private AI step finished, so Uwii will ask you about these ${n}.`,
+};
 const utcTime = (iso: string) => `${iso.slice(0, 10)} ${iso.slice(11, 16)} UTC`;
 
 export default function ScanClient({ account, cached = false }: { account: string; cached?: boolean }) {
@@ -109,25 +115,29 @@ export default function ScanClient({ account, cached = false }: { account: strin
       activeSince.current = Date.now();
       let finished = false;
       try {
-        const res = await fetch("/api/scan", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ account, ownAccounts: parseAccountList(loadSaved(account).ownText).filter((a) => a !== account), source: cached ? "cached" : "live" }),
-          signal: controller.signal,
-        });
+        // Watchdog: the server sends something at least every 15 s, so silence means the connection is gone.
+        const res = await withinSilence(
+          fetch("/api/scan", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ account, ownAccounts: parseAccountList(loadSaved(account).ownText).filter((a) => a !== account), source: cached ? "cached" : "live" }),
+            signal: controller.signal,
+          }),
+          STREAM_SILENCE_LIMIT_MS,
+        );
         if (!res.ok || !res.body) {
           const j = await res.json().then(
             (x: { error?: string; code?: string }) => x,
             () => ({}) as { error?: string; code?: string },
           );
           const code = j.code === "rate_limited" || j.code === "daily_cap" ? j.code : j.code === "scans_not_configured" ? "busy" : undefined;
-          push({ type: "error", stage: "input", message: j.error ?? `HTTP ${res.status}`, code });
+          push({ type: "error", stage: "input", message: j.error ?? CONNECTION_LOST_MESSAGE, code: code ?? "connection" });
           return;
         }
         const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
         let buffer = "";
         for (;;) {
-          const { value, done } = await reader.read();
+          const { value, done } = await withinSilence(reader.read(), STREAM_SILENCE_LIMIT_MS);
           if (done) break;
           buffer += value;
           const { events, rest } = sseDecode(buffer);
@@ -141,9 +151,13 @@ export default function ScanClient({ account, cached = false }: { account: strin
             } else push(e);
           }
         }
-        if (!finished) push({ type: "error", stage: "classification", message: "The connection closed before the scan finished." });
-      } catch (e) {
-        if (!controller.signal.aborted) push({ type: "error", stage: "classification", message: e instanceof Error ? e.message : String(e) });
+        if (!finished) push({ type: "error", stage: "classification", code: "connection", message: CONNECTION_LOST_MESSAGE });
+      } catch {
+        if (!controller.signal.aborted) {
+          // Lost, stalled or refused: stop the request and say so plainly.
+          controller.abort();
+          push({ type: "error", stage: "classification", code: "connection", message: CONNECTION_LOST_MESSAGE });
+        }
       }
     }, 0);
     return () => {
@@ -163,10 +177,12 @@ export default function ScanClient({ account, cached = false }: { account: strin
   const failed = Boolean(view.error);
   const questions = done?.questions ?? 0;
   const nextHref = questions > 0 ? `/questions?account=${encodeURIComponent(account)}` : `/result?account=${encodeURIComponent(account)}`;
-  const autoContinue = Boolean(done) && !failed && !attFailed && !stayed;
+  const aiSkipped = view.aiSkipped;
+  // A skipped AI step is worth reading before moving on, so the page waits for the user.
+  const autoContinue = Boolean(done) && !failed && !attFailed && !aiSkipped && !stayed;
   const noAi = view.rules?.pending === 0;
-  const verifiedPrivate = Boolean(done) && done!.attestationVerified && done!.aiResponses > 0 && done!.aiResponsesVerified === done!.aiResponses;
-  const busy = Boolean(view.error?.code && BUSY_CODES.has(view.error.code));
+  const verifiedPrivate = Boolean(done) && !aiSkipped && done!.attestationVerified && done!.aiResponses > 0 && done!.aiResponsesVerified === done!.aiResponses;
+  const busy = Boolean(view.error?.code && LIMIT_CODES.has(view.error.code));
   const replay = view.cached;
 
   // Remember which classification the next pages should use: the replayed committed run, or the live scan.
@@ -190,7 +206,8 @@ export default function ScanClient({ account, cached = false }: { account: strin
 
   let phase: string;
   if (busy) phase = view.error!.message;
-  else if (failed) phase = view.error!.code === "timeout" ? view.error!.message : `Scan stopped: ${view.error!.message}`;
+  else if (failed) phase = view.error!.code === "timeout" || view.error!.code === "connection" ? view.error!.message : `Scan stopped: ${view.error!.message}`;
+  else if (done && aiSkipped) phase = AI_SKIPPED_TEXT[aiSkipped.reason](`${aiSkipped.count} ${aiSkipped.count === 1 ? "transaction" : "transactions"}`);
   else if (done && attFailed) phase = `Hardware attestation failed, so nothing was sent to the AI model. ${questions} ${questions === 1 ? "thing needs" : "things need"} you.`;
   else if (done && replay) phase = `Cached demo result, attestation recorded ${utcTime(replay.recordedAt)}. ${questions} ${questions === 1 ? "thing needs" : "things need"} you.`;
   else if (done) phase = questions > 0 ? `Done. ${questions} ${questions === 1 ? "thing needs" : "things need"} you.` : "Done. Nothing needs you.";
@@ -200,11 +217,13 @@ export default function ScanClient({ account, cached = false }: { account: strin
   return (
     <div className="flex flex-col items-center pt-[clamp(20px,4cqi,56px)] text-center">
       {busy ? (
-        <Chip tone="draft">Hosted demo busy</Chip>
+        <Chip tone="draft">{STOPPED_CHIP[view.error!.code ?? ""] ?? "Hosted demo busy"}</Chip>
       ) : failed || (done && attFailed) ? (
         <Chip tone="error">{failed ? "Scan stopped" : "Not verified"}</Chip>
       ) : replay ? (
         <Chip tone="neutral">Cached demo result</Chip>
+      ) : done && aiSkipped ? (
+        <Chip tone="draft">Private AI step skipped</Chip>
       ) : done ? (
         verifiedPrivate ? <Chip tone="verified">Verified private</Chip> : <Chip tone="neutral">{noAi ? "Labelled by rules only" : "Done, with checks to review"}</Chip>
       ) : (
@@ -259,7 +278,7 @@ export default function ScanClient({ account, cached = false }: { account: strin
                 {questions > 0 ? `Answer ${questions} ${questions === 1 ? "question" : "questions"}` : "See result"}
               </ButtonLink>
             )}
-            {busy && (
+            {failed && !replay && (
               <ButtonLink href={`/scan?account=${DEMO_ACCOUNT}&cached=1`} arrow>
                 Load the cached demo report
               </ButtonLink>

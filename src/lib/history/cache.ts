@@ -31,6 +31,8 @@ export interface GetHistoryOptions extends FetchHistoryOptions {
   refresh?: boolean;
   /** Never use the fixture (cache is still used unless refresh). */
   live?: boolean;
+  /** Runs just before a live fetch (not for cache or fixture hits): the hosted scan's size check. */
+  beforeLive?: () => Promise<void>;
 }
 
 export type HistoryOrigin = "cache" | "fixture" | "live";
@@ -67,8 +69,10 @@ export async function getHistory(
       if (fixture) return { result: fixture, origin: "fixture", file: fx };
     }
   }
+  await options.beforeLive?.();
   const result = await fetchHistory(accountId, from, to, options);
-  await writeJson(file, result);
+  // A result with skipped staking snapshots must not be reused: the next scan should try again.
+  if (!result.staking.incomplete) await writeJson(file, result);
   return { result, origin: "live", file };
 }
 

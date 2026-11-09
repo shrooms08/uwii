@@ -2,7 +2,8 @@ import type { NormalizedTx } from "../../history/types";
 import type { AssetCategory, LabelId } from "./labels";
 import type { OpeningInputs, OpeningPosition } from "./opening";
 
-export type ClassificationMethod = "rule" | "ai" | "user";
+/** "unlabelled": no rule matched and the private AI step did not run for this record; it waits for the user. */
+export type ClassificationMethod = "rule" | "ai" | "user" | "unlabelled";
 
 export interface AiEvidence {
   chatId: string;
@@ -91,6 +92,15 @@ export interface ClassificationMetrics {
   aiResponses: number;
   aiResponsesVerified: number;
   attestationVerified: boolean;
+  /** Records the private AI step did not process (absent when it ran for every record it was needed for). */
+  aiSkipped?: number;
+}
+
+/** The private AI step did not run for some records; they went to the user's questions instead. */
+export interface AiSkipped {
+  count: number;
+  /** unavailable: NEAR AI refused or failed. attestation: the hardware could not be verified. out_of_time: the scan's time budget ran out. */
+  reason: "unavailable" | "attestation" | "out_of_time";
 }
 
 export const CLASSIFIED_SCHEMA_VERSION = 1;
@@ -122,6 +132,8 @@ export interface ClassifiedRun {
   aiResponses: AiResponseRecord[];
   metrics: ClassificationMetrics;
   records: ClassifiedTx[];
+  /** Set when the private AI step did not run for every record it was needed for. */
+  aiSkipped?: AiSkipped;
   /**
    * Set on runs returned by /api/scan (signed, kept in the user's browser): what the report needs from
    * the history, so any server instance can build the report without the history cache.
@@ -135,4 +147,8 @@ export interface RunContext {
   openingInputs: OpeningInputs;
   /** Opening position, when it was ready before the scan finished. */
   opening: OpeningPosition | null;
+  /** Where the history came from, when it was not read live for this scan. */
+  historyOrigin?: "cache" | "fixture";
+  /** Some staking snapshots could not be read during the scan: the report stays a draft. */
+  stakingIncomplete?: boolean;
 }
