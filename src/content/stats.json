@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-10T07:37:49.252Z",
+  "generatedAt": "2026-11-10T08:17:45.363Z",
   "tests": {
     "passing": 168,
     "total": 168,
@@ -12,7 +12,7 @@
   "anchors": {
     "count": 6,
     "contract": "uwii-anchor.testnet",
-    "blockHeight": 277037720,
+    "blockHeight": 277041807,
     "source": "view_state of uwii-anchor.testnet (entries of its anchors map)"
   }
 }

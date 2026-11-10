@@ -4,7 +4,7 @@
  */
 
 /** Where the user's own inputs go. The one place this claim is worded: every other mention uses it verbatim. */
-export const PRIVATE_INPUTS_CLAIM = "Your answers, other income, reliefs and personal details are processed in your browser and never sent to Uwii, unless you choose to anchor.";
+export const PRIVATE_INPUTS_CLAIM = "Your answers, other income, reliefs and personal details are processed in your browser and sent to Uwii only if you choose to anchor; even then, your name, TIN and state are never sent.";
 
 export const PRIVACY_SCOPE = {
   title: "What this proof covers",

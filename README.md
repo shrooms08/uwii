@@ -1,56 +1,63 @@
 # Uwii
 
 Uwii computes an individual's 2026 Nigerian tax on their NEAR crypto activity, line by line under NRS
-Information Circular No. 2026/21. Its AI step runs in attested hardware on NEAR AI Cloud, and the finished
-report's fingerprint can be anchored on NEAR testnet.
+Information Circular No. 2026/21. Its AI step runs in attested hardware on NEAR AI Cloud, the report is
+computed in the browser, and the finished report's fingerprint can be anchored on NEAR testnet.
 
 Live: <https://uwii-chi.vercel.app> · Computation for review; not tax advice.
 
-## The problem
+## Why it matters
 
-- Nigeria's revenue service (NRS) now taxes crypto: Information Circular No. 2026/21 (published 31 July
-  2026) sets out how virtual-asset income and gains are computed for individuals.
+- NRS Information Circular No. 2026/21 (published 31 July 2026) sets out how individuals' virtual-asset
+  income and gains are taxed for the 2026 year of assessment.
 - The first annual returns that include 2026 income are due by 31 March 2027.
-- Working it out by hand needs every transaction:
-  - classified as income, disposal or non-taxable;
-  - priced in US dollars;
-  - converted at the CBN NFEM rate;
-  - run through the personal income tax bands.
-- Doing that with a general AI service means handing over the full history and the reasons behind each
-  payment. Uwii keeps that step in verifiable hardware and keeps the person's answers in their browser.
+- Nigeria ranks 6th in Chainalysis's
+  [2025 Global Crypto Adoption Index](https://www.chainalysis.com/blog/2025-global-crypto-adoption-index/).
+- By hand, every transaction has to be classified (income, disposal or not taxable), priced in US dollars,
+  converted at the CBN NFEM rate and run through the personal income tax bands.
+- A general AI service would need the full history and the reasons behind each payment. Uwii keeps the
+  AI step in verifiable hardware and keeps the person's answers in their browser.
+
+## Who it's for
+
+- Individuals with NEAR activity filing 2026 Nigerian returns.
+- Tax consultants and accounting firms preparing client worksheets. A firm can use it tomorrow: scan the
+  client's account, answer the questions with the client, and hand over the PDF and CSV, which carry the
+  circular reference for every line and the report's fingerprint (anchorable on-chain).
 
 ## Try it in 60 seconds (live site)
 
-1. **Open the finished example.** On <https://uwii-chi.vercel.app>, click **See a finished report**.
-   - You see `/result?account=rybergh44.near` with the label **Cached demo result · questions answered
+1. **Open the finished example.** On <https://uwii-chi.vercel.app>, click **See a finished report** (the
+   button loads the illustrative answers into your browser; typing the URL does not).
+   - It opens `/result?account=rybergh44.near` with the label **Cached demo result · questions answered
      for illustration**.
    - The hero shows **₦41,231.99** with the chips **Final** and **Verified private**.
-   - This path makes no AI call: it uses the committed classification of the demo account and
-     illustrative answers.
-2. **Open the privacy proof.** Click **Privacy proof**.
-   - The panel reads **18 of 18 checks passed** and **Verified private**.
-   - It lists every attestation check, and what the proof does and does not cover.
-3. **Read the lines.** Scroll to the five sections (Income, Disposals and swaps, Gas fees, Not
-   taxable, Excluded). Click a row: the drawer shows how that line was worked out and the circular
-   paragraph it relies on.
-4. **Export.** Click **Export worksheet**, then **Download PDF worksheet** or **Download CSV**. You get
-   a PDF worksheet (fingerprint on page 1) and a CSV of every line.
+   - This path makes no AI call: it uses the committed classification of the demo account.
+   - Opening `/result?account=rybergh44.near` directly shows **Draft** until the questions are answered,
+     by design.
+2. **Open the privacy proof.** Click **Privacy proof**: **18 of 18 checks passed** and **Verified
+   private**, every attestation check, and what the proof does and does not cover.
+3. **Read the lines.** Scroll to the five sections (Income, Disposals and swaps, Gas fees, Not taxable,
+   Excluded). Click a row: the drawer shows how that line was worked out and the circular paragraph it
+   relies on.
+4. **Export.** Click **Export worksheet**, then **Download PDF worksheet** or **Download CSV**: a PDF
+   worksheet (fingerprint on page 1) and a CSV of every line.
 5. **Anchor and verify.**
    - On Export, the anchor card shows **Already anchored on NEAR testnet** with the block and
      transaction for this report's fingerprint.
    - Click **Verify it**: `/verify` looks the fingerprint up on the `uwii-anchor.testnet` contract.
-6. **Run it live.** Click **Run it live yourself** on the result page; this starts a real scan of
-   `rybergh44.near`.
-   - The scan reads the history, labels 117 of 125 transactions with the NRS rules, verifies the TEE
-     attestation, and classifies the rest with the attested model.
-   - Click **Answer 4 questions**, then **Fill illustrative demo answers**, then **See final result**.
+6. **Run it live.** Click **Run it live yourself** on the result page.
+   - For the demo account the scan uses the committed history snapshot (the page says so), labels 117 of
+     125 transactions with the NRS rules, verifies the TEE attestation, and classifies the rest live
+     with the attested model.
+   - Click **Answer … questions**, then **Fill illustrative demo answers**, then **See final result**.
    - The hosted demo allows 5 live scans per IP per hour and has a daily AI-call cap. When a limit is
      hit, the page offers **Load the cached demo report**.
 
 ## Run locally
 
-Requirements: Node.js 22 or later and npm. Optional: Rust 1.93 for the contract tests (`rust-toolchain.toml`
-pins it).
+Requirements: Node.js 22 or later and npm. Optional: Rust 1.93 for the contract tests
+(`contracts/anchor/rust-toolchain.toml` pins it).
 
 ```bash
 git clone https://github.com/shrooms08/uwii.git
@@ -59,18 +66,13 @@ npm ci
 cp .env.example .env.local      # no values are needed for the cached demo
 npm test                        # 168 tests
 npm run build                   # also writes public/static-data/ from data/ (npm run static-data)
-npm start                       # http://localhost:3000
+npm start                       # http://localhost:3000 (npm start -- -p 3100 for another port)
 ```
 
-**Works with no keys:**
-- the home page and **See a finished report**;
-- the cached scan replay at `/scan?account=rybergh44.near&cached=1`;
-- Questions, Result and Export for `rybergh44.near`, including the PDF and CSV;
-- the guide;
-- all tests.
-
-The demo account's history, classification, prices and opening position are committed in
-`data/fixtures/`; CBN NFEM rates are in `data/fx/`.
+**Works with no keys:** the home page and **See a finished report**, the cached scan replay at
+`/scan?account=rybergh44.near&cached=1`, Questions, Result and Export for `rybergh44.near` (PDF and CSV
+included), the guide, and all tests. The demo account's history, classification, prices and opening
+position are committed in `data/fixtures/`; CBN NFEM rates are in `data/fx/`.
 
 **Needs keys or settings** (names only; see `.env.example` and `docs/DEPLOY.md`):
 
@@ -79,11 +81,12 @@ The demo account's history, classification, prices and opening position are comm
 | Live scans of any account | `UWII_RUN_SECRET` (signs the run the browser keeps; without it live scans return 503) and `NEAR_AI_API_KEY` (NEAR AI Cloud) |
 | Looking up anchors on `/verify` (read-only) | `NEAR_NETWORK=testnet`, `NEAR_ANCHOR_CONTRACT_ID` |
 | Anchoring new reports | `NEAR_ANCHOR_ACCOUNT_ID` and `NEAR_ANCHOR_PRIVATE_KEY` (a function-call key limited to `anchor`) |
-| Optional | `NEAR_ARCHIVAL_RPC_URL`, `COINGECKO_DEMO_API_KEY`, `MAX_AI_CALLS_PER_DAY`, `MAX_ANCHORS_PER_DAY` |
+| Optional | `NEAR_ARCHIVAL_RPC_URL`, `COINGECKO_DEMO_API_KEY`, `MAX_AI_CALLS_PER_DAY`, `MAX_ANCHORS_PER_DAY`, `SCAN_MAX_TXNS` (default 1500), `SCAN_TIME_BUDGET_MS` |
 
-Live scans read NearBlocks' free API (about 6 calls a minute) and a NEAR archival RPC (about one call a
-minute), so a large account can take many minutes. The `/dev/*` developer pages are off in production
-builds unless `UWII_ENABLE_DEV_PAGES=1`.
+Live scans read NearBlocks' free API (about 6 calls a minute), and staking snapshots and opening balances
+from FastNEAR's archival RPC, falling back to the public archival RPC (about one call a minute), so a
+large account can take many minutes. The `/dev/*` developer pages are off in production builds unless
+`UWII_ENABLE_DEV_PAGES=1`.
 
 ## Architecture
 
@@ -120,7 +123,7 @@ flowchart LR
   B -->|"/verify"| C
 ```
 
-Your answers, other income, reliefs and personal details are processed in your browser and never sent to Uwii, unless you choose to anchor.
+Your answers, other income, reliefs and personal details are processed in your browser and sent to Uwii only if you choose to anchor; even then, your name, TIN and state are never sent.
 
 - **History.** `/api/scan` reads the account's history from NearBlocks, and staking snapshots and the
   1 January 2026 opening balances from a NEAR archival RPC.
@@ -185,7 +188,7 @@ Does not cover:
 - A pinned allowlist of approved software builds: Uwii checks that the reported configuration matches the hardware measurement, not that it is a build it has approved.
 - That TLS terminates inside the attested gateway.
 - Local validation of NVIDIA's attestation token: Uwii relies on NVIDIA's service over HTTPS.
-- Your answers, other income, reliefs and personal details are processed in your browser and never sent to Uwii, unless you choose to anchor. They never reach the TEE: the AI only ever receives public on-chain data.
+- Your answers, other income, reliefs and personal details are processed in your browser and sent to Uwii only if you choose to anchor; even then, your name, TIN and state are never sent. They never reach the TEE: the AI only ever receives public on-chain data.
 
 ## Tax correctness
 
@@ -213,20 +216,17 @@ every finding:
   generic.
 - **Known limitations:** the privacy-proof gaps listed above, and in-memory per-instance limits.
 
-## Tests
+## Verify the claims yourself
 
-```bash
-npm test                         # 168 tests (node:test via tsx): engine, rules, reports, sections, API limits, signing, anchoring, service failures, browser-computation parity
-npm run lint
-npm run build && npm run test:privacy   # network canary (Playwright, production build): no answer or personal detail leaves the browser except in the anchor request
-(cd contracts/anchor && cargo test)   # 8 contract unit tests (Rust 1.93, near-sdk 5.29)
-npm run stats                    # re-measures the landing page's "Live" row into src/content/stats.json
-```
-
-The landing page's **Live** row shows only measured numbers: tests passing and NRS illustrations
-reproduced (from `npm test`), reports anchored (counted from the anchor contract's state on testnet),
-and privacy checks per scan (from the committed demo run). `npm run stats` refreshes them and refuses to
-write if any test fails.
+| Command | What it proves |
+| --- | --- |
+| `npm test` | 168 tests (node:test via tsx): the engine, including circular Illustrations 2 and 3; rules; report sections that reconcile with the totals; API limits; run signing; anchoring; the fault switch and every service-failure fallback (`src/lib/server/resilience.test.ts`); browser/server parity, the same report and fingerprint from the browser's code path (`src/lib/report/client-parity.test.ts`) |
+| `npm run lint` | ESLint is clean |
+| `npm run build && npm run test:privacy` | Playwright network canary on the production build (`scripts/privacy-canary.ts`): canary income, rent, TIN and name never appear in any request; only the anchor request carries answers, and never the name or TIN |
+| `(cd contracts/anchor && cargo test)` | 8 contract tests: owner only, duplicates and non-final reports refused, input checks, NEP-297 event (Rust 1.93, near-sdk 5.29) |
+| `npm run check:attestation` | Needs `NEAR_AI_API_KEY` in `.env.local`. Fetches NEAR AI Cloud's attestation with a fresh nonce, sends one sample classification, and prints PASS or FAIL for each of the 18 checks |
+| `npm ci`, then `npm run build` with the network off | The build needs no network: fonts come from the `geist` package and static data from `data/` |
+| `npm run stats` | Re-measures the landing page's **Live** row (tests passing, illustrations reproduced, reports anchored on testnet as of the measurement date) into `src/content/stats.json`; refuses to write if any test fails. The row's privacy-checks figure comes from the committed demo run |
 
 ## Limitations
 
@@ -241,9 +241,15 @@ write if any test fails.
   that the account owner made it; every anchor is signed by Uwii's own account.
 - The privacy proof has the gaps listed above. Answers are processed in the browser; anchoring sends them
   to Uwii's server once, to recompute the report, and they are not stored.
-- The hosted demo has a 300-second function limit, so very large accounts may not finish a live scan. Scans
-  stop at about 250 seconds with a clear message, and accounts over 1,500 transactions in 2026 are declined
-  up front. Rate limits and daily caps are kept in memory per server instance.
+- The hosted demo has a 300-second function limit:
+  - scans stop at about 250 seconds with a clear message;
+  - accounts with more 2026 transactions than `SCAN_MAX_TXNS` are declined up front (300 on the live
+    site; the code default is 1,500);
+  - an account that staked all year may end as **Draft**, because reading a daily snapshot for every pool
+    and day takes longer than the time budget; the result names the reason (staking rewards could not be
+    read) and offers another scan.
+- Rate limits and daily caps are kept in memory per server instance.
+- Scans saved in the browser before commit `9832424` carry no prices, so the result asks for a new scan.
 - When an outside service fails, a scan degrades instead of breaking:
   - NEAR AI unavailable or attestation failed: the transactions go to your questions, the run makes no
     private-AI claim, and the report can still become final once answered.
@@ -252,12 +258,18 @@ write if any test fails.
 - On mobile Lighthouse runs, Result and Export score 85 to 88 on performance: the report is drawn after
   the browser loads the tax engine and its static tables and computes it.
 
+## What's next (plans, not features)
+
+- Consultant mode: several client accounts in one workspace.
+- Anchoring on NEAR mainnet.
+- More NEAR protocols, then other chains.
+- Rule packs for other jurisdictions; the Nigerian rules already live in `src/lib/tax/ng`.
+- Withholding-tax credits from uploaded certificates.
+
 ## Hackathon disclosures
 
 - **Event and tracks.** Built in November 2026 (first commit 2026-11-04) for the NEAR HACKATHON, in the
   Privacy & Private AI and Real-World Money tracks.
-- **Second project.** The author also submits **Vigil**, an independent project: a NEAR memecoin with an
-  AI Keeper. The two projects share no code.
 - **AI assistance.** The code was written with an AI coding assistant (Claude Code); commits carry a
   co-author line.
 - **Templates.**

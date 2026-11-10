@@ -62,7 +62,7 @@ Vercel sets `VERCEL` and `VERCEL_GIT_COMMIT_SHA` itself; do not set them.
   step; quotes that were only temporarily unavailable are left out. The browser keeps `{ run, runSig }` in
   IndexedDB and computes the question flow, the report, the fingerprint, the PDF and the CSV itself, with
   the CBN NFEM table and the cached demo's inputs served as static JSON (`public/static-data/`, generated
-  from `data/` by `npm run static-data` before every build). Your answers, other income, reliefs and personal details are processed in your browser and never sent to Uwii, unless you choose to anchor. The only other request is
+  from `data/` by `npm run static-data` before every build). Your answers, other income, reliefs and personal details are processed in your browser and sent to Uwii only if you choose to anchor; even then, your name, TIN and state are never sent. The only other request is
   `GET /api/price?asset=&contract=&ts=`, made only when an answer adds a source leg the scan did not price:
   it reveals an asset and a date, nothing else. Anchoring sends the signed run, the answers and the
   browser's fingerprint to `/api/anchor`, which verifies the signature and the account (400 otherwise),

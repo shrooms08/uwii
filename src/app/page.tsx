@@ -50,7 +50,7 @@ export default function Landing() {
     [String(stats.tests.passing), liveStats.tests],
     [String(stats.illustrations.reproduced), liveStats.illustrations],
     [checks ? `${checks.passed}/${checks.total}` : "–", liveStats.checks],
-    [String(stats.anchors.count), liveStats.anchors],
+    [String(stats.anchors.count), `${liveStats.anchors} as of ${stats.generatedAt.slice(0, 10)}`],
   ];
   return (
     <AppShell landing recordedAt={demoRecordedAt} mainClassName="pb-[clamp(48px,6cqi,96px)]">
