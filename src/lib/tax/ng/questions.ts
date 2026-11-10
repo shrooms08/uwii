@@ -7,7 +7,7 @@ import { formatUnits } from "../../history/amount";
 import { sanitizeSymbol } from "../../history/sanitize";
 import { toUnits } from "../../history/summary";
 import type { NormalizedTx } from "../../history/types";
-import { computeMetrics, toClassified } from "./classify";
+import { computeMetrics, toClassified } from "./classify-core";
 import type { LabelId } from "./labels";
 import { applyRules } from "./rules";
 import { USER_SOURCE_LEG_NOTE, normalizeSourceLeg, type SourceLegInput } from "./source-leg";

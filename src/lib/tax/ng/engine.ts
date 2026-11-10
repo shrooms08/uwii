@@ -3,14 +3,13 @@
  * (docs/rules-ng-2026-21.md). Dollar-referenced gains (9.1.2), FIFO (D5, 9.3.3(3)), CBN NFEM
  * rates (D8), PIT bands (D6). Full precision throughout; rounding happens only at presentation.
  */
-import type { FxQuote, NafemTable } from "../../fx/nafem";
+import type { FxQuote, NafemTable } from "../../fx/nafem-table";
 import { Dec, ZERO_D, dec, full } from "../../money";
 import { sanitizeSymbol } from "../../history/sanitize";
-import type { PriceProvider, PriceResult } from "../../prices/provider";
+import type { PriceProvider, PriceResult } from "../../prices/quotes";
 import type { Asset } from "../../history/types";
 import { LABELS, costBasisAsset, type LabelId } from "./labels";
-import type { OpeningBalance } from "./opening";
-import { RESET_PRICE_TIME } from "./opening";
+import { RESET_PRICE_TIME, type OpeningBalance } from "./opening-core";
 import { pit, type PitBandUse } from "./pit";
 import { RELIEFS, computeReliefs, hasReliefInputs, type ReliefInputs, type ReliefItem } from "./reliefs";
 import { USER_SOURCE_LEG_NOTE, USER_SOURCE_LEG_REF } from "./source-leg";

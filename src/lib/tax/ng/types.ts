@@ -1,6 +1,7 @@
 import type { NormalizedTx } from "../../history/types";
 import type { AssetCategory, LabelId } from "./labels";
-import type { OpeningInputs, OpeningPosition } from "./opening";
+import type { PriceFixture } from "../../prices/quotes";
+import type { OpeningInputs, OpeningPosition } from "./opening-core";
 
 /** "unlabelled": no rule matched and the private AI step did not run for this record; it waits for the user. */
 export type ClassificationMethod = "rule" | "ai" | "user" | "unlabelled";
@@ -151,4 +152,10 @@ export interface RunContext {
   historyOrigin?: "cache" | "fixture";
   /** Some staking snapshots could not be read during the scan: the report stays a draft. */
   stakingIncomplete?: boolean;
+  /**
+   * Every USD price the report could need for this run (each record at its time, fees, and the 31 Dec 2025
+   * reset prices of the opening holdings), recorded at the end of the scan so the report can be computed in
+   * the browser. Covered by the run signature.
+   */
+  prices?: PriceFixture;
 }

@@ -1,7 +1,9 @@
 /**
- * Handlers for /api/anchor and /api/verify, with injectable dependencies for tests. The report is
- * recomputed server-side from the request body; only its fingerprint (and "final") is sent on-chain.
- * Nothing here logs.
+ * Handlers for /api/anchor and /api/verify, with injectable dependencies for tests. Anchoring is the one
+ * request that carries the user's answers (the browser computes the report everywhere else): the server
+ * checks the signed run, recomputes the report from the body, requires it to be final and its fingerprint
+ * to equal the one the browser computed, and sends only that fingerprint (and "final") on-chain. The body
+ * is not stored, and nothing here logs.
  */
 import { FINGERPRINT_RE, anchorConfig, anchorFingerprint, nearAnchorClient, verifyFingerprint, type AnchorClient, type AnchorConfig, type AnchorInfo } from "@/lib/near/anchor";
 import { DailyCap, clientKey, limitState, tooManyRequests } from "@/lib/server/limits";
@@ -42,6 +44,8 @@ export async function handleAnchor(request: Request, deps: AnchorDeps = defaultD
   if (!perIp.ok) return tooManyRequests("rate_limited", perIp.retryAfterSec, ANCHOR_BUSY);
   const parsed = await parseReportBody(request);
   if (!parsed.ok) return parsed.response;
+  const browserFingerprint = parsed.body.fingerprint;
+  if (!browserFingerprint) return fail(400, "The report fingerprint computed in the browser is missing.", { code: "fingerprint_missing" });
   const resolved = await resolveReportRequest(parsed.body);
   if (!resolved.ok) return resolved.response;
   let report: ReportData;
@@ -53,6 +57,9 @@ export async function handleAnchor(request: Request, deps: AnchorDeps = defaultD
   }
   if (report.status !== "final") {
     return fail(409, "Only final reports can be anchored. Finalise the report first.", { status: report.status, draftReasons: report.draftReasons.map((d) => d.code) });
+  }
+  if (report.fingerprint !== browserFingerprint) {
+    return fail(409, "The server computed a different report from these answers, so nothing was anchored. Reload the page and try again.", { code: "fingerprint_mismatch" });
   }
   let cfg: AnchorConfig | null;
   try {

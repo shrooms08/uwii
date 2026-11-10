@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { CheckIcon } from "@/components/ui/AnswerChip";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { ANCHOR_CAVEAT } from "@/content/anchor";
+import { ANCHOR_CAVEAT, ANCHOR_DISCLOSURE } from "@/content/anchor";
 import { serializeBody } from "@/lib/client/request";
 import { loadAnchor, storeAnchor, type StoredAnchor } from "@/lib/client/storage";
 
@@ -16,8 +16,10 @@ const groupInt = (s: string) => s.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 type State = { kind: "checking" } | { kind: "idle" } | { kind: "busy" } | { kind: "done"; anchor: StoredAnchor; already: boolean } | { kind: "error"; message: string };
 
 /**
- * "Anchor this report on NEAR" (design 07). Only the fingerprint goes on-chain; the server recomputes
- * the report from the same request body and refuses drafts.
+ * "Anchor this report on NEAR" (design 07). The report is computed in the browser; anchoring is the one
+ * request that carries the user's answers, and only when they press the button after reading
+ * ANCHOR_DISCLOSURE. The server recomputes the report, refuses drafts and any fingerprint other than the
+ * browser's, and writes only the fingerprint on-chain. Personal details (name, TIN, state) are never sent.
  */
 export function AnchorCard({ fingerprint, isFinal, body, onAnchor }: { fingerprint: string; isFinal: boolean; body: { account?: string; classificationSource?: string } & Record<string, unknown>; onAnchor?: (a: StoredAnchor) => void }) {
   const [state, setState] = useState<State>({ kind: "checking" });
@@ -51,7 +53,7 @@ export function AnchorCard({ fingerprint, isFinal, body, onAnchor }: { fingerpri
   async function anchor() {
     setState({ kind: "busy" });
     try {
-      const res = await fetch("/api/anchor", { method: "POST", headers: { "content-type": "application/json" }, body: await serializeBody(body) });
+      const res = await fetch("/api/anchor", { method: "POST", headers: { "content-type": "application/json" }, body: await serializeBody({ ...body, fingerprint }) });
       const json = (await res.json()) as StoredAnchor & { alreadyAnchored?: boolean; error?: string };
       if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
       if (json.fingerprint !== fingerprint) throw new Error("The server computed a different fingerprint; reload the page and try again.");
@@ -100,8 +102,11 @@ export function AnchorCard({ fingerprint, isFinal, body, onAnchor }: { fingerpri
           Checking whether this fingerprint is already anchored…
         </p>
       ) : state.kind === "idle" || state.kind === "error" ? (
-        <div className="flex flex-col gap-2">
-          <Button onClick={anchor} className="h-[50px] self-start px-6 text-ui">
+        <div className="flex flex-col gap-3">
+          <p id="anc-disclosure" className="text-label leading-normal text-pretty text-ink-2">
+            {ANCHOR_DISCLOSURE}
+          </p>
+          <Button onClick={anchor} aria-describedby="anc-disclosure" className="h-[50px] self-start px-6 text-ui">
             {state.kind === "error" ? "Try again" : "Anchor fingerprint"}
           </Button>
           {state.kind === "error" && (

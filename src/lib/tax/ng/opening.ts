@@ -12,35 +12,8 @@ import { NEAR_ASSET } from "../../history/types";
 import { formatUnits } from "../../history/amount";
 import { LIQUID_STAKING_CONTRACTS } from "./labels";
 
-export const OPENING_YEAR = 2026;
-export const RESET_PRICE_TIME = "2025-12-31T23:59:59.000Z";
-
-export interface OpeningBalance {
-  asset: Asset;
-  /** Exact decimal quantity. */
-  qty: string;
-  source: string;
-}
-
-export interface OpeningPosition {
-  schemaVersion: 1;
-  accountId: string;
-  date: string;
-  block: { height: number; hash: string; timestampNs: string };
-  accountExisted: boolean;
-  balances: OpeningBalance[];
-  fetchedAt: string;
-  method: string;
-}
-
-/** What the opening position needs from the history (small enough to travel inside a signed run). */
-export interface OpeningInputs {
-  accountId: string;
-  /** Token assets seen in the history (contract, symbol, decimals). */
-  tokens: Asset[];
-  /** Staking pools with their balance at the first snapshot of the year. */
-  stakingStarts: { pool: string; date: string; totalBalance: string; blockHeight: number | null }[];
-}
+export { OPENING_YEAR, RESET_PRICE_TIME, type OpeningBalance, type OpeningInputs, type OpeningPosition } from "./opening-core";
+import { OPENING_YEAR, type OpeningBalance, type OpeningInputs, type OpeningPosition } from "./opening-core";
 
 export function openingInputsFromHistory(history: HistoryResult): OpeningInputs {
   const tokens = new Map<string, Asset>();

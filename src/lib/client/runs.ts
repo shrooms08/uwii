@@ -1,7 +1,7 @@
 /**
  * Signed classification runs kept in this browser (IndexedDB, memory if IndexedDB is unavailable).
- * /api/scan returns { run, runSig }; every questions/report/anchor request sends them back, so any
- * server instance can build the report and no other user can change it. Runs hold public on-chain
+ * /api/scan returns { run, runSig }; the browser computes the report from the run, and the anchor request
+ * sends it back so the server can check the signature and recompute (no other user can change it). Runs hold public on-chain
  * data and the AI's labels; answers and personal fields stay in localStorage (storage.ts).
  */
 import type { ClassifiedRun } from "@/lib/tax/ng/types";

@@ -3,6 +3,9 @@
  * panel and the guide, and mirrored in the README. Every line must stay true of src/lib/near/attestation.ts.
  */
 
+/** Where the user's own inputs go. The one place this claim is worded: every other mention uses it verbatim. */
+export const PRIVATE_INPUTS_CLAIM = "Your answers, other income, reliefs and personal details are processed in your browser and never sent to Uwii, unless you choose to anchor.";
+
 export const PRIVACY_SCOPE = {
   title: "What this proof covers",
   covers: [
@@ -17,6 +20,6 @@ export const PRIVACY_SCOPE = {
     { title: "No pinned list of approved builds", text: "A pinned allowlist of approved software builds: Uwii checks that the reported configuration matches the hardware measurement, not that it is a build it has approved." },
     { title: "TLS termination", text: "That TLS terminates inside the attested gateway." },
     { title: "NVIDIA token checked by NVIDIA", text: "Local validation of NVIDIA's attestation token: Uwii relies on NVIDIA's service over HTTPS." },
-    { title: "Your answers stay out of the TEE", text: "Your answers, other income and reliefs: they are processed on Uwii's server (not in a TEE) and are not stored. The AI only ever receives public on-chain data." },
+    { title: "Your answers are not part of it", text: PRIVATE_INPUTS_CLAIM + " They never reach the TEE: the AI only ever receives public on-chain data." },
   ],
 };

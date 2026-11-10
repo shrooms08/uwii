@@ -121,7 +121,8 @@ Deterministic rules remove those cases; the guards catch the same shape of error
 - NEAR Intents swap answer: `acquisition_swap` with `incompleteSourceLeg: true`; the source leg inside NEAR Intents
   is not captured, so the cost base uses the dollar FMV of the asset received (9.1.2 Step 1(b)) pending source data.
 - Privacy: answers and the optional profile ("other taxable income in 2026 (NGN)", for D6) live only in the
-  browser (localStorage) and are sent in each request body. The server stores and logs neither.
+  browser (localStorage), where the report is computed. They are sent only if the user anchors (the server
+  recomputes the report to confirm it), and the server stores and logs neither.
 
 ## D15 — Reliefs and deductions (Accepted; see D17)
 - Source: Nigeria Tax Act 2025 s.30. Config: `src/lib/tax/ng/reliefs.ts` (id, label, plain explanation, rule, cap,
@@ -137,7 +138,7 @@ Deterministic rules remove those cases; the guards catch the same shape of error
   PIT(max(0, other income + chargeable VA − R)) − PIT(max(0, other income − R)). With no reliefs this is exactly the
   D6 marginal computation. `reliefSavingNgn` = attributable tax without reliefs − with reliefs (can be 0, e.g. when
   both bases stay in the same band); `totalPitSavingNgn` = the drop in PIT on other income + chargeable VA.
-- Privacy and fingerprint: relief amounts live only in the browser and request bodies. The raw inputs
+- Privacy and fingerprint: relief amounts live only in the browser (and in the anchor request, if the user anchors). The raw inputs
   (`tax.reliefs.inputs`) are excluded from the fingerprint like `tax.otherIncomeNgn`; the allowed amounts, totals and
   savings are computed values and are covered. When no relief is entered, `tax.reliefs` is absent and the report
   (and its fingerprint) is unchanged.

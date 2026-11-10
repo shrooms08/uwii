@@ -57,8 +57,8 @@ git clone https://github.com/shrooms08/uwii.git
 cd uwii
 npm ci
 cp .env.example .env.local      # no values are needed for the cached demo
-npm test                        # 157 tests
-npm run build
+npm test                        # 168 tests
+npm run build                   # also writes public/static-data/ from data/ (npm run static-data)
 npm start                       # http://localhost:3000
 ```
 
@@ -90,17 +90,17 @@ builds unless `UWII_ENABLE_DEV_PAGES=1`.
 ```mermaid
 flowchart LR
   B["Browser<br/>answers, reliefs, TIN: localStorage<br/>signed run: IndexedDB"]
+  ENG["Tax engine, in the browser<br/>questions · FIFO · USD then NGN · PIT bands<br/>fingerprint · PDF · CSV"]
+  STATIC["Static JSON<br/>CBN NFEM rates · cached demo inputs"]
   SCAN["/api/scan"]
-  API["/api/questions · /api/report"]
-  ANC["/api/anchor"]
+  PRICE["/api/price<br/>asset + date only"]
+  ANC["/api/anchor<br/>recompute, fingerprint must match"]
   NB["NearBlocks API<br/>account history"]
   ARC["NEAR archival RPC<br/>staking snapshots, opening balances"]
   RULES["NRS rules<br/>(deterministic)"]
   TEE["NEAR AI Cloud TEE<br/>gateway + model"]
   ATT["Intel DCAP (dcap-qvl)<br/>NVIDIA NRAS"]
-  ENG["Tax engine<br/>FIFO · USD then NGN · PIT bands"]
   CG["CoinGecko<br/>USD prices"]
-  FX["CBN NFEM rates<br/>(committed CSV)"]
   C[("uwii-anchor.testnet<br/>anchor contract")]
 
   B -->|account| SCAN
@@ -109,16 +109,18 @@ flowchart LR
   SCAN --> RULES
   SCAN -->|"nonce, attestation, then unlabelled records"| TEE
   TEE -.->|"quote + GPU evidence"| ATT
-  SCAN -->|"run + HMAC signature"| B
-  B -->|"answers + signed run"| API
-  API --> ENG
-  ENG --> CG
-  ENG --> FX
-  API -->|"report + SHA-256 fingerprint"| B
-  B -->|"answers + signed run"| ANC
+  SCAN --> CG
+  SCAN -->|"run + prices + opening, HMAC-signed"| B
+  STATIC --> B
+  B --> ENG
+  B -.->|"only for an answered source leg"| PRICE
+  PRICE --> CG
+  B -.->|"only if you anchor: answers + signed run + fingerprint"| ANC
   ANC -->|"function-call key: anchor(fingerprint)"| C
   B -->|"/verify"| C
 ```
+
+Your answers, other income, reliefs and personal details are processed in your browser and never sent to Uwii, unless you choose to anchor.
 
 - **History.** `/api/scan` reads the account's history from NearBlocks, and staking snapshots and the
   1 January 2026 opening balances from a NEAR archival RPC.
@@ -127,19 +129,28 @@ flowchart LR
 - **Attested AI.** Before anything is sent, Uwii fetches NEAR AI Cloud's attestation report with a fresh
   nonce and verifies it: Intel TDX quote, NVIDIA GPU evidence, debug off, signer bound to the
   hardware. Each AI response is then signature-checked. Only public on-chain data is sent.
-- **Signed run.** The classified run returns to the browser signed with HMAC-SHA256
-  (`UWII_RUN_SECRET`) and is kept in IndexedDB. No shared server cache holds it, so one user can't
-  change another's run, and any server instance can build the report.
-- **Questions.** Uwii asks plain questions about the transactions the chain can't explain. Answers,
-  other income, reliefs and personal details stay in the browser's localStorage and travel only in
-  request bodies; the server doesn't store or log them.
+- **Prices in the run.** Alongside the AI step, the scan reads the USD price of every record and fee at
+  its time, NEAR at every record's time, and the 31 December 2025 price of each opening holding.
+- **Signed run.** The classified run, its prices and the opening position return to the browser signed
+  with HMAC-SHA256 (`UWII_RUN_SECRET`) and are kept in IndexedDB. No shared server cache holds them, so
+  one user can't change another's run.
+- **Questions and report, in the browser.** Uwii asks plain questions about the transactions the chain
+  can't explain. Answers, other income, reliefs and personal details stay in the browser's localStorage,
+  and the question flow, the tax engine, the fingerprint, the PDF and the CSV all run there, from the
+  signed run and two static files built from `data/` (the CBN NFEM table and the cached demo's inputs).
+  If an answer adds a source leg the scan did not price, the browser asks `GET /api/price` for that asset
+  and date; the request carries nothing else.
 - **Tax engine.** It values every line in US dollars (CoinGecko), converts at the CBN NFEM closing rate
   on the transaction date, applies FIFO cost, nets gains and losses, and charges the personal income
   tax bands marginally over other income. Every line carries its circular reference.
 - **Fingerprint.** The report gets a SHA-256 fingerprint over its canonical JSON (personal fields and
   raw income and relief inputs excluded). The PDF (jsPDF, built in the browser) and the CSV print it.
-- **Anchor.** A final report's fingerprint can be anchored on the `uwii-anchor.testnet` contract by a
-  function-call key that can only call `anchor`. `/verify` reads it back.
+- **Anchor, only if you choose.** Before the button, the page says: "To anchor, Uwii's server recomputes
+  your report from your answers to confirm it is final, then writes only the fingerprint on-chain. Your
+  answers are not stored." `/api/anchor` verifies the signed run, recomputes the report with the same
+  code, and anchors only a final report whose fingerprint equals the browser's, on the
+  `uwii-anchor.testnet` contract, with a function-call key that can only call `anchor`. Name, TIN and
+  state are never sent. `/verify` reads the anchor back.
 
 ## How NEAR is used, and why
 
@@ -174,7 +185,7 @@ Does not cover:
 - A pinned allowlist of approved software builds: Uwii checks that the reported configuration matches the hardware measurement, not that it is a build it has approved.
 - That TLS terminates inside the attested gateway.
 - Local validation of NVIDIA's attestation token: Uwii relies on NVIDIA's service over HTTPS.
-- Your answers, other income and reliefs: they are processed on Uwii's server (not in a TEE) and are not stored. The AI only ever receives public on-chain data.
+- Your answers, other income, reliefs and personal details are processed in your browser and never sent to Uwii, unless you choose to anchor. They never reach the TEE: the AI only ever receives public on-chain data.
 
 ## Tax correctness
 
@@ -205,8 +216,9 @@ every finding:
 ## Tests
 
 ```bash
-npm test                         # 157 tests (node:test via tsx): engine, rules, reports, sections, API limits, signing, anchoring, service failures
+npm test                         # 168 tests (node:test via tsx): engine, rules, reports, sections, API limits, signing, anchoring, service failures, browser-computation parity
 npm run lint
+npm run build && npm run test:privacy   # network canary (Playwright, production build): no answer or personal detail leaves the browser except in the anchor request
 (cd contracts/anchor && cargo test)   # 8 contract unit tests (Rust 1.93, near-sdk 5.29)
 npm run stats                    # re-measures the landing page's "Live" row into src/content/stats.json
 ```
@@ -227,7 +239,8 @@ write if any test fails.
   - tokens without a verifiable price are left out of the totals (circular 9.2(4)).
 - Anchoring uses NEAR testnet. An anchor proves a report existed at that time, not that it is correct or
   that the account owner made it; every anchor is signed by Uwii's own account.
-- The privacy proof has the gaps listed above. Answers are processed on Uwii's server, not in the TEE.
+- The privacy proof has the gaps listed above. Answers are processed in the browser; anchoring sends them
+  to Uwii's server once, to recompute the report, and they are not stored.
 - The hosted demo has a 300-second function limit, so very large accounts may not finish a live scan. Scans
   stop at about 250 seconds with a clear message, and accounts over 1,500 transactions in 2026 are declined
   up front. Rate limits and daily caps are kept in memory per server instance.
@@ -236,8 +249,8 @@ write if any test fails.
     private-AI claim, and the report can still become final once answered.
   - NearBlocks busy: a clear message within about a minute, and the cached demo is offered.
   - Archival RPC or CoinGecko busy: the report stays a draft and says what is missing.
-- On mobile Lighthouse runs, Result and Export score 86 to 87 on performance: the report is drawn after
-  the browser sends its saved answers to the API.
+- On mobile Lighthouse runs, Result and Export score 85 to 88 on performance: the report is drawn after
+  the browser loads the tax engine and its static tables and computes it.
 
 ## Hackathon disclosures
 

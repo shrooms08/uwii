@@ -1,12 +1,13 @@
 /**
- * Stateless tax report endpoint. Own accounts, answers, profile and optional original costs arrive in
- * the request body (they live only in the user's browser) and are never stored or logged.
+ * Developer-only report endpoint (the /dev pages, scripts and tests): a 404 in production. The app computes
+ * reports in the browser (src/lib/client/local-report.ts), so answers are never sent here.
  */
 import { noStore, parseReportBody, resolveReportRequest } from "@/lib/api/report-body";
 import { NotScannedError } from "@/lib/tax/ng/cache";
 import { apiLimit } from "@/lib/server/limits";
 import { serverError } from "@/lib/server/errors";
 import { buildReport } from "@/lib/tax/ng/report";
+import { devPagesEnabled } from "@/lib/server/dev-pages";
 
 /** Vercel Hobby (Fluid compute): 300 s default and maximum per invocation. */
 export const maxDuration = 300;
@@ -14,6 +15,7 @@ export const maxDuration = 300;
 const REPORT_TIME_BUDGET_MS = 200_000;
 
 export async function POST(request: Request) {
+  if (!devPagesEnabled()) return new Response("Not found", { status: 404, headers: noStore });
   const limited = apiLimit("reportPerIp", request);
   if (limited) return limited;
   const parsed = await parseReportBody(request);

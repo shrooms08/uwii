@@ -61,12 +61,15 @@ function mockChain(opts: { anchored?: string[]; blockOnlyOnArchival?: boolean } 
   return { client, calls, rpcCalls, anchors };
 }
 
+/** The demo report with the illustrative answers, as the browser computes it (src/lib/report/client-parity.test.ts). */
+const DEMO_FINGERPRINT = "41777b4d0d29ebecd00bf07d3c72f62eee6b417f79f9b91c632978ff37710eea";
+
 const post = (body: unknown) => new Request("http://localhost/api/anchor", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
 
 test("/api/anchor refuses a draft report and never touches the chain", async () => {
   const chain = mockChain();
   const deps: AnchorDeps = { build: buildReport, config: () => cfg, client: () => chain.client };
-  const res = await handleAnchor(post({ account: "rybergh44.near" }), deps);
+  const res = await handleAnchor(post({ account: "rybergh44.near", fingerprint: FP }), deps);
   assert.equal(res.status, 409);
   const json = (await res.json()) as { error: string; status: string; draftReasons: string[] };
   assert.equal(json.status, "draft");
@@ -79,7 +82,7 @@ test("/api/anchor anchors a final report: only the fingerprint and status go on-
   const chain = mockChain();
   const deps: AnchorDeps = { build: buildReport, config: () => cfg, client: () => chain.client };
   const res = await handleAnchor(
-    post({ account: "rybergh44.near", answers: { groups: ILLUSTRATIVE_ANSWERS.groups }, profile: { otherIncomeNgn: ILLUSTRATIVE_ANSWERS.otherIncomeNgn } }),
+    post({ account: "rybergh44.near", answers: { groups: ILLUSTRATIVE_ANSWERS.groups }, profile: { otherIncomeNgn: ILLUSTRATIVE_ANSWERS.otherIncomeNgn }, fingerprint: DEMO_FINGERPRINT }),
     deps,
   );
   assert.equal(res.status, 200);
@@ -97,6 +100,21 @@ test("/api/anchor anchors a final report: only the fingerprint and status go on-
   // Nothing from the request (answers, naira amounts, other income) is in the payload.
   const payload = JSON.stringify(chain.calls[0].args);
   for (const secretish of ["180000", "4800000", "p2p_buy", "rybergh44.near"]) assert.ok(!payload.includes(secretish), secretish);
+});
+
+test("/api/anchor needs the browser's fingerprint and refuses a different one without touching the chain", async () => {
+  delete (globalThis as { __uwiiLimits?: unknown }).__uwiiLimits; // fresh per-IP anchor limit
+  const chain = mockChain();
+  const deps: AnchorDeps = { build: buildReport, config: () => cfg, client: () => chain.client };
+  const body = { account: "rybergh44.near", answers: { groups: ILLUSTRATIVE_ANSWERS.groups }, profile: { otherIncomeNgn: ILLUSTRATIVE_ANSWERS.otherIncomeNgn } };
+  const missing = await handleAnchor(post(body), deps);
+  assert.equal(missing.status, 400);
+  assert.equal(((await missing.json()) as { code: string }).code, "fingerprint_missing");
+  // Other income changed after the browser computed its fingerprint: the server's report differs.
+  const changed = await handleAnchor(post({ ...body, profile: { otherIncomeNgn: "4800001" }, fingerprint: DEMO_FINGERPRINT }), deps);
+  assert.equal(changed.status, 409);
+  assert.equal(((await changed.json()) as { code: string }).code, "fingerprint_mismatch");
+  assert.equal(chain.calls.length, 0);
 });
 
 test("anchorArgs validates and returns exactly { fingerprint, status }", () => {

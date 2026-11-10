@@ -33,7 +33,7 @@ export function LandingForm() {
     }
     setError(null);
     setOthersError(null);
-    // Own accounts stay in this browser; the scan sends them only to count the questions left.
+    // Own accounts stay in this browser: the scan never receives them (the scan page recounts the questions here).
     if (showOthers) storeSaved(id, { ...loadSaved(id), ownText: own.join(", ") });
     setStarting(true);
     router.push(`/scan?account=${encodeURIComponent(id)}`);

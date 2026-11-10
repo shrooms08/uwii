@@ -2,7 +2,7 @@
  * Deterministic classification rules, applied before any AI. Each rule returns
  * { label, confidence: 1, method: "rule", reason } for the records it is certain about.
  */
-import { STAKING_POOL_RE } from "../../history/fetch";
+import { STAKING_POOL_RE } from "../../history/pools";
 import { toUnits } from "../../history/summary";
 import type { NormalizedTx } from "../../history/types";
 import { CONTRACTS, DEX_CONTRACTS, LIQUID_STAKING_CONTRACTS, costBasisAsset, type LabelId } from "./labels";

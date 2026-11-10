@@ -8,7 +8,7 @@ import { AnchorCard } from "@/components/report/AnchorCard";
 import { NextSteps } from "@/components/report/NextSteps";
 import { proofAllVerified, proofCounts } from "@/lib/report/privacy-summary";
 import { needsRescan } from "@/lib/report/status";
-import { Button } from "@/components/ui/Button";
+import { Button, ButtonLink } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
 import { Money } from "@/components/ui/Money";
@@ -52,7 +52,7 @@ function LockIcon() {
 }
 
 export default function ExportClient({ account }: { account: string }) {
-  const { report, flow, saved, error, retry } = useReport(account);
+  const { report, flow, saved, error, needsScan, retry } = useReport(account);
   const [personal, setPersonal] = useState<Personal>(EMPTY);
   const [personalLoaded, setPersonalLoaded] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -100,9 +100,15 @@ export default function ExportClient({ account }: { account: string }) {
       <Card role="alert" className="mx-auto mt-16 flex max-w-[580px] flex-col items-start gap-4 border-red-line p-7">
         <Chip tone="error">Could not build your worksheet</Chip>
         <p className="text-ui text-ink-2">{error}</p>
-        <Button variant="secondary" onClick={retry}>
-          Try again
-        </Button>
+        {needsScan ? (
+          <ButtonLink href={`/scan?account=${encodeURIComponent(account)}`} arrow>
+            Scan the account
+          </ButtonLink>
+        ) : (
+          <Button variant="secondary" onClick={retry}>
+            Try again
+          </Button>
+        )}
       </Card>
     );
   }

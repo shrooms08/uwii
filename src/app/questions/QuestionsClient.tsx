@@ -9,30 +9,17 @@ import { cx } from "@/components/ui/cx";
 import { Money } from "@/components/ui/Money";
 import { Mono } from "@/components/ui/Mono";
 import { SegmentBar } from "@/components/ui/ProgressBar";
-import { legForRequest, postJson, requestBody } from "@/lib/client/request";
+import { legForRequest } from "@/lib/client/request";
 import { EMPTY_SAVED, NGN_INPUT_RE, isDemoPresetOn, loadSaved, setDemoPreset, storeSaved, stripNgn, type Saved } from "@/lib/client/storage";
 import { DEMO_ACCOUNT, ILLUSTRATIVE_ANSWERS } from "@/lib/demo/illustrative-answers";
 import { shortParty } from "@/lib/near/account-id";
 import { fmtAmount, fmtDate, fmtUsd } from "@/lib/report/format";
-import type { ReportData } from "@/lib/tax/ng/report";
+import type { ReportData } from "@/lib/tax/ng/compute";
 import type { AnswerOption, GroupAnswer, Question, QuestionTx } from "@/lib/tax/ng/questions";
 import { isPositiveQuantity, normalizeSourceLeg, type SourceLegInput } from "@/lib/tax/ng/source-leg";
-import type { ClassificationMetrics } from "@/lib/tax/ng/types";
+import type { AssetChoice, QuestionsView } from "@/lib/tax/ng/questions-view";
 import { ReliefsCard } from "./ReliefsCard";
 
-interface AssetChoice {
-  symbol: string;
-  contract: string | null;
-}
-
-interface FlowResponse {
-  questions: Question[];
-  metrics: ClassificationMetrics;
-  records: { id: string }[];
-  /** Assets seen in this account (source-leg choices). */
-  assets: AssetChoice[];
-  error?: string;
-}
 
 const RECOMPUTE_DEBOUNCE_MS = 450;
 
@@ -46,7 +33,7 @@ const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? o
 export default function QuestionsClient({ account }: { account: string }) {
   const [saved, setSaved] = useState<Saved>(EMPTY_SAVED);
   const [loaded, setLoaded] = useState(false);
-  const [flow, setFlow] = useState<FlowResponse | null>(null);
+  const [flow, setFlow] = useState<QuestionsView | null>(null);
   const [flowError, setFlowError] = useState<string | null>(null);
   const [report, setReport] = useState<ReportData | null>(null);
   const [reportError, setReportError] = useState<string | null>(null);
@@ -70,37 +57,35 @@ export default function QuestionsClient({ account }: { account: string }) {
     if (loaded) storeSaved(account, saved);
   }, [account, saved, loaded]);
 
-  // Recompute the question flow and the draft report after every change (debounced, latest wins).
+  // Recompute the question flow and the draft report in this browser after every change (debounced, latest
+  // wins). Answers never leave the device: see src/lib/client/local-report.ts.
   useEffect(() => {
     if (!loaded) return;
-    const controller = new AbortController();
+    let live = true;
     const delay = first.current ? 0 : RECOMPUTE_DEBOUNCE_MS;
     first.current = false;
     const t = setTimeout(async () => {
       setUpdating(true);
-      const body = requestBody(account, saved);
-      const flowP = postJson<FlowResponse>("/api/questions", body, controller.signal)
-        .then((f) => {
-          setFlow(f);
-          setFlowError(null);
-        })
-        .catch((e: unknown) => {
-          if (!controller.signal.aborted) setFlowError(e instanceof Error ? e.message : String(e));
-        });
-      const reportP = postJson<ReportData>("/api/report", body, controller.signal)
-        .then((r) => {
-          setReport(r);
-          setReportError(null);
-        })
-        .catch((e: unknown) => {
-          if (!controller.signal.aborted) setReportError(e instanceof Error ? e.message : String(e));
-        });
-      await Promise.all([flowP, reportP]);
-      if (!controller.signal.aborted) setUpdating(false);
+      try {
+        const { computeLocalReport } = await import("@/lib/client/local-report");
+        const { report: r, view } = await computeLocalReport(account, saved);
+        if (!live) return;
+        setFlow(view);
+        setFlowError(null);
+        setReport(r);
+        setReportError(null);
+      } catch (e: unknown) {
+        if (!live) return;
+        const message = e instanceof Error ? e.message : String(e);
+        setFlowError(message);
+        setReportError(message);
+      } finally {
+        if (live) setUpdating(false);
+      }
     }, delay);
     return () => {
+      live = false;
       clearTimeout(t);
-      controller.abort();
     };
   }, [account, saved, loaded, retry]);
 

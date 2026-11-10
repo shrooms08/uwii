@@ -1,10 +1,11 @@
 /**
- * Stateless question-flow endpoint. Own accounts, answers and profile arrive in the request body
- * (they live only in the user's browser) and are never stored or logged server-side.
+ * Developer-only question-flow endpoint (the /dev pages and tests): a 404 in production. The app itself
+ * computes the question flow in the browser, so answers are never sent here.
  */
 import { z } from "zod";
-import { sanitizeSymbol } from "@/lib/history/sanitize";
-import { isValidAccountId } from "@/lib/history/fetch";
+import { isValidAccountId } from "@/lib/near/account-id";
+import { devPagesEnabled } from "@/lib/server/dev-pages";
+import { questionsView } from "@/lib/tax/ng/questions-view";
 import { NotScannedError, getClassification } from "@/lib/tax/ng/cache";
 import { AnswersBody, ReliefsBody, RunField, RunSigField, resolveRun } from "@/lib/api/report-body";
 import { apiLimit, readJsonBody } from "@/lib/server/limits";
@@ -36,6 +37,7 @@ const Body = z
 const noStore = { "cache-control": "no-store" };
 
 export async function POST(request: Request) {
+  if (!devPagesEnabled()) return new Response("Not found", { status: 404, headers: noStore });
   const limited = apiLimit("questionsPerIp", request);
   if (limited) return limited;
   const raw = await readJsonBody(request);
@@ -53,39 +55,14 @@ export async function POST(request: Request) {
       ? { run: resolved.run, origin: "signed scan from the browser" }
       : await getClassification(body.account, body.from, body.to, { ownAccounts: [], fixtureOnly: true });
     const flow = runQuestionFlow(run, { ownAccounts: body.ownAccounts, answers: body.answers });
-    const records = flow.records.map((r) => ({
-      id: r.id,
-      timestamp: r.timestamp,
-      kind: r.kind,
-      direction: r.direction,
-      asset: r.asset.symbol,
-      amount: r.amount,
-      counterparty: r.counterparty,
-      label: r.label,
-      method: r.method,
-      confidence: r.confidence,
-      needsQuestion: r.needsQuestion,
-      circularRef: r.circularRef,
-      reason: r.reason,
-      userFiat: r.userFiat ?? null,
-      incompleteSourceLeg: r.incompleteSourceLeg ?? false,
-      previousLabel: r.evidence && "previous" in r.evidence ? r.evidence.previous.label : null,
-    }));
-    // Assets seen in this account (for the "what did you give up" source-leg answer).
-    const assetMap = new Map<string, { symbol: string; contract: string | null }>();
-    for (const r of run.records) assetMap.set(r.asset.contract ?? "native", { symbol: sanitizeSymbol(r.asset.symbol), contract: r.asset.contract });
-    const assets = [...assetMap.values()];
+    const view = questionsView(run, flow);
     return Response.json(
       {
         account: run.accountId,
         origin,
         classifiedAt: run.classifiedAt,
-        questions: flow.questions,
-        summary: flow.summary,
-        metrics: flow.metrics,
+        ...view,
         profile: { otherIncomeNgn: body.profile.otherIncomeNgn || null },
-        records,
-        assets,
       },
       { headers: noStore },
     );

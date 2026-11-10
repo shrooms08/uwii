@@ -1,6 +1,7 @@
 /**
- * Request bodies built from what is saved in this browser. Answers, own accounts and profile are
- * sent only in request bodies; the server never stores them.
+ * The report request built from what is saved in this browser. The browser computes from it
+ * (local-report.ts); it is sent only as the anchor request, when the user chooses to anchor, and the
+ * server never stores it.
  */
 import { parseAccountList } from "@/lib/near/account-id";
 import type { GroupAnswer } from "@/lib/tax/ng/questions";
@@ -13,10 +14,10 @@ export function legForRequest(leg: SourceLegInput | undefined): SourceLegInput |
   if (!leg) return null;
   const quantity = stripNgn(leg.quantity);
   if (!leg.asset.symbol.trim() || leg.asset.contract === "" || !isPositiveQuantity(quantity)) return null;
-  return { asset: leg.asset, quantity, ...(leg.timestamp ? { timestamp: leg.timestamp } : {}) };
+  return { asset: { symbol: leg.asset.symbol, contract: leg.asset.contract }, quantity, ...(leg.timestamp ? { timestamp: leg.timestamp } : {}) };
 }
 
-/** Body for /api/questions and /api/report (naira separators stripped, incomplete source legs left out). */
+/** The report body (naira separators stripped, incomplete source legs left out): computed locally, sent only to anchor. */
 export function requestBody(account: string, saved: Saved) {
   const groups: Record<string, GroupAnswer> = {};
   for (const [id, g] of Object.entries(saved.groups)) {
@@ -58,7 +59,7 @@ export function requestBody(account: string, saved: Saved) {
  * browser checks first and explains (the server answers 413 above the same limit).
  */
 export const MAX_BODY_BYTES = 4_500_000;
-export const TOO_LARGE_BODY = "This account's scan is too large to send back for a report (over 4.5 MB). Uwii can't compute it in the hosted demo yet.";
+export const TOO_LARGE_BODY = "This account's scan is too large to send for anchoring (over 4.5 MB). Your report and fingerprint are unaffected.";
 
 /** JSON body with the saved signed run attached (not for the cached demo, which uses the committed fixture). */
 export async function serializeBody(body: { account?: string; classificationSource?: string } & Record<string, unknown>): Promise<string> {

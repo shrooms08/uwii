@@ -1,6 +1,7 @@
 /**
  * Browser-only persistence. Own accounts, answers and the profile live in localStorage under the same
- * key /dev/questions uses, and are sent only in request bodies; the server never stores them.
+ * key /dev/questions uses. The report is computed here from them; they leave the device only in the anchor
+ * request, when the user chooses to anchor, and the server never stores them.
  */
 import type { GroupAnswer } from "@/lib/tax/ng/questions";
 import type { ReliefInputKey } from "@/lib/tax/ng/reliefs";

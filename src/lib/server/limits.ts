@@ -99,6 +99,8 @@ export const LIMITS = {
   defaultAnchorsPerDay: 100,
   /** /api/report, /api/questions and /api/verify: each, per IP, per minute. */
   apiPerIpPerMinute: 60,
+  /** /api/price, per IP, per minute (each lookup can cost a paced CoinGecko call). */
+  pricesPerIpPerMinute: 20,
 };
 
 export const MINUTE_MS = 60 * 1000;
@@ -114,6 +116,7 @@ interface LimitState {
   reportPerIp: SlidingWindowLimiter;
   questionsPerIp: SlidingWindowLimiter;
   verifyPerIp: SlidingWindowLimiter;
+  pricePerIp: SlidingWindowLimiter;
 }
 
 /** One shared state per server process (kept on globalThis so dev hot reloads do not reset it). */
@@ -127,6 +130,7 @@ export function limitState(): LimitState {
     reportPerIp: new SlidingWindowLimiter(LIMITS.apiPerIpPerMinute, MINUTE_MS),
     questionsPerIp: new SlidingWindowLimiter(LIMITS.apiPerIpPerMinute, MINUTE_MS),
     verifyPerIp: new SlidingWindowLimiter(LIMITS.apiPerIpPerMinute, MINUTE_MS),
+    pricePerIp: new SlidingWindowLimiter(LIMITS.pricesPerIpPerMinute, MINUTE_MS),
   };
   return g.__uwiiLimits;
 }
@@ -165,7 +169,7 @@ export function tooManyRequests(code: "rate_limited" | "daily_cap", retryAfterSe
 }
 
 /** Per-IP limit for a cheap API route: null when allowed, else the 429 response. */
-export function apiLimit(limiter: "reportPerIp" | "questionsPerIp" | "verifyPerIp", request: Request): Response | null {
+export function apiLimit(limiter: "reportPerIp" | "questionsPerIp" | "verifyPerIp" | "pricePerIp", request: Request): Response | null {
   const r = limitState()[limiter].hit(clientKey(request));
   return r.ok ? null : tooManyRequests("rate_limited", r.retryAfterSec, SLOW_DOWN_MESSAGE);
 }

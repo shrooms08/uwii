@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-11-09T15:56:30.007Z",
+  "generatedAt": "2026-11-10T07:37:49.252Z",
   "tests": {
-    "passing": 157,
-    "total": 157,
+    "passing": 168,
+    "total": 168,
     "source": "npm test (node:test summary)"
   },
   "illustrations": {
@@ -12,7 +12,7 @@
   "anchors": {
     "count": 6,
     "contract": "uwii-anchor.testnet",
-    "blockHeight": 276941373,
+    "blockHeight": 277037720,
     "source": "view_state of uwii-anchor.testnet (entries of its anchors map)"
   }
 }

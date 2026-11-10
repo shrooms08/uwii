@@ -62,7 +62,7 @@ function gainsNote(r: ReportData): string {
 }
 
 export default function ResultClient({ account }: { account: string }) {
-  const { report, flow, error, retry } = useReport(account);
+  const { report, flow, error, needsScan, retry } = useReport(account);
   const [openLine, setOpenLine] = useState<ReportLine | null>(null);
   const [proofOpen, setProofOpen] = useState(false);
   const [warnOpen, setWarnOpen] = useState(false);
@@ -78,9 +78,15 @@ export default function ResultClient({ account }: { account: string }) {
       <Card role="alert" className="mx-auto mt-16 flex max-w-[580px] flex-col items-start gap-4 border-red-line p-7">
         <Chip tone="error">Could not compute your result</Chip>
         <p className="text-ui text-ink-2">{error}</p>
-        <Button variant="secondary" onClick={retry}>
-          Try again
-        </Button>
+        {needsScan ? (
+          <ButtonLink href={`/scan?account=${encodeURIComponent(account)}`} arrow>
+            Scan the account
+          </ButtonLink>
+        ) : (
+          <Button variant="secondary" onClick={retry}>
+            Try again
+          </Button>
+        )}
       </Card>
     );
   }

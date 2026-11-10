@@ -1,23 +1,25 @@
 /**
- * Report orchestration: base classification -> user answers (Phase 4) -> opening position (D11) ->
- * prices (CoinGecko / primary pair) + CBN NFEM rates -> engine. Answers and profile come from the
- * caller's request and are never stored or logged.
+ * Server-side report orchestration (scripts, tests, the anchor recomputation): resolve the inputs -
+ * classification, history facts, opening position (D11), prices and CBN NFEM rates - then compute with the
+ * same pure code the browser runs (./compute). Answers and profile come from the caller and are never
+ * stored or logged.
  */
 import path from "node:path";
-import { NafemTable } from "../../fx/nafem";
+import { loadNafemTable } from "../../fx/nafem";
 import { getHistory } from "../../history/cache";
 import { FIXTURE_DIR, readJsonIfExists, writeJson } from "../../history/paths";
-import { FixturePriceProvider, LivePriceProvider, RecordingPriceProvider, loadPriceFixture, writePriceFixture, type PriceProvider } from "../../prices/provider";
-import { reportFingerprint } from "../../report/fingerprint";
-import { privacyProofFromRun, type PrivacyProof } from "../../report/privacy";
-import { reportStatus, type DraftReason, type ReportStatus } from "../../report/status";
+import { FixturePriceProvider, LivePriceProvider, loadPriceFixture, writePriceFixture, type PriceProvider, type RecordingPriceProvider } from "../../prices/provider";
+import { inputsFromSignedRun } from "../../report/local";
 import { getClassification } from "./cache";
-import { runEngine, type EngineResult } from "./engine";
+import { computeReport, unavailableOpening, type ReportData } from "./compute";
 import { fetchOpeningPosition, OPENING_YEAR, RESET_PRICE_TIME, type OpeningPosition } from "./opening";
-import { runQuestionFlow, type Answers, type ApplySummary } from "./questions";
+import type { Answers } from "./questions";
 import type { ClassifiedRun, ClassifiedTx } from "./types";
+import type { NormalizedTx } from "../../history/types";
 import { urlOrigin } from "../../server/run-signing";
 import type { ReliefInputs } from "./reliefs";
+
+export type { ReportData } from "./compute";
 
 const TECHNICAL = new Set(["wrap_unwrap", "staking_lockup", "round_trip", "dust_no_value", "storage_deposit", "gas_refund", "loan_collateralised"]);
 
@@ -40,58 +42,49 @@ export interface ReportRequest {
   onProgress?: (m: string) => void;
 }
 
-export interface ReportData extends EngineResult {
-  account: string;
-  from: string;
-  to: string;
-  generatedAt: string;
-  origin: { classification: string; prices: string; opening: string; history?: string };
-  questionSummary: ApplySummary;
-  opening: Pick<OpeningPosition, "date" | "block" | "accountExisted" | "method" | "balances">;
-  dataSources: { name: string; detail: string; retrievedAt: string | null }[];
-  /** TEE attestation + response-signature evidence from the stored classification run. */
-  privacyProof: PrivacyProof;
-  /** SHA-256 of the canonical report JSON, personal fields excluded (src/lib/report/fingerprint.ts). */
-  fingerprint: string;
-  /** "draft" while anything unresolved could distort the figures; covered by the fingerprint. */
-  status: ReportStatus;
-  draftReasons: DraftReason[];
-  /** Question groups still unanswered. */
-  blockingQuestions: number;
-}
-
 /** Longest a report waits on the archival RPC for the opening position. */
 const OPENING_LOOKUP_LIMIT_MS = 45_000;
-
-/** Used when the opening position cannot be read in time: no earlier holdings, and the report says so as a draft. */
-function unavailableOpening(accountId: string): OpeningPosition {
-  return {
-    schemaVersion: 1,
-    accountId,
-    date: `${OPENING_YEAR}-01-01`,
-    block: { height: 0, hash: "", timestampNs: "0" },
-    accountExisted: true,
-    balances: [],
-    fetchedAt: new Date().toISOString(),
-    method: "not available: the archival RPC could not be read when this report was built",
-  };
-}
 
 export const priceFixturePath = (account: string) => path.join(FIXTURE_DIR, `${account}-${OPENING_YEAR}.prices.json`);
 export const openingFixturePath = (account: string) => path.join(FIXTURE_DIR, `${account}-${OPENING_YEAR}.opening.json`);
 
-/** Quote every record a computation could need (any answer), every fee, and the D11 reset prices. */
+/**
+ * Quote every record a computation could need (any answer), every fee, and the D11 reset prices. Technical
+ * records are skipped unless a question is open on them, since an answer can make them taxable.
+ */
 export async function prequote(records: ClassifiedTx[], opening: OpeningPosition, prices: PriceProvider): Promise<void> {
-  const near = { symbol: "NEAR", contract: null, decimals: 24 };
   for (const r of records) {
-    if (r.fee) await prices.quote(near, r.timestamp);
-    if (!r.success || TECHNICAL.has(r.label) || r.amount === "0") continue;
+    if (r.fee) await prices.quote(NEAR_FEE_ASSET, r.timestamp);
+    if (!r.success || r.amount === "0" || (TECHNICAL.has(r.label) && !r.needsQuestion)) continue;
     await prices.quote(r.asset, r.timestamp);
     if (r.userSourceLeg) {
       const leg = r.userSourceLeg;
       await prices.quote({ symbol: leg.asset.symbol, contract: leg.asset.contract, decimals: 0 }, leg.timestamp);
     }
   }
+  await quoteResetPrices(opening, prices);
+}
+
+const NEAR_FEE_ASSET = { symbol: "NEAR", contract: null, decimals: 24 };
+
+/**
+ * The scan's price pass, before classification is known: every successful non-zero record and every fee
+ * (a superset of what any answers can need), plus NEAR at every record's time, the commonest source leg a
+ * user adds ("I gave up NEAR for this"). CoinGecko is fetched a month per asset at a time, so the extra
+ * quotes cost almost no extra calls. Other source legs are priced by /api/price when answered.
+ */
+export async function quoteHistory(records: NormalizedTx[], prices: PriceProvider): Promise<void> {
+  for (const r of records) {
+    if (r.fee) await prices.quote(NEAR_FEE_ASSET, r.timestamp);
+    if (r.success && r.amount !== "0") {
+      await prices.quote(r.asset, r.timestamp);
+      if (r.asset.contract !== null) await prices.quote(NEAR_FEE_ASSET, r.timestamp);
+    }
+  }
+}
+
+/** D11: the 31 Dec 2025 price of every opening holding. */
+export async function quoteResetPrices(opening: OpeningPosition, prices: PriceProvider): Promise<void> {
   for (const b of opening.balances) await prices.quote(b.asset, RESET_PRICE_TIME);
 }
 
@@ -102,9 +95,18 @@ export async function buildReport(req: ReportRequest): Promise<{ report: ReportD
     throw new Error(`The engine computes the ${OPENING_YEAR} tax year only (from ${OPENING_YEAR}-01-01 to ${OPENING_YEAR}-12-31)`);
   }
   const log = req.onProgress ?? (() => {});
+  const fx = await loadNafemTable();
+  const user = { account: req.account, ownAccounts: req.ownAccounts, answers: req.answers, profile: req.profile, originalCostUsd: req.originalCostUsd };
 
-  // A signed run from the browser (verified by the API layer) replaces the shared classification cache
-  // and, through its context, the history: any server instance can build the report from it.
+  // A signed run that carries its own prices and opening position: exactly the inputs the browser uses.
+  if (req.run?.context?.prices) {
+    if (req.run.accountId !== req.account) throw new Error("The classification run belongs to a different account");
+    const inputs = inputsFromSignedRun(req.run, user, fx, new LivePriceProvider(req.deadlineAt))!;
+    const { report, recorder, flow } = await computeReport(inputs);
+    return { report, recorder, opening: inputs.opening, records: flow.records };
+  }
+
+  // A signed run from before runs carried prices, or the shared classification cache / committed fixture.
   let run: ClassifiedRun;
   let classificationOrigin: string;
   if (req.run) {
@@ -114,7 +116,6 @@ export async function buildReport(req: ReportRequest): Promise<{ report: ReportD
   } else {
     ({ run, origin: classificationOrigin } = await getClassification(req.account, from, to, { ownAccounts: [], fixtureOnly: req.classificationSource === "fixture", noLive: req.noLiveClassification }));
   }
-  const flow = runQuestionFlow(run, { ownAccounts: req.ownAccounts ?? [], answers: req.answers ?? { groups: {} } });
   const ctx = req.run?.context;
   const history = ctx ? null : (await getHistory(req.account, from, to)).result;
   const historyFetchedAt = history ? history.fetchedAt : run.historyFetchedAt;
@@ -141,82 +142,26 @@ export async function buildReport(req: ReportRequest): Promise<{ report: ReportD
   }
 
   const fixture = await loadPriceFixture(priceFixturePath(req.account));
-  const recorder = new RecordingPriceProvider(fixture ? new FixturePriceProvider(fixture, new LivePriceProvider(req.deadlineAt)) : new LivePriceProvider(req.deadlineAt));
-  const fx = await NafemTable.load();
-
-  const engine = await runEngine({
-    year: OPENING_YEAR,
-    records: flow.records,
-    prices: recorder,
-    fx,
-    openingBalances: opening.balances,
-    originalCostUsd: req.originalCostUsd,
-    otherIncomeNgn: req.profile?.otherIncomeNgn || null,
-    reliefs: req.profile?.reliefs ?? null,
-  });
-
-  const privacyProof = privacyProofFromRun(run);
-  const warnings = [...engine.warnings];
-  for (const m of privacyProof.missing) warnings.push({ code: "privacy_proof_unavailable", message: `Privacy proof: ${m}` });
-  if (privacyProof.aiDecisions > 0 && privacyProof.aiDecisionsSignatureVerified < privacyProof.aiDecisions) {
-    warnings.push({ code: "ai_signature_unverified", message: `${privacyProof.aiDecisions - privacyProof.aiDecisionsSignatureVerified} AI decision(s) without a verified response signature` });
-  }
-
-  const status = reportStatus({
-    records: flow.records,
-    warnings,
-    questions: flow.questions,
-    // The base run (before answers): records the rules could not label went to the AI step.
-    attestation: { verified: run.attestation.verified, aiNeeded: run.records.some((r) => r.method === "ai") },
-    dataGaps: {
-      stakingIncomplete: ctx ? ctx.stakingIncomplete === true : Boolean(history?.staking.incomplete),
-      openingUnavailable,
-      pricesUnavailable: [...recorder.results.values()].filter((p) => p.status !== "ok" && p.temporary).length,
-    },
-  });
-
-  const report: ReportData = {
-    ...engine,
-    warnings,
-    privacyProof,
-    fingerprint: "",
-    status: status.status,
-    draftReasons: status.draftReasons,
-    blockingQuestions: status.blockingQuestions,
-    account: req.account,
+  const live = new LivePriceProvider(req.deadlineAt);
+  const { report, recorder, flow } = await computeReport({
+    ...user,
     from,
     to,
-    generatedAt: new Date().toISOString(),
+    run,
+    prices: fixture ? new FixturePriceProvider(fixture, live) : live,
+    pricesRetrievedAt: fixture?.generatedAt ?? null,
+    fx,
+    opening,
     origin: {
       classification: classificationOrigin,
       prices: fixture ? `committed fixture (${fixture.generatedAt}) with live fallback` : "live",
       opening: openingOrigin,
       ...(ctx?.historyOrigin === "fixture" ? { history: "committed snapshot" } : {}),
     },
-    questionSummary: flow.summary,
-    opening: { date: opening.date, block: opening.block, accountExisted: opening.accountExisted, method: opening.method, balances: opening.balances },
-    dataSources: [
-      {
-        name: "CoinGecko",
-        detail: "keyless public API /coins/{id}/market_chart/range, hourly points (monthly windows); exact source-text prices",
-        retrievedAt: fixture?.generatedAt ?? null,
-      },
-      {
-        name: "CBN NFEM (formerly NAFEM) closing rate",
-        detail: `data/fx/cbn-nafem-usdngn.csv from ${fx.meta.sourceUrl}, ${fx.range.first}..${fx.range.last}`,
-        retrievedAt: fx.meta.retrievedAt || null,
-      },
-      { name: "NearBlocks", detail: "v3 API (Powered by NearBlocks.io APIs): receipts, FT transfers, staking and signed transactions", retrievedAt: historyFetchedAt },
-      {
-        name: "NEAR archival RPC",
-        detail: `${archivalRpc}: pool snapshots (staking rewards) and opening position at block ${opening.block.height}`,
-        retrievedAt: opening.fetchedAt,
-      },
-      { name: "neardata (FastNEAR)", detail: "block headers for timestamp -> block lookup", retrievedAt: historyFetchedAt },
-      { name: "Rhea / Ref Finance pools", detail: "primary trading pair for tokens without a CoinGecko listing (9.2(1))", retrievedAt: fixture?.generatedAt ?? null },
-    ],
-  };
-  report.fingerprint = await reportFingerprint(report);
+    historyFetchedAt,
+    archivalRpc,
+    dataGaps: { stakingIncomplete: ctx ? ctx.stakingIncomplete === true : Boolean(history?.staking.incomplete), openingUnavailable },
+  });
   return { report, recorder, opening, records: flow.records };
 }
 

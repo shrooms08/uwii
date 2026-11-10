@@ -462,3 +462,33 @@ test("/api/scan: the time budget ends a stuck scan with a clear message, not a c
     delete process.env.SCAN_TIME_BUDGET_MS;
   }
 });
+
+// ---------- the signed run carries what the browser needs ----------
+
+test("/api/scan: the signed run carries the opening position and every price the report can need; temporary gaps are left out", async () => {
+  const { POST } = await import("../../app/api/scan/route");
+  const { readFile } = await import("node:fs/promises");
+  const { checkSignedRun, runSecret } = await import("./run-signing");
+  // Every outside call fails (NEAR AI refused, CoinGecko down): the demo's committed history, opening and prices still apply.
+  mockFetch(() => jsonRes({ error: "payment required" }, 402));
+  instantTimers();
+  const events = await scanEvents(await POST(scanRequest({ account: "rybergh44.near" }, "203.0.113.210")));
+  const done = events.find((e) => e.type === "done") as Extract<(typeof events)[number], { type: "done" }> | undefined;
+  assert.ok(done?.run && done.runSig, JSON.stringify(events.filter((e) => e.type === "error")));
+  assert.equal(checkSignedRun("rybergh44.near", done.run, done.runSig, runSecret()).ok, true, "prices are inside the signature");
+  const ctx = done.run.context!;
+  const fixturePrices = JSON.parse(await readFile("data/fixtures/rybergh44.near-2026.prices.json", "utf8")) as { generatedAt: string; quotes: Record<string, unknown> };
+  const fixtureOpening = JSON.parse(await readFile("data/fixtures/rybergh44.near-2026.opening.json", "utf8"));
+  assert.deepEqual(ctx.opening, fixtureOpening);
+  assert.equal(ctx.prices!.generatedAt, fixturePrices.generatedAt);
+  for (const [k, v] of Object.entries(fixturePrices.quotes)) assert.deepEqual(ctx.prices!.quotes[k], v, k);
+  assert.ok(Object.values(ctx.prices!.quotes).every((q) => q.status === "ok" || !q.temporary), "no temporary result is embedded");
+
+  // The browser can compute this run with no further price requests.
+  const { inputsFromSignedRun } = await import("../report/local");
+  const { computeReport } = await import("../tax/ng/compute");
+  const { loadNafemTable } = await import("../fx/nafem");
+  const noNetwork = { quote: async () => Promise.reject(new Error("network price needed")) };
+  const { report } = await computeReport(inputsFromSignedRun(done.run, { account: "rybergh44.near" }, await loadNafemTable(), noNetwork)!);
+  assert.equal(report.opening.block.height, fixtureOpening.block.height);
+});

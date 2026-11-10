@@ -9,10 +9,12 @@
  * { source: "cached" } replays the committed classified fixture instead (no live calls, no limits).
  *
  * The classified run is NOT written to any shared cache: it is returned to the browser in the final event
- * with runSig = HMAC-SHA256(UWII_RUN_SECRET, canonical run), and the browser sends it back with each
- * questions/report/anchor request (src/lib/server/run-signing.ts). Without UWII_RUN_SECRET live scans
- * are refused (503). Own accounts arrive in the request body, are used only to count the questions left,
- * and are never stored or logged. Nothing in this route logs.
+ * with runSig = HMAC-SHA256(UWII_RUN_SECRET, canonical run). The run carries everything the report needs
+ * besides the user's own inputs - the opening position and every USD price the engine could need (read
+ * alongside the AI step) - so the browser computes the report itself. The server sees the run again only
+ * if the user chooses to anchor (src/lib/server/run-signing.ts). Without UWII_RUN_SECRET live scans
+ * are refused (503). The app sends only the account and the source; the question counts it shows are
+ * worked out again in the browser with the user's own accounts. Nothing in this route logs.
  */
 import { z } from "zod";
 import { getHistory } from "@/lib/history/cache";
@@ -26,7 +28,8 @@ import { publicError } from "@/lib/server/errors";
 import { getClassification } from "@/lib/tax/ng/cache";
 import { readJsonIfExists } from "@/lib/history/paths";
 import { fetchOpeningPosition, openingInputsFromHistory, type OpeningPosition } from "@/lib/tax/ng/opening";
-import { openingFixturePath } from "@/lib/tax/ng/report";
+import { openingFixturePath, priceFixturePath, quoteHistory, quoteResetPrices } from "@/lib/tax/ng/report";
+import { FixturePriceProvider, LivePriceProvider, RecordingPriceProvider, loadPriceFixture, type PriceFixture, type PriceResult } from "@/lib/prices/provider";
 import { runSecret, signRun, slimRun, urlOrigin } from "@/lib/server/run-signing";
 import { BATCH_SIZE, classifyHistory } from "@/lib/tax/ng/classify";
 import { runQuestionFlow } from "@/lib/tax/ng/questions";
@@ -52,8 +55,18 @@ class TooManyTransactionsError extends Error {
     super("too many transactions for the hosted demo");
   }
 }
-/** Longest wait for the opening position after classification; otherwise the report computes it. */
-const OPENING_WAIT_MS = 25_000;
+/** The price and opening lookups stop this long before the time budget ends, leaving time to sign and send the run. */
+const FINISH_MARGIN_MS = 3_000;
+
+/** Prices recorded during the scan; quotes that were only temporarily unavailable are left out (the browser asks /api/price). */
+function embeddedPrices(results: Map<string, PriceResult>, generatedAt: string): PriceFixture {
+  const quotes: Record<string, PriceResult> = {};
+  for (const k of [...results.keys()].sort()) {
+    const r = results.get(k)!;
+    if (r.status === "ok" || !r.temporary) quotes[k] = r;
+  }
+  return { generatedAt, quotes };
+}
 
 
 const accountId = z.string().trim().toLowerCase().refine(isValidAccountId, "invalid NEAR account id");
@@ -65,8 +78,9 @@ const Body = z
   })
   .strict();
 
-/** The promise's value if it settles within ms, else null (the timer is always cleared). */
-async function withinMs<T>(p: Promise<T | null>, ms: number): Promise<T | null> {
+/** The promise's value if it settles within ms, else null (the timer is always cleared). No time limit: just the value. */
+async function withinMs<T>(p: Promise<T | null>, ms: number | null): Promise<T | null> {
+  if (ms === null) return p;
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<null>((resolve) => {
     timer = setTimeout(() => resolve(null), ms);
@@ -217,8 +231,20 @@ export async function POST(request: Request) {
       send({ type: "history", count: history.result.records.length, origin: history.origin, fetchedAt: history.result.fetchedAt });
       // Opening position (archival RPC, slow) runs alongside classification; it travels in the signed run.
       const openingInputs = openingInputsFromHistory(history.result);
-      const hasOpeningFixture = await readJsonIfExists(openingFixturePath(account)).then((x) => x !== null);
-      const openingP: Promise<OpeningPosition | null> = hasOpeningFixture ? Promise.resolve(null) : fetchOpeningPosition(openingInputs, undefined, { deadlineAt }).catch(() => null);
+      const openingFixture = await readJsonIfExists<OpeningPosition>(openingFixturePath(account));
+      const openingP: Promise<OpeningPosition | null> = openingFixture ? Promise.resolve(openingFixture) : fetchOpeningPosition(openingInputs, undefined, { deadlineAt }).catch(() => null);
+      // Prices for every record and fee, read alongside the AI step (CoinGecko is paced, so this takes a while).
+      const priceFixture = await loadPriceFixture(priceFixturePath(account));
+      const live = new LivePriceProvider(deadlineAt ? deadlineAt - FINISH_MARGIN_MS : undefined);
+      const prices = new RecordingPriceProvider(priceFixture ? new FixturePriceProvider(priceFixture, live) : live);
+      const pricedAt = priceFixture?.generatedAt ?? new Date().toISOString();
+      const pricesP = quoteHistory(history.result.records, prices)
+        .then(async () => {
+          const o = await openingP;
+          if (o) await quoteResetPrices(o, prices);
+        })
+        .catch(() => {}); // a quote that did not arrive is simply not embedded
+      const remaining = () => (deadlineAt ? Math.max(0, deadlineAt - Date.now() - FINISH_MARGIN_MS) : null);
 
       // Daily AI budget: the deterministic rule pre-pass tells how many records (and so AI batches) remain.
       stage = "classification";
@@ -241,7 +267,9 @@ export async function POST(request: Request) {
           send(e);
         },
       });
-      const opening = await withinMs(openingP, deadlineAt ? Math.min(OPENING_WAIT_MS, Math.max(0, deadlineAt - Date.now() - 2_000)) : OPENING_WAIT_MS);
+      const opening = await withinMs(openingP, remaining());
+      await withinMs(pricesP.then(() => true), remaining());
+      if (!isOpen()) return;
       const signed = slimRun({
         ...run,
         context: {
@@ -250,6 +278,7 @@ export async function POST(request: Request) {
           opening,
           ...(history.origin === "live" ? {} : { historyOrigin: history.origin }),
           ...(history.result.staking.incomplete ? { stakingIncomplete: true } : {}),
+          prices: embeddedPrices(prices.results, pricedAt),
         },
       });
       const runSig = signRun(signed, secret);

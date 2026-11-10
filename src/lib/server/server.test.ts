@@ -139,7 +139,7 @@ test("anchor: per-IP and daily caps return 429 only when a new transaction would
       new Request("http://localhost/api/anchor", {
         method: "POST",
         headers: { "content-type": "application/json", "x-forwarded-for": "198.51.100.9" },
-        body: JSON.stringify({ account: "rybergh44.near", answers: { groups: ILLUSTRATIVE_ANSWERS.groups }, profile: { otherIncomeNgn: "4800000" } }),
+        body: JSON.stringify({ account: "rybergh44.near", answers: { groups: ILLUSTRATIVE_ANSWERS.groups }, profile: { otherIncomeNgn: "4800000" }, fingerprint: "41777b4d0d29ebecd00bf07d3c72f62eee6b417f79f9b91c632978ff37710eea" }),
       }),
       deps,
     );

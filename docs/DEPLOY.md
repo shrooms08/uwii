@@ -16,8 +16,9 @@ The hosted demo runs on Vercel's Hobby plan, imported from the GitHub repository
 | Fluid compute | on (the default for new projects) |
 | Function region | default `iad1` is fine |
 
-Function durations are set in code (`export const maxDuration`): 300 s for `/api/scan`, `/api/report`,
-`/api/questions` and `/api/anchor` (the Hobby maximum), 60 s for `/api/verify`. Do not raise the
+Function durations are set in code (`export const maxDuration`): 300 s for `/api/scan` and `/api/anchor`
+(the Hobby maximum), 60 s for `/api/verify` and `/api/price`. (`/api/report` and `/api/questions` are
+developer-only and return 404 in production.) Do not raise the
 project's default above 300 s; Hobby does not allow it.
 
 ## 2. Environment variables
@@ -55,22 +56,26 @@ Vercel sets `VERCEL` and `VERCEL_GIT_COMMIT_SHA` itself; do not set them.
   (per instance, not persisted; every cache can be rebuilt) and any write elsewhere throws. The committed
   fixtures (`data/fixtures`) and CBN NFEM rates (`data/fx`) are read-only and are bundled into every API
   function through `outputFileTracingIncludes` in `next.config.ts`.
-- **Live AI only through `/api/scan`, and runs live in the browser.** `/api/scan` returns the classified run
-  signed with `UWII_RUN_SECRET` (HMAC-SHA256) and writes no shared cache. The browser keeps `{ run, runSig }`
-  in IndexedDB and sends them with every `/api/questions`, `/api/report` and `/api/anchor` request; the
-  server verifies the signature and the account (400 otherwise). So any instance can serve any request,
-  and one user's scan can never change another's report. Without a signed run, the committed demo fixture
-  is used for `rybergh44.near`; any other account gets a 409 ("Start a scan first"). The opening position
-  (archival RPC) is computed alongside the scan and travels in the signed run when it is ready in time;
-  otherwise the report computes it (cached per instance). Request bodies are limited to 4.5 MB (Vercel's
-  limit), checked in the browser first.
+- **Live AI only through `/api/scan`; reports are computed in the browser.** `/api/scan` returns the
+  classified run signed with `UWII_RUN_SECRET` (HMAC-SHA256) and writes no shared cache. The run carries
+  the opening position (archival RPC) and every USD price the report could need, read alongside the AI
+  step; quotes that were only temporarily unavailable are left out. The browser keeps `{ run, runSig }` in
+  IndexedDB and computes the question flow, the report, the fingerprint, the PDF and the CSV itself, with
+  the CBN NFEM table and the cached demo's inputs served as static JSON (`public/static-data/`, generated
+  from `data/` by `npm run static-data` before every build). Your answers, other income, reliefs and personal details are processed in your browser and never sent to Uwii, unless you choose to anchor. The only other request is
+  `GET /api/price?asset=&contract=&ts=`, made only when an answer adds a source leg the scan did not price:
+  it reveals an asset and a date, nothing else. Anchoring sends the signed run, the answers and the
+  browser's fingerprint to `/api/anchor`, which verifies the signature and the account (400 otherwise),
+  recomputes, and anchors only a final report whose fingerprint matches (409 otherwise). A run saved before
+  runs carried prices asks for a new scan. Request bodies are limited to 4.5 MB (Vercel's limit), checked in
+  the browser first.
 - **`/dev/*` is off.** The developer pages return 404 in production unless `UWII_ENABLE_DEV_PAGES=1`.
 - **Errors.** Unexpected failures return "Something went wrong on our side … quote error <id>" (5xx). The
   internal message is logged once with that id (`[uwii error <id>]` in the Vercel function logs); no request
   body, answers or personal fields are ever logged.
 - **Limits (best-effort, in memory, per instance):**
   - scans: 5 per IP per hour; anchors: 3 per IP per hour (checked before the report is rebuilt);
-  - `/api/report`, `/api/questions`, `/api/verify`: 60 per IP per minute each;
+  - `/api/verify`: 60 per IP per minute; `/api/price`: 20 per IP per minute;
   - request bodies over 4.5 MB get 413; answers are capped at 200 groups and 500 overrides, naira amounts
     or source legs per group;
   - global per UTC day: `MAX_AI_CALLS_PER_DAY` AI requests (checked before any AI call from the

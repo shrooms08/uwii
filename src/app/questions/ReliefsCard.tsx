@@ -21,7 +21,7 @@ function LockNote({ id, children }: { id?: string; children: React.ReactNode }) 
   );
 }
 
-/** Optional reliefs and deductions (NTA 2025 s.30). Amounts stay in this browser and are sent only in request bodies. */
+/** Optional reliefs and deductions (NTA 2025 s.30). Amounts stay in this browser; they are sent only if the user anchors. */
 export function ReliefsCard({
   values,
   onChange,

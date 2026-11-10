@@ -4,6 +4,7 @@
  * Rules: every claim must be true of the current product. No reviews, ratings, user counts, press
  * mentions or guarantees. Answers that state law name their source (the Circular or the Act).
  */
+import { PRIVATE_INPUTS_CLAIM } from "./privacy-scope";
 
 export const REPO_URL = "https://github.com/shrooms08/uwii";
 export const DEMO_ACCOUNT_ID = "rybergh44.near";
@@ -54,7 +55,7 @@ export const howItWorks = {
     {
       number: "02",
       title: "Answer a few questions",
-      body: "Only what the chain can't tell us, like who sent you money and why, in plain English.",
+      body: "Only what the chain can't tell us, like who sent you money and why, in plain English. Your answers stay in your browser.",
     },
     {
       number: "03",
@@ -135,7 +136,7 @@ export const faq = {
     },
     {
       q: "Can Uwii see my data?",
-      a: "Your NEAR transactions are public on the chain. Your answers stay in your browser and are sent only to compute each report; Uwii doesn't store them. The deterministic tax rules run on Uwii's server; the AI step for the transactions they can't label runs in verified secure hardware, and you can read the proof.",
+      a: `Your NEAR transactions are public on the chain. ${PRIVATE_INPUTS_CLAIM} The deterministic tax rules label your transactions on Uwii's server during the scan; the AI step for the ones they can't label runs in verified secure hardware, and you can read the proof.`,
     },
     {
       q: "What if I don't know an answer?",

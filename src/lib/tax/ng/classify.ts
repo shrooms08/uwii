@@ -19,9 +19,6 @@ import {
   ASSET_CATEGORY_IDS,
   LABELS,
   LABEL_IDS,
-  isKnownAsset,
-  knownAssetCategory,
-  type AssetCategory,
   type LabelId,
 } from "./labels";
 import { applyRules, type RuleMatch } from "./rules";
@@ -30,48 +27,15 @@ import {
   type AiEvidence,
   type AiResponseRecord,
   type AiSkipped,
-  type ClassificationMetrics,
   type ClassifiedRun,
   type ClassifiedTx,
   type EvidenceCheck,
 } from "./types";
 
 export const BATCH_SIZE = 20;
-export const CONFIDENCE_THRESHOLD = 0.8;
+export { CONFIDENCE_THRESHOLD, computeMetrics, toClassified, type Decision } from "./classify-core";
+import { CONFIDENCE_THRESHOLD, computeMetrics, toClassified } from "./classify-core";
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e));
-
-// ---------- building classified records (circularRef always from labels.ts) ----------
-
-export interface Decision {
-  label: LabelId;
-  assetCategory?: AssetCategory;
-  confidence: number;
-  method: "rule" | "ai" | "user" | "unlabelled";
-  reason: string;
-  pairingId?: string;
-  swapRole?: "disposed" | "acquired";
-  evidence?: AiEvidence;
-  /** Force a user question regardless of confidence (e.g. signature not verified). */
-  forceQuestion?: boolean;
-}
-
-export function toClassified(tx: NormalizedTx, d: Decision): ClassifiedTx {
-  const category: AssetCategory = isKnownAsset(tx.asset) ? knownAssetCategory(tx.asset) : (d.assetCategory ?? knownAssetCategory(tx.asset));
-  const out: ClassifiedTx = {
-    ...tx,
-    label: d.label,
-    assetCategory: category,
-    confidence: d.confidence,
-    method: d.method,
-    reason: d.reason,
-    circularRef: LABELS[d.label].circularRef,
-    needsQuestion: d.forceQuestion === true || d.label === "unknown" || d.confidence < CONFIDENCE_THRESHOLD,
-  };
-  if (d.pairingId) out.pairingId = d.pairingId;
-  if (d.swapRole) out.swapRole = d.swapRole;
-  if (d.evidence) out.evidence = d.evidence;
-  return out;
-}
 
 const fromRule = (tx: NormalizedTx, m: RuleMatch): ClassifiedTx =>
   toClassified(tx, { label: m.label, confidence: m.confidence, method: "rule", reason: m.reason, pairingId: m.pairingId, swapRole: m.swapRole });
@@ -291,27 +255,6 @@ export function preflightVerified(p: Preflight): { ok: boolean; details: string 
 }
 
 // ---------- run ----------
-
-export function computeMetrics(records: ClassifiedTx[], aiResponses: AiResponseRecord[], attestationVerified: boolean, aiSkipped?: number): ClassificationMetrics {
-  const total = records.length;
-  const count = (m: string) => records.filter((r) => r.method === m).length;
-  const pct = (n: number) => (total ? `${((n * 100) / total).toFixed(1)}%` : "0%");
-  const rule = count("rule");
-  const ai = count("ai");
-  return {
-    total,
-    rule,
-    ai,
-    user: count("user"),
-    pctRule: pct(rule),
-    pctAi: pct(ai),
-    needsQuestion: records.filter((r) => r.needsQuestion).length,
-    aiResponses: aiResponses.filter((r) => r.chatId).length,
-    aiResponsesVerified: aiResponses.filter((r) => r.signatureVerified).length,
-    attestationVerified,
-    ...(aiSkipped ? { aiSkipped } : {}),
-  };
-}
 
 /** Structured progress for live UIs (the scan stream). Emitted only; never changes classification. */
 export type ClassifyEvent =

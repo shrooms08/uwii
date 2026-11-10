@@ -14,6 +14,7 @@ import { DEMO_ACCOUNT } from "@/lib/demo/illustrative-answers";
 import { parseAccountList } from "@/lib/near/account-id";
 import { CONNECTION_LOST_MESSAGE, STREAM_SILENCE_LIMIT_MS, sseDecode, type ScanEvent } from "@/lib/scan/events";
 import { withinSilence } from "@/lib/scan/stream";
+import type { ClassifiedRun } from "@/lib/tax/ng/types";
 import { INITIAL_SCAN_VIEW, LIMIT_CODES, activeStepIndex, applyScanEvent, labelledCount, scanProgress, scanSteps, type ScanView, type StepState } from "@/lib/scan/view";
 
 /** Cosmetic pacing only: each checklist step stays visible at least this long. Numbers are never invented. */
@@ -29,6 +30,21 @@ const PHASE_LABELS = [
 ];
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * The server counts questions without the user's own accounts (it never receives them); with own accounts
+ * saved here, the counts are worked out again in this browser. Nothing changes when there are none.
+ */
+async function countsWithOwnAccounts(account: string, run: ClassifiedRun | null): Promise<{ questions?: number; needsYou?: number }> {
+  const own = parseAccountList(loadSaved(account).ownText).filter((a) => a !== account);
+  if (own.length === 0) return {};
+  try {
+    const { localQuestionCounts } = await import("@/lib/client/local-report");
+    return await localQuestionCounts(account, own, run);
+  } catch {
+    return {};
+  }
+}
 
 function StepIcon({ state }: { state: StepState }) {
   switch (state) {
@@ -120,7 +136,8 @@ export default function ScanClient({ account, cached = false }: { account: strin
           fetch("/api/scan", {
             method: "POST",
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ account, ownAccounts: parseAccountList(loadSaved(account).ownText).filter((a) => a !== account), source: cached ? "cached" : "live" }),
+            // Only the account and the source: own accounts and answers stay in this browser.
+            body: JSON.stringify({ account, source: cached ? "cached" : "live" }),
             signal: controller.signal,
           }),
           STREAM_SILENCE_LIMIT_MS,
@@ -144,10 +161,10 @@ export default function ScanClient({ account, cached = false }: { account: strin
           buffer = rest;
           for (const e of events) {
             if (e.type === "done" || e.type === "error") finished = true;
-            if (e.type === "done" && e.run && e.runSig) {
+            if (e.type === "done") {
               // Keep the signed run in this browser before moving on; the page state never holds it.
-              await saveRun(account, { run: e.run, runSig: e.runSig });
-              push({ ...e, run: undefined, runSig: undefined });
+              if (e.run && e.runSig) await saveRun(account, { run: e.run, runSig: e.runSig });
+              push({ ...e, ...(await countsWithOwnAccounts(account, e.run ?? null)), run: undefined, runSig: undefined });
             } else push(e);
           }
         }

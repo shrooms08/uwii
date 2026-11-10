@@ -44,3 +44,6 @@ next-env.d.ts
 # local history cache (Phase 2)
 /data/cache/
 !.env.example
+
+# browser-side report data, generated from data/ by scripts/static-data.ts
+/public/static-data/
