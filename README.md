@@ -160,6 +160,17 @@ Your answers, other income, reliefs and personal details are processed in your b
   `uwii-anchor.testnet` contract, with a function-call key that can only call `anchor`. Name, TIN and
   state are never sent. `/verify` reads the anchor back.
 
+## Built with the NEAR ecosystem
+
+- **NEAR AI (NEAR AI Cloud):** private, attested inference for the transactions the rules can't label. The
+  attestation is verified with a fresh nonce on every scan and every response signature is checked
+  (`src/lib/near/attestation.ts`, `src/lib/tax/ng/classify.ts`).
+- **Rhea:** on-chain pool prices for tokens CoinGecko does not list, from the Rhea (Ref Finance) pool
+  pairing the token with wNEAR, read at the transaction's block (`src/lib/prices/refpool.ts`).
+- **NEAR Intents:** transfers from `intents.near` in the account history get their own question; answered
+  as "A swap I made on NEAR Intents", they are taxed as swaps, including a source leg the user supplies
+  (`src/lib/tax/ng/questions.ts`, `src/lib/tax/ng/source-leg.ts`).
+
 ## How NEAR is used, and why
 
 - **NEAR AI Cloud private inference with attestation.** The one step that needs judgement (who paid you,
@@ -266,6 +277,7 @@ every finding:
 ## What's next (plans, not features)
 
 - Consultant mode: several client accounts in one workspace.
+- Consultant mode with a firm's tax reserve held in a NEAR multisig (e.g. Trezu or NEAR Business) (plan).
 - Anchoring on NEAR mainnet.
 - More NEAR protocols, then other chains.
 - Rule packs for other jurisdictions; the Nigerian rules already live in `src/lib/tax/ng`.

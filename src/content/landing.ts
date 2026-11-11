@@ -26,7 +26,7 @@ export const sections = {
     label: "How it works",
     headline: "Three steps.",
     muted: "Scan, answer, file.",
-    body: "Fixed tax rules first, private AI only for what they can't label, then a worksheet that cites the circular line by line.",
+    body: "Fixed tax rules first, private AI only for what they can't label, then a worksheet that cites the circular line by line. Built with NEAR AI, Rhea and NEAR Intents.",
   },
   trust: { index: "02", label: "Why trust the number", headline: "Checked and cited.", muted: "Proven, then anchored.", body: `Other crypto-tax apps upload your whole financial life. Uwii's server never sees your answers. ${ANSWERS_EXCEPTION_LINE} Four things you can check yourself.` },
   who: { index: "03", label: "Who it's for", headline: "Paid, staked or swapped", muted: "on NEAR in 2026.", body: "Individuals filing personal income tax in Nigeria." },
