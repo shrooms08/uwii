@@ -13,9 +13,9 @@ export const SITE_URL =
 export const SITE_NAME = "Uwii";
 
 export const SITE_DESCRIPTION =
-  "Uwii reads your NEAR transactions, classifies the ones its rules can't label inside attested secure hardware, and computes your 2026 Nigerian tax under NRS Circular 2026/21.";
+  "Paste your NEAR account and Uwii works out your 2026 Nigerian crypto tax. The AI runs in verified, sealed hardware, and your answers stay on your device.";
 
-export const SITE_CARD_ALT = "uwii: Crypto tax, without the guesswork. Built on NEAR.";
+export const SITE_CARD_ALT = "uwii: Know your crypto tax. Tell no one. Built on NEAR.";
 
 export interface CardImage {
   og: string;

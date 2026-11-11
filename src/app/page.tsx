@@ -75,7 +75,8 @@ export default function Landing() {
         <div className="relative w-full pt-[230px] pb-[clamp(56px,7cqi,104px)] @min-[760px]:pt-[clamp(96px,11cqi,168px)]">
           <div className="flex max-w-[620px] flex-col items-start gap-6">
             <Eyebrow star>{hero.eyebrow}</Eyebrow>
-            <h1 id="hero-h" className="font-serif text-[clamp(44px,4.7cqi,68px)] leading-[1.04] tracking-[-0.05em]">
+            {/* Below ~440px the size follows the width so "Know your crypto tax." stays on one line; unchanged above. */}
+            <h1 id="hero-h" className="font-serif text-[clamp(30px,10cqi,44px)] leading-[1.04] tracking-[-0.05em] @min-[760px]:text-[clamp(44px,4.7cqi,68px)]">
               <span className="block text-ink">{hero.headline}</span>
               <span className="block text-ink-3 @min-[1100px]:whitespace-nowrap">
                 {hero.headlineMuted}

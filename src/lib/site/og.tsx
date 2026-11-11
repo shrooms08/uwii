@@ -144,14 +144,14 @@ export function SiteCard() {
       <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
         <Eyebrow>PRIVATE AI · NRS CIRCULAR 2026/21</Eyebrow>
         <div style={{ display: "flex", flexDirection: "column", fontFamily: "Geist", fontSize: 66, lineHeight: 1.05, letterSpacing: -2.4 }}>
-          <span style={{ color: C.ink }}>Crypto tax,</span>
+          <span style={{ color: C.ink }}>Know your crypto tax.</span>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <span style={{ color: C.ink3 }}>without the guesswork.</span>
+            <span style={{ color: C.ink3 }}>Tell no one.</span>
             <Mark size={40} color={C.gold} />
           </div>
         </div>
         <div style={{ display: "flex", fontFamily: "Geist", fontSize: 24, color: C.ink2, lineHeight: 1.4, maxWidth: 540 }}>
-          Private crypto-tax agent for NEAR accounts, under Nigeria&apos;s NRS Circular 2026/21.
+          Your 2026 Nigerian crypto tax from your NEAR account. AI in verified, sealed hardware.
         </div>
       </div>
     </div>

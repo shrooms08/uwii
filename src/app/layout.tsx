@@ -7,7 +7,7 @@ import { SITE_DESCRIPTION, SITE_NAME, SITE_URL, pageMetadata } from "@/lib/site/
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   applicationName: SITE_NAME,
-  ...pageMetadata("Uwii · private crypto tax for NEAR", SITE_DESCRIPTION, "/"),
+  ...pageMetadata("Uwii · Know your crypto tax. Tell no one.", SITE_DESCRIPTION, "/"),
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

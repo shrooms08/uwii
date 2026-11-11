@@ -1,8 +1,11 @@
 # Uwii
 
-Uwii computes an individual's 2026 Nigerian tax on their NEAR crypto activity, line by line under NRS
-Information Circular No. 2026/21. Its AI step runs in attested hardware on NEAR AI Cloud, the report is
-computed in the browser, and the finished report's fingerprint can be anchored on NEAR testnet.
+**Know your crypto tax. Tell no one.**
+
+Paste your NEAR account and Uwii works out your 2026 Nigerian crypto tax. The AI runs in verified, sealed hardware, and your answers stay on your device.
+
+Every line cites NRS Information Circular No. 2026/21, the report is computed in the browser, and
+its fingerprint can be anchored on NEAR testnet.
 
 Live: <https://uwii-chi.vercel.app> · Computation for review; not tax advice.
 
@@ -17,6 +20,8 @@ Live: <https://uwii-chi.vercel.app> · Computation for review; not tax advice.
   converted at the CBN NFEM rate and run through the personal income tax bands.
 - A general AI service would need the full history and the reasons behind each payment. Uwii keeps the
   AI step in verifiable hardware and keeps the person's answers in their browser.
+- Other crypto-tax apps upload your whole financial life. Uwii's server never sees your answers. The one exception: your answers reach Uwii only if you choose to anchor; even then, your
+  name, TIN and state are never sent.
 
 ## Who it's for
 

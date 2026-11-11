@@ -1,8 +1,9 @@
 import { cacheLife } from "next/cache";
 import { ImageResponse } from "next/og";
+import { SITE_CARD_ALT } from "@/lib/site/metadata";
 import { OG_SIZE, SiteCard, ogFonts } from "@/lib/site/og";
 
-export const alt = "uwii: Crypto tax, without the guesswork. Built on NEAR.";
+export const alt = SITE_CARD_ALT;
 export const size = OG_SIZE;
 export const contentType = "image/png";
 
