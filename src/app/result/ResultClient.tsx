@@ -133,7 +133,7 @@ export default function ResultClient({ account }: { account: string }) {
             Privacy proof
           </Button>
           <ButtonLink href={q("/export")} size="md" arrow>
-            Export worksheet
+            Get your crypto tax report
           </ButtonLink>
         </div>
       </div>

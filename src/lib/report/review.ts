@@ -5,7 +5,7 @@
 
 export const REVIEW_COPY = {
   title: "Have a tax consultant review this",
-  body: "A tax consultant can check your answers and this worksheet before you file.",
+  body: "A tax consultant can check your answers and this report before you file.",
   button: "Ask for a review",
 };
 

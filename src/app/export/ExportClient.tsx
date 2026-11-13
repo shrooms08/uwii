@@ -98,7 +98,7 @@ export default function ExportClient({ account }: { account: string }) {
   if (error && !report) {
     return (
       <Card role="alert" className="mx-auto mt-16 flex max-w-[580px] flex-col items-start gap-4 border-red-line p-7">
-        <Chip tone="error">Could not build your worksheet</Chip>
+        <Chip tone="error">Could not build your report</Chip>
         <p className="text-ui text-ink-2">{error}</p>
         {needsScan ? (
           <ButtonLink href={`/scan?account=${encodeURIComponent(account)}`} arrow>
@@ -116,7 +116,7 @@ export default function ExportClient({ account }: { account: string }) {
     return (
       // Fills the viewport so the footer does not jump when the worksheet arrives (no layout shift).
       <p role="status" className="flex min-h-[100svh] items-start justify-center pt-24 text-center text-ui text-ink-2">
-        Preparing your worksheet…
+        Preparing your report…
       </p>
     );
   }
@@ -147,7 +147,7 @@ export default function ExportClient({ account }: { account: string }) {
   return (
     <>
       <div className="pt-[clamp(20px,3cqi,40px)] pb-[clamp(20px,2.4cqi,28px)]">
-        <h1 className="font-serif text-[clamp(44px,5cqi,72px)] leading-none font-normal tracking-[-0.045em]">Export your worksheet</h1>
+        <h1 className="font-serif text-[clamp(44px,5cqi,72px)] leading-none font-normal tracking-[-0.045em]">Get your crypto tax report</h1>
         <p className="mt-3 max-w-[620px] text-body leading-[1.55] text-ink-2">A PDF your tax consultant can check line by line, with every figure tied to the NRS circular.</p>
       </div>
 
@@ -264,9 +264,9 @@ export default function ExportClient({ account }: { account: string }) {
 
         <div className="flex flex-col gap-4">
         <AnchorCard fingerprint={r.fingerprint} isFinal={!isDraft} body={saved ? requestBody(account, saved) : { account }} onAnchor={onAnchor} />
-        <section aria-label="Worksheet contents" className="flex flex-col gap-4 rounded-card border border-gold-line bg-surface bg-[radial-gradient(120%_90%_at_100%_100%,rgb(230_187_121_/0.12),transparent_60%)] p-[clamp(20px,2.4cqi,32px)] text-ink">
+        <section aria-label="Report contents" className="flex flex-col gap-4 rounded-card border border-gold-line bg-surface bg-[radial-gradient(120%_90%_at_100%_100%,rgb(230_187_121_/0.12),transparent_60%)] p-[clamp(20px,2.4cqi,32px)] text-ink">
           <div className="flex items-center justify-between gap-3">
-            <span className="text-small text-ink-2">In this worksheet</span>
+            <span className="text-small text-ink-2">In this report</span>
             {isDraft ? <Chip tone="draft">Draft</Chip> : <Chip tone="onInk">Final</Chip>}
           </div>
           <Money value={r.tax.taxAttributableToVaNgn} className="text-[56px] leading-[0.95] tracking-[-0.02em]" />

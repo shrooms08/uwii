@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { DataFlowTable } from "@/components/DataFlowTable";
 import { CheckIcon } from "@/components/ui/AnswerChip";
 import { Button, TextButton } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
@@ -222,6 +223,8 @@ export function PrivacyPanel({ proof, account, ruleCount, onClose }: { proof: Pr
             </div>
           </section>
           )}
+
+          <DataFlowTable id="proof-data-flow" className="rounded-tile bg-muted p-5" />
 
           <div className="flex flex-wrap items-center justify-between gap-3">
             {skipped && noAi ? <span /> : <TextButton onClick={downloadJson}>Download attestation report (JSON)</TextButton>}

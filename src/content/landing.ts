@@ -19,6 +19,15 @@ export const hero = {
   subline: "Paste your NEAR account and Uwii works out your 2026 Nigerian crypto tax. The AI runs in verified, sealed hardware, and your answers stay on your device.",
 };
 
+/** The report preview under the hero (figures from src/lib/demo/demo-preview.ts). */
+export const preview = {
+  label: "Example report",
+  taxLabel: "Tax attributable to crypto, 2026",
+  totals: { income: "Total VA income", gains: "Net disposal gains", chargeable: "Chargeable VA" },
+  caption: "Example: rybergh44.near, questions answered for illustration",
+  cta: "Open the full report",
+};
+
 /** Numbered section headers: "01 / HOW IT WORKS", a one-line two-tone headline, a short line. */
 export const sections = {
   how: {
@@ -26,7 +35,7 @@ export const sections = {
     label: "How it works",
     headline: "Three steps.",
     muted: "Scan, answer, file.",
-    body: "Fixed tax rules first, private AI only for what they can't label, then a worksheet that cites the circular line by line. Built with NEAR AI, Rhea and NEAR Intents.",
+    body: "Fixed tax rules first, private AI only for what they can't label, then a report that cites the circular line by line. Built with NEAR AI, Rhea and NEAR Intents.",
   },
   trust: { index: "02", label: "Why trust the number", headline: "Checked and cited.", muted: "Proven, then anchored.", body: `Other crypto-tax apps upload your whole financial life. Uwii's server never sees your answers. ${ANSWERS_EXCEPTION_LINE} Four things you can check yourself.` },
   who: { index: "03", label: "Who it's for", headline: "Paid, staked or swapped", muted: "on NEAR in 2026.", body: "Individuals filing personal income tax in Nigeria." },
@@ -58,7 +67,7 @@ export const howItWorks = {
     },
     {
       number: "03",
-      title: "Get your worksheet",
+      title: "Get your crypto tax report",
       body: "Every line cites the circular; hand it to your consultant or file it yourself.",
     },
   ],
@@ -140,6 +149,10 @@ export const faq = {
     {
       q: "What if I don't know an answer?",
       a: "Choose “I don't know”. That transaction stays out of the totals, and the report stays a draft and says why.",
+    },
+    {
+      q: "What if Uwii gets a transaction wrong?",
+      a: "Fixed NRS rules label first; the private AI labels only what they can't, and anything it is unsure of, or whose response signature does not verify, becomes a question for you. On the Questions page you answer each group and can change the answer for any single transaction in it; other accounts you list when you start a scan are treated as your own, so transfers between them are not income. Every line shows whether a rule, the AI or you labelled it, and the circular paragraph it follows. Dollar prices come from CoinGecko, or the token's Rhea pool when CoinGecko has no listing, and naira rates from the CBN NFEM table. A line labelled confidently by a rule or the AI cannot be changed in the app yet: your tax consultant can see where each figure came from in the PDF and CSV.",
     },
     {
       q: "What is the report fingerprint?",

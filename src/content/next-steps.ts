@@ -11,7 +11,7 @@ export const NEXT_STEPS: { title: string; body: string }[] = [
     body: "You need it to file.",
   },
   {
-    title: "Give this worksheet to your tax consultant, or use it to file with your State Internal Revenue Service by 31 March 2027.",
+    title: "Give this report to your tax consultant, or use it to file with your State Internal Revenue Service by 31 March 2027.",
     body: "Every line cites NRS Information Circular 2026/21, so it can be checked line by line.",
   },
   {

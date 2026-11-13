@@ -11,7 +11,7 @@ import { ZERO_D, dec } from "../lib/money";
 import { fmtNgn } from "../lib/report/format";
 import { PIT_BANDS } from "../lib/tax/ng/pit";
 import { RELIEFS, RELIEFS_NOTE } from "../lib/tax/ng/reliefs";
-import { PRIVACY_SCOPE } from "./privacy-scope";
+import { DATA_FLOW, PRIVACY_SCOPE } from "./privacy-scope";
 import { REPO_URL } from "./landing";
 
 /** A heading in docs/rules-ng-2026-21.md on GitHub. */
@@ -262,6 +262,7 @@ export const guideSections: GuideSection[] = [
     items: [
       ...PRIVACY_SCOPE.covers.map((c) => ({ title: c.title, body: c.text, cite: "Checked on every scan" })),
       ...PRIVACY_SCOPE.notCovered.map((c) => ({ title: c.title, body: c.text, cite: "Not covered" })),
+      ...DATA_FLOW.rows.map((r) => ({ title: r.what, body: r.where, cite: DATA_FLOW.title })),
     ],
   },
 ];

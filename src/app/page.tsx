@@ -1,13 +1,15 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { AppShell } from "@/components/AppShell";
+import { DataFlowTable } from "@/components/DataFlowTable";
 import { GlyphArt } from "@/components/GlyphArt";
 import { CheckIcon } from "@/components/ui/AnswerChip";
 import { Chip } from "@/components/ui/Chip";
 import { Eyebrow, TwoTone } from "@/components/ui/Eyebrow";
 import { PercentMark } from "@/components/ui/Mark";
-import { DEMO_ACCOUNT_ID, faq, hero, howItWorks, liveStats, scope, sections, trust, whoFor } from "@/content/landing";
+import { DEMO_ACCOUNT_ID, faq, hero, howItWorks, liveStats, preview, scope, sections, trust, whoFor } from "@/content/landing";
 import stats from "@/content/stats.json";
+import { demoPreview, type DemoPreview } from "@/lib/demo/demo-preview";
 import { demoPrivacyProof, demoRecordedAt, demoRuleCount } from "@/lib/demo/demo-proof";
 import { proofCounts } from "@/lib/report/privacy-summary";
 import { FinishedReportButton } from "./FinishedReportButton";
@@ -44,7 +46,64 @@ const CARD = "card-lift rounded-card border border-border bg-surface/50";
 
 const linkClass = "self-start text-small font-medium text-gold underline-offset-[3px] hover:underline";
 
-export default function Landing() {
+/** Report preview: the committed demo result, rendered at build time (static HTML, no animation). */
+function ReportPreview({ p }: { p: DemoPreview }) {
+  return (
+    <section aria-labelledby="preview-h" className="w-full">
+      <div className="grid gap-6 rounded-card border border-gold-line bg-surface bg-[radial-gradient(120%_90%_at_100%_100%,rgb(230_187_121_/0.10),transparent_60%)] p-[clamp(20px,2.4cqi,32px)] @min-[900px]:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] @min-[900px]:gap-10">
+        <div className="flex flex-col gap-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 id="preview-h" className="font-mono text-eyebrow font-medium tracking-[0.2em] text-gold uppercase">
+              {preview.label}
+            </h2>
+            {p.final && <Chip tone="final">Final</Chip>}
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-label text-ink-2">{preview.taxLabel}</span>
+            <span className="font-mono text-[clamp(32px,3.6cqi,44px)] leading-none tracking-[-0.03em] text-ink tabular-nums">₦{p.tax}</span>
+          </div>
+          <dl className="grid grid-cols-3 gap-3 border-t border-border pt-4">
+            {[
+              [preview.totals.income, p.totalVaIncome],
+              [preview.totals.gains, p.netGains],
+              [preview.totals.chargeable, p.chargeable],
+            ].map(([k, v]) => (
+              <div key={k} className="flex min-w-0 flex-col gap-1">
+                <dt className="text-caption text-ink-2">{k}</dt>
+                <dd className="font-mono text-label text-ink tabular-nums [overflow-wrap:anywhere]">₦{v}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+        <div className="flex flex-col gap-4">
+          <p className="text-label text-ink-2">
+            {p.lines} lines{p.linesWithRef === p.lines ? ", each citing its paragraph of the circular" : `, ${p.linesWithRef} citing the circular`}. For example:
+          </p>
+          <ul className="flex flex-col divide-y divide-border rounded-inset border border-border">
+            {p.rows.map((r) => (
+              <li key={`${r.date}-${r.label}`} className="flex items-start justify-between gap-4 px-4 py-3">
+                <span className="flex min-w-0 flex-col gap-0.5">
+                  <span className="text-small text-ink">{r.label}</span>
+                  <span className="font-mono text-caption text-ink-3">
+                    {r.date} · {r.ref}
+                  </span>
+                </span>
+                <span className="shrink-0 font-mono text-small text-ink tabular-nums">₦{r.ngn}</span>
+              </li>
+            ))}
+          </ul>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-caption text-ink-3">{preview.caption}</p>
+            <FinishedReportButton recordedAt={demoRecordedAt} label={preview.cta} />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export default async function Landing() {
+  const demo = await demoPreview();
   const checks = proofCounts(demoPrivacyProof);
   const statItems: [string, string][] = [
     [String(stats.tests.passing), liveStats.tests],
@@ -95,6 +154,8 @@ export default function Landing() {
           </div>
         </div>
       </section>
+
+      <ReportPreview p={demo} />
 
       {/* Live numbers: each one measured (npm run stats; the committed demo run), never typed by hand. */}
       <section aria-label="Live numbers" data-reveal="" className="relative w-full">
@@ -164,6 +225,7 @@ export default function Landing() {
             </li>
           ))}
         </Row>
+        <DataFlowTable id="data-flow-h" className={`${CARD} mt-3 p-[clamp(20px,2.2cqi,28px)]`} headingClassName="text-[17px] leading-snug font-medium tracking-[-0.02em]" />
       </Section>
 
       <Section id="who" head={sections.who}>

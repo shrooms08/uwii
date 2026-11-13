@@ -9,7 +9,7 @@ import { DEMO_ACCOUNT, ILLUSTRATIVE_ANSWERS } from "@/lib/demo/illustrative-answ
  * Opens the finished demo report in one click: the committed classified run of the demo account (the
  * cached-demo path, no live AI call) with the illustrative answers loaded in this browser.
  */
-export function FinishedReportButton({ recordedAt, compact }: { recordedAt: string; compact?: boolean }) {
+export function FinishedReportButton({ recordedAt, compact, label = "See a finished report" }: { recordedAt: string; compact?: boolean; label?: string }) {
   const router = useRouter();
   const [opening, setOpening] = useState(false);
   return (
@@ -26,7 +26,7 @@ export function FinishedReportButton({ recordedAt, compact }: { recordedAt: stri
       }}
       className={`btn-sweep inline-flex items-center justify-center gap-2 border border-white/14 bg-transparent font-medium text-ink backdrop-blur-sm transition-colors duration-200 hover:border-ink-2 hover:bg-white/[0.03] disabled:opacity-60 ${compact ? "h-9 rounded-control px-3.5 text-label" : "h-12 rounded-[10px] px-5 text-ui"}`}
     >
-      {opening ? "Opening…" : "See a finished report"}
+      {opening ? "Opening…" : label}
       {!compact && <span aria-hidden="true" className="arrow-nudge">→</span>}
     </button>
   );

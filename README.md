@@ -45,7 +45,7 @@ Live: <https://uwii-chi.vercel.app> · Computation for review; not tax advice.
 3. **Read the lines.** Scroll to the five sections (Income, Disposals and swaps, Gas fees, Not taxable,
    Excluded). Click a row: the drawer shows how that line was worked out and the circular paragraph it
    relies on.
-4. **Export.** Click **Export worksheet**, then **Download PDF worksheet** or **Download CSV**: a PDF
+4. **Export.** Click **Get your crypto tax report**, then **Download PDF worksheet** or **Download CSV**: a PDF
    worksheet (fingerprint on page 1) and a CSV of every line.
 5. **Anchor and verify.**
    - On Export, the anchor card shows **Already anchored on NEAR testnet** with the block and
@@ -277,6 +277,7 @@ every finding:
 ## What's next (plans, not features)
 
 - Consultant mode: several client accounts in one workspace.
+- Exchange CSV imports (Binance, Bybit, P2P) and other chains (Ethereum, Solana, Tron) (plan).
 - Consultant mode with a firm's tax reserve held in a NEAR multisig (e.g. Trezu or NEAR Business) (plan).
 - Anchoring on NEAR mainnet.
 - More NEAR protocols, then other chains.

@@ -26,3 +26,23 @@ export const PRIVACY_SCOPE = {
     { title: "Your answers are not part of it", text: PRIVATE_INPUTS_CLAIM + " They never reach the TEE: the AI only ever receives public on-chain data." },
   ],
 };
+
+/**
+ * Where each kind of data goes, checked against the code: /api/scan (history, classify.ts payload),
+ * src/lib/client/local-report.ts and remote-prices.ts (browser compute, /api/price), AnchorCard
+ * (anchor request, /api/verify lookup) and ExportClient (personal fields, PDF only).
+ */
+export const DATA_FLOW = {
+  title: "Where your data goes",
+  rows: [
+    { what: "Your NEAR account's public transactions", where: "Read by Uwii's server from NearBlocks and NEAR RPC (public data)." },
+    { what: "Transactions the rules can't label (public on-chain fields only, sanitised)", where: "Sent to NEAR AI Cloud, inside verified sealed hardware." },
+    {
+      what: "Your answers, other income, reliefs",
+      where:
+        "Your browser only; sent to Uwii only if you choose to anchor. If an answer adds a source leg the scan did not price, that asset and date (nothing else) go to Uwii's price lookup.",
+    },
+    { what: "Name, TIN, state", where: "Your browser and the PDF only; never sent." },
+    { what: "Report fingerprint", where: "Written on NEAR only when you choose to anchor. The Export page looks it up, read-only, to show whether it is already anchored." },
+  ],
+};
