@@ -15,7 +15,7 @@ export const PRIVACY_SCOPE = {
     { title: "Genuine hardware", text: "Genuine Intel TDX and NVIDIA GPU hardware: the TDX quote is verified with Intel DCAP and the GPU evidence by NVIDIA's attestation service." },
     { title: "Debug off", text: "Debug mode is off." },
     { title: "Fresh nonce", text: "A fresh nonce from Uwii is inside every attestation report, so the reports were made for this scan." },
-    { title: "Signer bound to the hardware", text: "The key that signs the AI's responses is bound to the attested hardware." },
+    { title: "Signer bound to the hardware", text: "The key that signs the AI's responses is bound to attested hardware (every machine reporting that key is verified)." },
     { title: "Signed responses", text: "Each AI response is signed over its exact bytes, and Uwii checks every signature." },
   ],
   notTitle: "What it does not cover",

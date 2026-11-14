@@ -23,7 +23,9 @@ import type { CapturedExchange } from "./client";
  * report and EVERY model candidate (TDX quote, debug bit, report-data binding,
  * echoed nonce, MRCONFIGID, RTMR3 replay, NVIDIA GPU evidence) -> completion ->
  * fetch response signature -> verify it over the exact bytes and match its
- * signer to exactly one retained verified report. Every step is fail-closed.
+ * signer to the retained reports: at least one names it, and every report that names it passed all its
+ * checks (NEAR AI Cloud can serve a model from several attested machines sharing one signing key).
+ * Every step is fail-closed.
  */
 
 export interface AttestationCheck {
@@ -55,7 +57,7 @@ interface AttestationReportResponse {
   model_attestations?: NearReport[];
 }
 
-interface ReportVerification {
+export interface ReportVerification {
   label: string;
   ok: boolean;
   signingAddress: string;
@@ -465,6 +467,29 @@ async function fetchSignature(chatId: string): Promise<{ ok: true; sig: Signatur
   return { ok: false, detail: `signature not available after bounded retry: ${last}` };
 }
 
+/**
+ * provider_tee signer match: at least one model report names the signer, and EVERY report naming it
+ * (whatever its algorithm) passed all its checks (TDX quote, debug off, signer + nonce in report_data,
+ * RTMR3 replay, MRCONFIGID, NVIDIA GPU) with the same signing algorithm. Otherwise rejected.
+ */
+export function matchProviderSigner(
+  models: Pick<ReportVerification, "label" | "ok" | "signingAddress" | "signingAlgo">[],
+  signingAlgo: string,
+  address: Buffer,
+): { ok: true; detail: string } | { ok: false; detail: string } {
+  const naming = models.filter((m) => typeof m.signingAddress === "string" && sameBytes(hexBytes(m.signingAddress), address));
+  if (naming.length === 0) return { ok: false, detail: "signer matches no verified model report" };
+  const bad = naming.filter((m) => !m.ok || m.signingAlgo !== signingAlgo);
+  if (bad.length > 0) {
+    return { ok: false, detail: `signer is named by ${bad.length} model report(s) that did not pass every check (${bad.map((m) => m.label).join(", ")})` };
+  }
+  const labels = naming.map((m) => m.label).join(", ");
+  return {
+    ok: true,
+    detail: naming.length === 1 ? `provider_tee signer = verified ${labels}` : `provider_tee signer bound to ${naming.length} verified model reports (${labels})`,
+  };
+}
+
 /** Docs: response-signature verification over exact bytes + preflight signer match. */
 export async function verifyResponse(
   preflight: Preflight,
@@ -516,13 +541,9 @@ export async function verifyResponse(
 
     // Match signer to retained, verified preflight evidence.
     if (sig.signature_kind === "provider_tee") {
-      const matches = preflight.models.filter(
-        (m) => m.ok && m.signingAlgo === sig.signing_algo && sameBytes(hexBytes(m.signingAddress), address),
-      );
-      if (matches.length !== 1) {
-        throw new Error(`signer matches ${matches.length} verified model reports (need exactly 1)`);
-      }
-      checks.push({ step: "signer matches verified preflight evidence", ok: true, detail: `provider_tee signer = verified ${matches[0].label}` });
+      const match = matchProviderSigner(preflight.models, sig.signing_algo, address);
+      if (!match.ok) throw new Error(match.detail);
+      checks.push({ step: "signer matches verified preflight evidence", ok: true, detail: match.detail });
     } else {
       const gw = preflight.gateway;
       if (!gw?.ok || gw.signingAlgo !== sig.signing_algo || !sameBytes(hexBytes(gw.signingAddress), address)) {

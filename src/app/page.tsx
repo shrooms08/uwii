@@ -175,7 +175,8 @@ export default async function Landing() {
         </div>
         <p className="mt-2 px-1 text-caption text-ink-3">
           Measured {stats.generatedAt.slice(0, 10)}: the test suite, the anchor contract&apos;s state on testnet ({stats.anchors.contract}), and the demo scan ({demoRuleCount} of{" "}
-          {demoRuleCount + demoPrivacyProof.aiDecisions} transactions labelled by the NRS rules).
+          {demoRuleCount + demoPrivacyProof.aiDecisions} transactions labelled by the NRS rules). The privacy-check total is the committed demo run&apos;s; a live scan
+          can differ, because NEAR AI can return several model reports and each one is checked.
         </p>
       </section>
 

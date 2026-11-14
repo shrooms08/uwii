@@ -41,7 +41,9 @@ Live: <https://uwii-chi.vercel.app> · Computation for review; not tax advice.
    - Opening `/result?account=rybergh44.near` directly shows **Draft** until the questions are answered,
      by design.
 2. **Open the privacy proof.** Click **Privacy proof**: **18 of 18 checks passed** and **Verified
-   private**, every attestation check, and what the proof does and does not cover.
+   private**, every attestation check, and what the proof does and does not cover. That total is the
+   committed demo run's; a live scan may show a different total, because NEAR AI can return several
+   model reports and each one is checked.
 3. **Read the lines.** Scroll to the five sections (Income, Disposals and swaps, Gas fees, Not taxable,
    Excluded). Click a row: the drawer shows how that line was worked out and the circular paragraph it
    relies on.
@@ -69,7 +71,7 @@ git clone https://github.com/shrooms08/uwii.git
 cd uwii
 npm ci
 cp .env.example .env.local      # no values are needed for the cached demo
-npm test                        # 168 tests
+npm test                        # 173 tests
 npm run build                   # also writes public/static-data/ from data/ (npm run static-data)
 npm start                       # http://localhost:3000 (npm start -- -p 3100 for another port)
 ```
@@ -196,7 +198,7 @@ Covers:
 - Genuine Intel TDX and NVIDIA GPU hardware: the TDX quote is verified with Intel DCAP and the GPU evidence by NVIDIA's attestation service.
 - Debug mode is off.
 - A fresh nonce from Uwii is inside every attestation report, so the reports were made for this scan.
-- The key that signs the AI's responses is bound to the attested hardware.
+- The key that signs the AI's responses is bound to attested hardware (every machine reporting that key is verified).
 - Each AI response is signed over its exact bytes, and Uwii checks every signature.
 
 Does not cover:
@@ -236,11 +238,11 @@ every finding:
 
 | Command | What it proves |
 | --- | --- |
-| `npm test` | 168 tests (node:test via tsx): the engine, including circular Illustrations 2 and 3; rules; report sections that reconcile with the totals; API limits; run signing; anchoring; the fault switch and every service-failure fallback (`src/lib/server/resilience.test.ts`); browser/server parity, the same report and fingerprint from the browser's code path (`src/lib/report/client-parity.test.ts`) |
+| `npm test` | 173 tests (node:test via tsx): the engine, including circular Illustrations 2 and 3; rules; report sections that reconcile with the totals; API limits; run signing; anchoring; the fault switch and every service-failure fallback (`src/lib/server/resilience.test.ts`); browser/server parity, the same report and fingerprint from the browser's code path (`src/lib/report/client-parity.test.ts`) |
 | `npm run lint` | ESLint is clean |
 | `npm run build && npm run test:privacy` | Playwright network canary on the production build (`scripts/privacy-canary.ts`): canary income, rent, TIN and name never appear in any request; only the anchor request carries answers, and never the name or TIN |
 | `(cd contracts/anchor && cargo test)` | 8 contract tests: owner only, duplicates and non-final reports refused, input checks, NEP-297 event (Rust 1.93, near-sdk 5.29) |
-| `npm run check:attestation` | Needs `NEAR_AI_API_KEY` in `.env.local`. Fetches NEAR AI Cloud's attestation with a fresh nonce, sends one sample classification, and prints PASS or FAIL for each of the 18 checks |
+| `npm run check:attestation` | Needs `NEAR_AI_API_KEY` in `.env.local`. Fetches NEAR AI Cloud's attestation with a fresh nonce, sends one sample classification, and prints PASS or FAIL for every check (the total depends on how many model reports NEAR AI returns) |
 | `npm ci`, then `npm run build` with the network off | The build needs no network: fonts come from the `geist` package and static data from `data/` |
 | `npm run stats` | Re-measures the landing page's **Live** row (tests passing, illustrations reproduced, reports anchored on testnet as of the measurement date) into `src/content/stats.json`; refuses to write if any test fails. The row's privacy-checks figure comes from the committed demo run |
 
