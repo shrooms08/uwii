@@ -14,8 +14,8 @@ Live: <https://uwii-chi.vercel.app> · Computation for review; not tax advice.
 - NRS Information Circular No. 2026/21 (published 31 July 2026) sets out how individuals' virtual-asset
   income and gains are taxed for the 2026 year of assessment.
 - The first annual returns that include 2026 income are due by 31 March 2027.
-- Nigeria ranks 6th in Chainalysis's
-  [2025 Global Crypto Adoption Index](https://www.chainalysis.com/blog/2025-global-crypto-adoption-index/).
+- Nigeria ranks 3rd in Chainalysis's
+  [2026 Global Crypto Adoption Index](https://www.chainalysis.com/blog/2026-global-crypto-adoption-index/).
 - By hand, every transaction has to be classified (income, disposal or not taxable), priced in US dollars,
   converted at the CBN NFEM rate and run through the personal income tax bands.
 - A general AI service would need the full history and the reasons behind each payment. Uwii keeps the
